@@ -1,57 +1,224 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DeKUT Housing Finder</title>
 
 <style>
 body{
-    font-family:Arial;
+    font-family: Arial, sans-serif;
     margin:0;
-    background:#f5f5f5;
+    background:#f7f7f7;
 }
 
+/* HEADER */
 header{
+    background:white;
+    padding:15px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #ddd;
+    position:sticky;
+    top:0;
+}
+
+.logo{
+    font-weight:bold;
+    font-size:20px;
+    color:#ff385c;
+}
+
+.post-btn{
     background:#ff385c;
     color:white;
+    padding:10px 15px;
+    border-radius:20px;
+    text-decoration:none;
+}
+
+/* SEARCH */
+.search{
     padding:20px;
     text-align:center;
 }
 
-.container{
+.search input{
+    width:80%;
+    max-width:600px;
+    padding:12px;
+    border-radius:30px;
+    border:1px solid #ddd;
+}
+
+/* GRID */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+    gap:20px;
     padding:20px;
-    text-align:center;
+}
+
+/* CARD */
+.card{
+    background:white;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+    transition:0.2s;
+}
+
+.card:hover{
+    transform:scale(1.02);
+}
+
+.card img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+}
+
+.card-body{
+    padding:12px;
+}
+
+.title{
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.price{
+    color:#222;
+    font-weight:bold;
+    margin:5px 0;
+}
+
+.location{
+    color:gray;
+    font-size:14px;
+}
+
+.extra{
+    font-size:12px;
+    color:#666;
+    margin-top:5px;
 }
 
 .btn{
-    background:#25D366;
-    color:white;
-    padding:12px 15px;
-    border-radius:8px;
-    text-decoration:none;
     display:inline-block;
     margin-top:10px;
+    background:#25D366;
+    color:white;
+    padding:8px 12px;
+    border-radius:20px;
+    text-decoration:none;
+    font-size:14px;
+}
+
+/* FOOTER */
+footer{
+    text-align:center;
+    padding:20px;
+    color:gray;
+    font-size:14px;
 }
 </style>
-
 </head>
 
 <body>
 
 <header>
-    <h1>🏠 DeKUT Housing Finder</h1>
-    <p>Find affordable student housing near campus</p>
+    <div class="logo">🏠 DeKUT Stay</div>
+
+    <a class="post-btn" 
+    href="https://docs.google.com/forms/d/e/1FAIpQLSfuQFmeWyjeIIWRDV9CyrcmRQtxx8-3d7oft-HvuLohxSEICw/viewform"
+    target="_blank">
+    Post Listing
+    </a>
 </header>
 
-<div class="container">
-
-    <h2>Are you a landlord?</h2>
-    <p>Post your house for free</p>
-
-    <a class="btn" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vT2kpfB9nCqU2X6oXxTcyX0ycrCDJBWSzjAqixpspGyX0Ij9-xXE3O9xESg_u2tdDLBRj7WNfaRaxXL/pubhtml" target="_blank">
-        ➕ Post a House
-    </a>
-
+<div class="search">
+    <input type="text" id="searchInput" placeholder="Search houses, bedsitters, locations...">
 </div>
+
+<div class="grid" id="listings"></div>
+
+<footer>
+    © 2026 DeKUT Housing Finder
+</footer>
+
+<script>
+const SHEET_URL = "https://opensheet.elk.sh/2PACX-1vT2kpfB9nCqU2X6oXxTcyX0ycrCDJBWSzjAqixpspGyX0Ij9-xXE3O9xESg_u2tdDLBRj7WNfaRaxXL/Sheet1";
+
+let allData = [];
+
+fetch(SHEET_URL)
+.then(res => res.json())
+.then(data => {
+    allData = data;
+    display(data);
+});
+
+function display(data){
+    const container = document.getElementById("listings");
+    container.innerHTML = "";
+
+    data.forEach(item => {
+
+        let phone = item["Phone / WhatsApp number"] || "";
+        phone = phone.replace(/\D/g,'');
+
+        container.innerHTML += `
+        <div class="card">
+
+            <img src="https://source.unsplash.com/400x300/?house,apartment,room" />
+
+            <div class="card-body">
+
+                <div class="title">
+                    ${item["House / Hostel Name"] || "No Name"}
+                </div>
+
+                <div class="location">
+                    📍 ${item["Location (e.g. Bomas, Nyaribo)"] || ""}
+                </div>
+
+                <div class="price">
+                    KSh ${item["Rent (KSh)"] || ""}
+                </div>
+
+                <div class="extra">
+                    ⏱ ${item["Distance from DeKUT"] || ""}
+                </div>
+
+                <div class="extra">
+                    ${item["Any extra info"] || ""}
+                </div>
+
+                <a class="btn" target="_blank"
+                href="https://wa.me/${phone}">
+                💬 WhatsApp
+                </a>
+
+            </div>
+        </div>
+        `;
+    });
+}
+
+/* SEARCH */
+document.getElementById("searchInput").addEventListener("input", function(e){
+    let value = e.target.value.toLowerCase();
+
+    let filtered = allData.filter(item =>
+        (item["House / Hostel Name"] || "").toLowerCase().includes(value) ||
+        (item["Location (e.g. Bomas, Nyaribo)"] || "").toLowerCase().includes(value)
+    );
+
+    display(filtered);
+});
+</script>
 
 </body>
 </html>
