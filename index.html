@@ -27,7 +27,6 @@ header h2 {
     font-size: 20px;
 }
 
-/* SEARCH + BUTTON */
 .top-bar {
     display: flex;
     gap: 10px;
@@ -140,7 +139,7 @@ input {
 
 <script>
 
-/* YOUR GOOGLE SHEETS CSV LINK */
+/* GOOGLE SHEETS CSV */
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
 
 let allData = [];
@@ -161,7 +160,7 @@ function parseCSV(text) {
             amenities: c[7] || "",
             phone: c[8] || "",
             info: c[9] || "",
-            image: c[11] || ""   // Image URL column
+            image: c[11] || ""
         };
     });
 }
@@ -181,7 +180,7 @@ async function loadData() {
     }
 }
 
-/* RENDER CARDS */
+/* RENDER */
 function render(data) {
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
@@ -193,18 +192,21 @@ function render(data) {
 
         let image = item.image || "";
 
-        // Convert Google Drive link if needed
+        /* FIXED IMAGE METHOD (NEW & STABLE) */
         if (image.includes("drive.google.com")) {
             let match = image.match(/[-\w]{25,}/);
             if (match) {
-                image = `https://drive.google.com/uc?id=${match[0]}`;
+                image = `https://lh3.googleusercontent.com/d/${match[0]}`;
             }
         }
 
         grid.innerHTML += `
         <div class="card">
 
-            ${image ? `<img src="${image}">` : `<div style="height:160px;background:#ddd;"></div>`}
+            ${image 
+                ? `<img src="${image}" onerror="this.style.display='none'">`
+                : `<div style="height:160px;background:#ddd;"></div>`
+            }
 
             <div class="content">
                 <div class="title">${item.type}</div>
