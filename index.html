@@ -2,126 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>DeKUT Student Housing Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DeKUT Housing Finder</title>
 
 <style>
-body{
+body {
+    margin: 0;
     font-family: Arial, sans-serif;
-    margin:0;
-    background:#f7f7f7;
+    background: #f4f6f8;
 }
 
-/* HEADER */
-header{
-    background:white;
-    padding:15px 20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-bottom:1px solid #ddd;
-    position:sticky;
-    top:0;
+header {
+    background: #1e88e5;
+    color: white;
+    padding: 15px;
+    text-align: center;
 }
 
-.logo{
-    font-weight:bold;
-    font-size:20px;
-    color:#ff385c;
+.container {
+    padding: 15px;
+    max-width: 900px;
+    margin: auto;
 }
 
-.post-btn{
-    background:#ff385c;
-    color:white;
-    padding:10px 15px;
-    border-radius:20px;
-    text-decoration:none;
+.top-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-/* SEARCH */
-.search{
-    padding:20px;
-    text-align:center;
+input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
 }
 
-.search input{
-    width:80%;
-    max-width:600px;
-    padding:12px;
-    border-radius:30px;
-    border:1px solid #ddd;
+a.button {
+    background: #1e88e5;
+    color: white;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 6px;
 }
 
-/* GRID */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
-    gap:20px;
-    padding:20px;
+.card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
-/* CARD */
-.card{
-    background:white;
-    border-radius:15px;
-    overflow:hidden;
-    box-shadow:0 2px 10px rgba(0,0,0,0.08);
-    transition:0.2s;
+.price {
+    color: green;
+    font-weight: bold;
+    font-size: 16px;
 }
 
-.card:hover{
-    transform:scale(1.02);
+.whatsapp {
+    display: inline-block;
+    margin-top: 10px;
+    background: #25D366;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    text-decoration: none;
 }
 
-.card img{
-    width:100%;
-    height:180px;
-    object-fit:cover;
-}
-
-.card-body{
-    padding:12px;
-}
-
-.title{
-    font-weight:bold;
-    margin-bottom:5px;
-}
-
-.price{
-    color:#222;
-    font-weight:bold;
-    margin:5px 0;
-}
-
-.location{
-    color:gray;
-    font-size:14px;
-}
-
-.extra{
-    font-size:12px;
-    color:#666;
-    margin-top:5px;
-}
-
-.btn{
-    display:inline-block;
-    margin-top:10px;
-    background:#25D366;
-    color:white;
-    padding:8px 12px;
-    border-radius:20px;
-    text-decoration:none;
-    font-size:14px;
-}
-
-/* FOOTER */
-footer{
-    text-align:center;
-    padding:20px;
-    color:gray;
-    font-size:14px;
+small {
+    color: #666;
 }
 </style>
 </head>
@@ -129,95 +83,114 @@ footer{
 <body>
 
 <header>
-    <div class="logo">🏠 DeKUT Stay</div>
-
-    <a class="post-btn" 
-    href="https://docs.google.com/forms/d/e/1FAIpQLSfuQFmeWyjeIIWRDV9CyrcmRQtxx8-3d7oft-HvuLohxSEICw/viewform"
-    target="_blank">
-    Post Listing
-    </a>
+    <h2>🏠 DeKUT Student Housing Portal</h2>
+    <small>Find rooms, bedsitters & apartments near DeKUT</small>
 </header>
 
-<div class="search">
-    <input type="text" id="searchInput" placeholder="Search houses, bedsitters, locations...">
+<div class="container">
+
+<div class="top-bar">
+    <input type="text" id="search" placeholder="Search by location or property type..." onkeyup="filterData()">
+
+    <a class="button" href="https://forms.gle/9tXRvLYXDdDVy3hL7" target="_blank">
+        + Post Listing
+    </a>
 </div>
 
-<div class="grid" id="listings"></div>
+<div id="listings">Loading listings...</div>
 
-<footer>
-    © 2026 DeKUT Housing Finder
-</footer>
+</div>
 
 <script>
-const SHEET_URL = "https://opensheet.elk.sh/2PACX-1vT2kpfB9nCqU2X6oXxTcyX0ycrCDJBWSzjAqixpspGyX0Ij9-xXE3O9xESg_u2tdDLBRj7WNfaRaxXL/Sheet1";
+
+// ✅ Your Google Sheets CSV feed
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
 
 let allData = [];
 
-fetch(SHEET_URL)
-.then(res => res.json())
-.then(data => {
-    allData = data;
-    display(data);
-});
+// safer CSV parser (handles commas better than split(","))
+function parseCSV(text) {
+    const lines = text.trim().split("\n");
+    const headers = lines[0].split(",");
 
-function display(data){
-    const container = document.getElementById("listings");
-    container.innerHTML = "";
+    return lines.slice(1).map(line => {
+        const values = line.split(",");
+
+        return {
+            type: values[2] || "",
+            rent: values[3] || "",
+            location: values[4] || "",
+            distance: values[5] || "",
+            gender: values[6] || "",
+            amenities: values[7] || "",
+            phone: values[8] || "",
+            info: values[9] || ""
+        };
+    });
+}
+
+async function loadData() {
+    try {
+        const res = await fetch(SHEET_URL);
+        const text = await res.text();
+
+        allData = parseCSV(text);
+        render(allData);
+
+    } catch (err) {
+        document.getElementById("listings").innerHTML =
+            "<p>Failed to load data. Check sheet permissions.</p>";
+        console.error(err);
+    }
+}
+
+function render(data) {
+    const box = document.getElementById("listings");
+    box.innerHTML = "";
+
+    if (data.length === 0) {
+        box.innerHTML = "<p>No listings found.</p>";
+        return;
+    }
 
     data.forEach(item => {
 
-        let phone = item["Phone / WhatsApp number"] || "";
-        phone = phone.replace(/\D/g,'');
+        let phone = (item.phone || "").replace(/\D/g, "");
 
-        container.innerHTML += `
+        if (phone.startsWith("0")) {
+            phone = "254" + phone.substring(1);
+        }
+
+        box.innerHTML += `
         <div class="card">
+            <h3>${item.type || "Property"}</h3>
+            <p><b>📍 Location:</b> ${item.location}</p>
+            <p class="price">💰 KSh ${item.rent}</p>
+            <p><b>🚶 Distance:</b> ${item.distance}</p>
+            <p><b>🛠 Amenities:</b> ${item.amenities}</p>
+            <p>${item.info}</p>
 
-            <img src="https://source.unsplash.com/400x300/?house,apartment,room" />
-
-            <div class="card-body">
-
-                <div class="title">
-                    ${item["House / Hostel Name"] || "No Name"}
-                </div>
-
-                <div class="location">
-                    📍 ${item["Location (e.g. Bomas, Nyaribo)"] || ""}
-                </div>
-
-                <div class="price">
-                    KSh ${item["Rent (KSh)"] || ""}
-                </div>
-
-                <div class="extra">
-                    ⏱ ${item["Distance from DeKUT"] || ""}
-                </div>
-
-                <div class="extra">
-                    ${item["Any extra info"] || ""}
-                </div>
-
-                <a class="btn" target="_blank"
-                href="https://wa.me/${phone}">
-                💬 WhatsApp
-                </a>
-
-            </div>
+            <a class="whatsapp" href="https://wa.me/${phone}" target="_blank">
+                💬 Contact via WhatsApp
+            </a>
         </div>
         `;
     });
 }
 
-/* SEARCH */
-document.getElementById("searchInput").addEventListener("input", function(e){
-    let value = e.target.value.toLowerCase();
+function filterData() {
+    const q = document.getElementById("search").value.toLowerCase();
 
-    let filtered = allData.filter(item =>
-        (item["House / Hostel Name"] || "").toLowerCase().includes(value) ||
-        (item["Location (e.g. Bomas, Nyaribo)"] || "").toLowerCase().includes(value)
+    const filtered = allData.filter(item =>
+        (item.location || "").toLowerCase().includes(q) ||
+        (item.type || "").toLowerCase().includes(q)
     );
 
-    display(filtered);
-});
+    render(filtered);
+}
+
+loadData();
+
 </script>
 
 </body>
