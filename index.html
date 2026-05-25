@@ -27,28 +27,30 @@ header h2 {
     font-size: 20px;
 }
 
+/* TOP BAR */
 .top-bar {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 10px;
-    flex-wrap: wrap;
 }
 
-input {
-    flex: 1;
-    min-width: 200px;
+input, select {
     padding: 10px;
     border: 1px solid #ddd;
-    border-radius: 25px;
+    border-radius: 20px;
+    min-width: 150px;
+    flex: 1;
 }
 
 .post-btn {
     background: #ff385c;
     color: white;
     padding: 10px 15px;
-    border-radius: 25px;
+    border-radius: 20px;
     text-decoration: none;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 /* GRID */
@@ -68,7 +70,7 @@ input {
     border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    transition: transform 0.2s;
+    transition: 0.2s;
 }
 
 .card:hover {
@@ -105,7 +107,7 @@ input {
     margin: 2px 0;
 }
 
-/* WHATSAPP */
+/* BUTTON */
 .whatsapp {
     display: block;
     text-align: center;
@@ -125,11 +127,34 @@ input {
     <h2>🏠 DeKUT Housing Marketplace</h2>
 
     <div class="top-bar">
-        <input type="text" id="search" placeholder="Search location, type, rent..." onkeyup="filterData()">
+
+        <input type="text" id="search" placeholder="Search location or type..." onkeyup="applyFilters()">
+
+        <select id="rentFilter" onchange="applyFilters()">
+            <option value="">All Rent</option>
+            <option value="low">Under 5,000</option>
+            <option value="mid">5,000 - 10,000</option>
+            <option value="high">10,000+</option>
+        </select>
+
+        <select id="typeFilter" onchange="applyFilters()">
+            <option value="">All Types</option>
+            <option value="bedsitter">Bedsitter</option>
+            <option value="one">One Bedroom</option>
+            <option value="shared">Shared</option>
+        </select>
+
+        <select id="genderFilter" onchange="applyFilters()">
+            <option value="">Any Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="any">Any</option>
+        </select>
 
         <a class="post-btn" href="https://forms.gle/9tXRvLYXDdDVy3hL7" target="_blank">
             + Post Listing
         </a>
+
     </div>
 </header>
 
@@ -167,17 +192,11 @@ function parseCSV(text) {
 
 /* LOAD DATA */
 async function loadData() {
-    try {
-        const res = await fetch(SHEET_URL);
-        const text = await res.text();
+    const res = await fetch(SHEET_URL);
+    const text = await res.text();
 
-        allData = parseCSV(text);
-        render(allData);
-
-    } catch (err) {
-        document.getElementById("grid").innerHTML =
-            "<p>Failed to load data. Check sheet permissions.</p>";
-    }
+    allData = parseCSV(text);
+    render(allData);
 }
 
 /* RENDER */
@@ -192,7 +211,7 @@ function render(data) {
 
         let image = item.image || "";
 
-        /* FIXED IMAGE METHOD (NEW & STABLE) */
+        // FIX GOOGLE DRIVE IMAGE
         if (image.includes("drive.google.com")) {
             let match = image.match(/[-\w]{25,}/);
             if (match) {
@@ -227,15 +246,44 @@ function render(data) {
     });
 }
 
-/* SEARCH */
-function filterData() {
-    const q = document.getElementById("search").value.toLowerCase();
+/* FILTER SYSTEM */
+function applyFilters() {
 
-    const filtered = allData.filter(i =>
-        (i.location || "").toLowerCase().includes(q) ||
-        (i.type || "").toLowerCase().includes(q) ||
-        (i.amenities || "").toLowerCase().includes(q)
-    );
+    const search = document.getElementById("search").value.toLowerCase();
+    const rentFilter = document.getElementById("rentFilter").value;
+    const typeFilter = document.getElementById("typeFilter").value;
+    const genderFilter = document.getElementById("genderFilter").value;
+
+    let filtered = allData.filter(item => {
+
+        let rent = parseInt(item.rent || 0);
+        let type = (item.type || "").toLowerCase();
+        let gender = (item.gender || "").toLowerCase();
+        let location = (item.location || "").toLowerCase();
+        let amenities = (item.amenities || "").toLowerCase();
+
+        let matchSearch =
+            location.includes(search) ||
+            type.includes(search) ||
+            amenities.includes(search);
+
+        let matchRent = true;
+        if (rentFilter === "low") matchRent = rent < 5000;
+        if (rentFilter === "mid") matchRent = rent >= 5000 && rent <= 10000;
+        if (rentFilter === "high") matchRent = rent > 10000;
+
+        let matchType = true;
+        if (typeFilter === "bedsitter") matchType = type.includes("bedsitter");
+        if (typeFilter === "one") matchType = type.includes("one");
+        if (typeFilter === "shared") matchType = type.includes("shared");
+
+        let matchGender = true;
+        if (genderFilter === "male") matchGender = gender.includes("male");
+        if (genderFilter === "female") matchGender = gender.includes("female");
+        if (genderFilter === "any") matchGender = gender.includes("any");
+
+        return matchSearch && matchRent && matchType && matchGender;
+    });
 
     render(filtered);
 }
