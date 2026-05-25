@@ -27,21 +27,22 @@ header h2 {
     font-size: 20px;
 }
 
-/* SEARCH BAR */
-.search-bar {
+/* SEARCH + BUTTON */
+.top-bar {
     display: flex;
     gap: 10px;
     margin-top: 10px;
+    flex-wrap: wrap;
 }
 
-.search-bar input {
+input {
     flex: 1;
+    min-width: 200px;
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 25px;
 }
 
-/* BUTTON */
 .post-btn {
     background: #ff385c;
     color: white;
@@ -58,7 +59,7 @@ header h2 {
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 15px;
 }
 
@@ -72,18 +73,15 @@ header h2 {
 }
 
 .card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
 }
 
-/* IMAGE PLACEHOLDER */
-.img {
-    height: 150px;
-    background: linear-gradient(135deg, #ddd, #eee);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #888;
-    font-size: 14px;
+/* IMAGE */
+.card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background: #ddd;
 }
 
 /* CONTENT */
@@ -105,9 +103,10 @@ header h2 {
 .meta {
     font-size: 13px;
     color: #555;
+    margin: 2px 0;
 }
 
-/* WHATSAPP BUTTON */
+/* WHATSAPP */
 .whatsapp {
     display: block;
     text-align: center;
@@ -117,7 +116,6 @@ header h2 {
     margin-top: 10px;
     border-radius: 10px;
     text-decoration: none;
-    font-size: 14px;
 }
 </style>
 </head>
@@ -127,26 +125,27 @@ header h2 {
 <header>
     <h2>🏠 DeKUT Housing Marketplace</h2>
 
-    <div class="search-bar">
-        <input type="text" id="search" placeholder="Search bedsitter, location..." onkeyup="filterData()">
+    <div class="top-bar">
+        <input type="text" id="search" placeholder="Search location, type, rent..." onkeyup="filterData()">
 
         <a class="post-btn" href="https://forms.gle/9tXRvLYXDdDVy3hL7" target="_blank">
-            + Post
+            + Post Listing
         </a>
     </div>
 </header>
 
 <div class="container">
-    <div id="grid" class="grid">Loading listings...</div>
+    <div id="grid">Loading listings...</div>
 </div>
 
 <script>
 
+/* YOUR GOOGLE SHEETS CSV LINK */
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
 
-let allListings = [];
+let allData = [];
 
-// CSV parser
+/* PARSE CSV */
 function parseCSV(text) {
     const rows = text.trim().split("\n").slice(1);
 
@@ -161,19 +160,28 @@ function parseCSV(text) {
             gender: c[6] || "",
             amenities: c[7] || "",
             phone: c[8] || "",
-            info: c[9] || ""
+            info: c[9] || "",
+            image: c[11] || ""   // Image URL column
         };
     });
 }
 
+/* LOAD DATA */
 async function loadData() {
-    const res = await fetch(SHEET_URL);
-    const text = await res.text();
+    try {
+        const res = await fetch(SHEET_URL);
+        const text = await res.text();
 
-    allListings = parseCSV(text);
-    render(allListings);
+        allData = parseCSV(text);
+        render(allData);
+
+    } catch (err) {
+        document.getElementById("grid").innerHTML =
+            "<p>Failed to load data. Check sheet permissions.</p>";
+    }
 }
 
+/* RENDER CARDS */
 function render(data) {
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
@@ -181,17 +189,25 @@ function render(data) {
     data.forEach(item => {
 
         let phone = (item.phone || "").replace(/\D/g, "");
-        if (phone.startsWith("0")) {
-            phone = "254" + phone.slice(1);
+        if (phone.startsWith("0")) phone = "254" + phone.slice(1);
+
+        let image = item.image || "";
+
+        // Convert Google Drive link if needed
+        if (image.includes("drive.google.com")) {
+            let match = image.match(/[-\w]{25,}/);
+            if (match) {
+                image = `https://drive.google.com/uc?id=${match[0]}`;
+            }
         }
 
         grid.innerHTML += `
         <div class="card">
-            <div class="img">No Image</div>
+
+            ${image ? `<img src="${image}">` : `<div style="height:160px;background:#ddd;"></div>`}
 
             <div class="content">
                 <div class="title">${item.type}</div>
-
                 <div class="price">KSh ${item.rent}</div>
 
                 <div class="meta">📍 ${item.location}</div>
@@ -203,18 +219,20 @@ function render(data) {
                     💬 Contact Landlord
                 </a>
             </div>
+
         </div>
         `;
     });
 }
 
+/* SEARCH */
 function filterData() {
     const q = document.getElementById("search").value.toLowerCase();
 
-    const filtered = allListings.filter(item =>
-        (item.location || "").toLowerCase().includes(q) ||
-        (item.type || "").toLowerCase().includes(q) ||
-        (item.amenities || "").toLowerCase().includes(q)
+    const filtered = allData.filter(i =>
+        (i.location || "").toLowerCase().includes(q) ||
+        (i.type || "").toLowerCase().includes(q) ||
+        (i.amenities || "").toLowerCase().includes(q)
     );
 
     render(filtered);
