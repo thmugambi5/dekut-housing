@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing</title>
+<title>DeKUT Housing Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -11,10 +11,11 @@
 <style>
 body{
     margin:0;
-    font-family:Arial,sans-serif;
+    font-family:Arial;
     background:#f7f7f7;
 }
 
+/* HEADER */
 header{
     background:white;
     padding:15px;
@@ -30,11 +31,12 @@ header{
     gap:10px;
 }
 
-input{
+input, select{
     padding:10px;
     border-radius:20px;
     border:1px solid #ddd;
     flex:1;
+    min-width:140px;
 }
 
 button{
@@ -46,6 +48,7 @@ button{
     cursor:pointer;
 }
 
+/* LAYOUT */
 .container{
     padding:20px;
 }
@@ -56,6 +59,7 @@ button{
     gap:15px;
 }
 
+/* CARD */
 .card{
     background:white;
     border-radius:15px;
@@ -75,19 +79,16 @@ button{
 
 .title{
     font-weight:bold;
-    font-size:16px;
 }
 
 .price{
     color:green;
     font-weight:bold;
-    margin-top:5px;
 }
 
 .meta{
     font-size:13px;
     color:#555;
-    margin-top:4px;
 }
 
 .whatsapp{
@@ -112,10 +113,10 @@ button{
     cursor:pointer;
 }
 
+/* MAP */
 #map{
     height:550px;
     display:none;
-    border-radius:15px;
 }
 </style>
 </head>
@@ -124,19 +125,36 @@ button{
 
 <header>
 
-<h2>🏠 DeKUT Housing</h2>
+<h2>🏠 DeKUT Housing Pro</h2>
 
 <div class="top-bar">
 
-<input
-id="search"
-placeholder="Search location or property type..."
-onkeyup="applyFilters()">
+<input id="search" placeholder="Search location or type..." onkeyup="applyFilters()">
 
-<button onclick="toggleMap()">🗺 Map View</button>
+<select id="rentFilter" onchange="applyFilters()">
+<option value="">All Rent</option>
+<option value="low">Under 5,000</option>
+<option value="mid">5,000 - 10,000</option>
+<option value="high">10,000+</option>
+</select>
+
+<select id="typeFilter" onchange="applyFilters()">
+<option value="">All Types</option>
+<option value="bedsitter">Bedsitter</option>
+<option value="one bedroom">One Bedroom</option>
+<option value="shared">Shared</option>
+</select>
+
+<select id="genderFilter" onchange="applyFilters()">
+<option value="">Any Gender</option>
+<option value="male">Male</option>
+<option value="female">Female</option>
+<option value="any">Any</option>
+</select>
+
+<button onclick="toggleMap()">🗺 Map</button>
 
 </div>
-
 </header>
 
 <div class="container">
@@ -157,10 +175,44 @@ const SHEET_URL =
 let allData = [];
 let map;
 let isMap = false;
-let propertyMarkers = [];
+let markers = [];
+
+/* SAFE CSV PARSER (FIXES COMMAS ISSUE) */
+function parseCSV(text){
+
+    const rows = text.split("\n");
+    const headers = rows[0].split(",");
+
+    let result = [];
+
+    for(let i=1;i<rows.length;i++){
+
+        let row = rows[i];
+
+        if(!row.trim()) continue;
+
+        let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+
+        if(!cols) continue;
+
+        result.push({
+            type: cols[2] || "",
+            rent: parseInt(cols[3]) || 0,
+            location: cols[4] || "",
+            distance: cols[5] || "",
+            gender: cols[6] || "",
+            phone: cols[8] || "",
+            image: cols[11] || "",
+            lat: parseFloat(cols[12]) || null,
+            lng: parseFloat(cols[13]) || null
+        });
+    }
+
+    return result;
+}
 
 /* LOAD */
-async function loadData() {
+async function loadData(){
 
     const res = await fetch(SHEET_URL);
     const text = await res.text();
@@ -170,35 +222,10 @@ async function loadData() {
     render(allData);
 }
 
-/* CSV */
-function parseCSV(text){
-
-    return text
-    .trim()
-    .split("\n")
-    .slice(1)
-    .map(r=>{
-
-        const c = r.split(",");
-
-        return {
-            type: c[2] || "",
-            rent: c[3] || "",
-            location: c[4] || "",
-            distance: c[5] || "",
-            phone: c[8] || "",
-            image: c[11] || "",
-            lat: parseFloat(c[12]) || null,
-            lng: parseFloat(c[13]) || null
-        };
-    });
-}
-
-/* GRID */
+/* RENDER */
 function render(data){
 
     let grid = document.getElementById("grid");
-
     grid.innerHTML = "";
 
     data.forEach((item,index)=>{
@@ -206,8 +233,7 @@ function render(data){
         let img = item.image || "";
 
         if(img.includes("drive.google")){
-            let id = img.match(/[-\\w]{25,}/);
-
+            let id = img.match(/[-\w]{25,}/);
             if(id){
                 img = `https://lh3.googleusercontent.com/d/${id[0]}`;
             }
@@ -223,39 +249,27 @@ function render(data){
 
         <div class="card">
 
-            ${img ?
-            `<img src="${img}" alt="Property">`
-            :
-            ''
-            }
+            ${img ? `<img src="${img}">` : ""}
 
             <div class="content">
 
                 <div class="title">${item.type}</div>
 
-                <div class="price">
-                    KSh ${item.rent}
-                </div>
+                <div class="price">KSh ${item.rent}</div>
 
-                <div class="meta">
-                    📍 ${item.location}
-                </div>
+                <div class="meta">📍 ${item.location}</div>
+                <div class="meta">🚶 ${item.distance}</div>
+                <div class="meta">🚻 ${item.gender}</div>
 
-                <div class="meta">
-                    🚶 ${item.distance}
-                </div>
-
-                <a
-                class="whatsapp"
-                href="https://wa.me/${phone}"
-                target="_blank">
-                Contact on WhatsApp
+                <a class="whatsapp"
+                   href="https://wa.me/${phone}"
+                   target="_blank">
+                   WhatsApp
                 </a>
 
-                <button
-                class="map-btn"
-                onclick="viewOnMap(${index})">
-                📍 View on Map
+                <button class="map-btn"
+                        onclick="viewOnMap(${index})">
+                    📍 View on Map
                 </button>
 
             </div>
@@ -265,29 +279,39 @@ function render(data){
     });
 }
 
-/* SEARCH */
+/* FILTERS */
 function applyFilters(){
 
-    let q =
-    document.getElementById("search")
-    .value
-    .toLowerCase();
+    const search = document.getElementById("search").value.toLowerCase();
+    const rentFilter = document.getElementById("rentFilter").value;
+    const typeFilter = document.getElementById("typeFilter").value;
+    const genderFilter = document.getElementById("genderFilter").value;
 
-    let filtered =
-    allData.filter(item=>
-        (
-            item.location +
-            " " +
-            item.type
-        )
+    let filtered = allData.filter(item=>{
+
+        let matchSearch =
+        (item.location + item.type)
         .toLowerCase()
-        .includes(q)
-    );
+        .includes(search);
+
+        let matchRent = true;
+        if(rentFilter === "low") matchRent = item.rent < 5000;
+        if(rentFilter === "mid") matchRent = item.rent >= 5000 && item.rent <= 10000;
+        if(rentFilter === "high") matchRent = item.rent > 10000;
+
+        let matchType = true;
+        if(typeFilter) matchType = (item.type || "").toLowerCase().includes(typeFilter);
+
+        let matchGender = true;
+        if(genderFilter) matchGender = (item.gender || "").toLowerCase().includes(genderFilter);
+
+        return matchSearch && matchRent && matchType && matchGender;
+    });
 
     render(filtered);
 }
 
-/* MAP TOGGLE */
+/* MAP */
 function toggleMap(){
 
     isMap = !isMap;
@@ -303,7 +327,7 @@ function toggleMap(){
     }
 }
 
-/* MAP */
+/* INIT MAP */
 function initMap(){
 
     if(map){
@@ -313,24 +337,17 @@ function initMap(){
 
     map = L.map("map");
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution:"© OpenStreetMap"
-        }
-    ).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        attribution:"© OpenStreetMap"
+    }).addTo(map);
 
     let bounds = [];
 
-    allData.forEach(item=>{
+    allData.forEach((item,index)=>{
 
-        if(!item.lat || !item.lng){
-            return;
-        }
+        if(!item.lat || !item.lng) return;
 
-        let marker =
-        L.marker([item.lat,item.lng])
-        .addTo(map);
+        let marker = L.marker([item.lat,item.lng]).addTo(map);
 
         marker.bindPopup(`
             <b>${item.type}</b><br>
@@ -339,12 +356,11 @@ function initMap(){
             🚶 ${item.distance}
         `);
 
-        propertyMarkers.push(marker);
-
+        markers[index] = marker;
         bounds.push([item.lat,item.lng]);
     });
 
-    if(bounds.length > 0){
+    if(bounds.length){
         map.fitBounds(bounds,{padding:[50,50]});
     }else{
         map.setView([-0.39,37.81],13);
@@ -357,7 +373,7 @@ function viewOnMap(index){
     const item = allData[index];
 
     if(!item.lat || !item.lng){
-        alert("Coordinates not available for this property.");
+        alert("No coordinates for this property.");
         return;
     }
 
@@ -367,13 +383,10 @@ function viewOnMap(index){
 
     setTimeout(()=>{
 
-        map.setView(
-            [item.lat,item.lng],
-            17
-        );
+        map.setView([item.lat,item.lng],17);
 
-        if(propertyMarkers[index]){
-            propertyMarkers[index].openPopup();
+        if(markers[index]){
+            markers[index].openPopup();
         }
 
     },300);
