@@ -5,74 +5,25 @@
 <title>DeKUT Landlord Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-    font-family:Arial;
-    margin:0;
-    background:#f7f7f7;
-}
-
-.container{
-    max-width:600px;
-    margin:auto;
-    padding:20px;
-}
-
-.card{
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-
-input, select{
-    width:100%;
-    padding:10px;
-    margin:8px 0;
-    border:1px solid #ddd;
-    border-radius:10px;
-}
-
-button{
-    width:100%;
-    padding:12px;
-    background:#ff385c;
-    color:white;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-}
-
-#previewContainer{
-    display:flex;
-    gap:5px;
-    flex-wrap:wrap;
-    margin-top:10px;
-}
-
-#previewContainer img{
-    width:70px;
-    height:70px;
-    object-fit:cover;
-    border-radius:8px;
-}
-
-#status{
-    margin-top:10px;
-    font-weight:bold;
-}
+body{font-family:Arial;margin:0;background:#f7f7f7;}
+.container{max-width:600px;margin:auto;padding:20px;}
+.card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
+input,select{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:10px;}
+button{width:100%;padding:12px;background:#ff385c;color:#fff;border:none;border-radius:10px;cursor:pointer;}
+#previewContainer{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+#previewContainer img{width:70px;height:70px;object-fit:cover;border-radius:8px;}
+#status{margin-top:10px;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
 <div class="container">
-
 <div class="card">
 
 <h2>🏠 Add Property</h2>
@@ -110,22 +61,18 @@ button{
 <div id="status">Idle</div>
 
 </div>
-
 </div>
 
 <script>
 
-/////////////////////////////////////////////////////
-// FIREBASE CONFIG (ADD YOUR OWN)
-/////////////////////////////////////////////////////
-
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXXX"
+  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain: "dekut-housing.firebaseapp.com",
+  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId: "dekut-housing",
+  storageBucket: "dekut-housing.appspot.com",
+  messagingSenderId: "784034754945",
+  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -133,103 +80,72 @@ firebase.initializeApp(firebaseConfig);
 const storage = firebase.storage();
 const db = firebase.database();
 
-/////////////////////////////////////////////////////
-// IMAGE PREVIEW
-/////////////////////////////////////////////////////
-
 document.getElementById("images").onchange = function(e){
-
-    const container = document.getElementById("previewContainer");
-    container.innerHTML = "";
-
-    for(let file of e.target.files){
-
-        const reader = new FileReader();
-
-        reader.onload = function(){
+    const c = document.getElementById("previewContainer");
+    c.innerHTML = "";
+    for(let f of e.target.files){
+        let r = new FileReader();
+        r.onload = e => {
             let img = document.createElement("img");
-            img.src = reader.result;
-            container.appendChild(img);
+            img.src = e.target.result;
+            c.appendChild(img);
         };
-
-        reader.readAsDataURL(file);
+        r.readAsDataURL(f);
     }
 };
 
-/////////////////////////////////////////////////////
-// PARALLEL IMAGE UPLOAD (FAST)
-/////////////////////////////////////////////////////
-
+// FAST PARALLEL UPLOAD
 async function uploadImages(files){
-
     let uploads = [];
-
     for(let file of files){
-
-        const ref = storage.ref("properties/" + Date.now() + "_" + file.name);
-
-        let task = ref.put(file).then(async ()=>{
-
-            return await ref.getDownloadURL();
-        });
-
-        uploads.push(task);
+        let ref = storage.ref("properties/" + Date.now() + "_" + file.name);
+        uploads.push(
+            ref.put(file).then(() => ref.getDownloadURL())
+        );
     }
-
     return await Promise.all(uploads);
 }
 
-/////////////////////////////////////////////////////
-// MAIN UPLOAD
-/////////////////////////////////////////////////////
-
 async function uploadProperty(){
 
-    const status = document.getElementById("status");
-    const files = document.getElementById("images").files;
+    let status = document.getElementById("status");
+    let files = document.getElementById("images").files;
 
     try{
 
-        // STEP 1
-        status.innerText = "Starting upload...";
+        status.innerText = "Uploading images...";
 
         let imageUrls = [];
-
         if(files.length > 0){
-            status.innerText = "Uploading images...";
             imageUrls = await uploadImages(files);
         }
 
-        // STEP 2
         status.innerText = "Saving property...";
 
         let property = {
-            type: document.getElementById("type").value,
-            rent: Number(document.getElementById("rent").value),
-            location: document.getElementById("location").value,
-            distance: Number(document.getElementById("distance").value),
-            gender: document.getElementById("gender").value,
-            amenities: document.getElementById("amenities").value,
-            phone: document.getElementById("phone").value,
-            extra: document.getElementById("extra").value,
+            type: type.value,
+            rent: Number(rent.value),
+            location: location.value,
+            distance: Number(distance.value),
+            gender: gender.value,
+            amenities: amenities.value,
+            phone: phone.value,
+            extra: extra.value,
             images: imageUrls,
             createdAt: Date.now()
         };
 
-        const newRef = db.ref("properties").push();
-        await newRef.set(property);
+        await db.ref("properties").push(property);
 
-        // ✅ SUCCESS STATE
         status.innerText = "✅ Upload Successful!";
-        alert("Property uploaded successfully!");
+        alert("Property uploaded!");
 
-        // reset form (optional)
-        document.getElementById("images").value = "";
         document.getElementById("previewContainer").innerHTML = "";
+        document.getElementById("images").value = "";
 
-    } catch(err){
-        console.error(err);
-        status.innerText = "❌ Upload failed. Check internet or Firebase rules.";
+    }catch(err){
+        console.log(err);
+        status.innerText = "❌ Upload failed";
     }
 }
 
