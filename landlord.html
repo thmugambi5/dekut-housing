@@ -1,9 +1,29 @@
-<div class="card">
-<h2>🏠 Landlord Upload Form</h2>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Landlord Form</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- PROPERTY DETAILS -->
-<div class="section">
-<h3>Property Details</h3>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f5f5f5;margin:0;padding:15px;}
+.card{max-width:650px;margin:auto;background:#fff;padding:15px;border-radius:12px;}
+input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc;}
+button{background:#ff385c;color:#fff;border:none;cursor:pointer;}
+.amenitiesBox{background:#f1f1f1;padding:10px;border-radius:8px;margin:10px 0;}
+small{color:gray;}
+.preview{display:flex;flex-wrap:wrap;}
+.preview img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>🏠 Landlord Form</h2>
 
 <select id="type">
 <option>Bedsitter</option>
@@ -22,48 +42,131 @@
 <option>Mixed</option>
 </select>
 
-<input id="extra" placeholder="Extra Information">
-</div>
-
-<!-- CONTACT -->
-<div class="section">
-<h3>Contact</h3>
-
 <input id="phone" placeholder="Phone (Kenya format e.g. 2547XXXXXXXX)">
-</div>
+<small>Use Kenyan format starting with 254</small>
+
+<input id="extra" placeholder="Extra Information">
 
 <!-- AMENITIES -->
-<div class="section">
-<h3>Amenities</h3>
+<div class="amenitiesBox">
+<b>Amenities</b><br>
 
-<label><input type="checkbox" class="amenity" value="WiFi"> WiFi</label>
-<label><input type="checkbox" class="amenity" value="Water"> Water</label>
-<label><input type="checkbox" class="amenity" value="Electricity"> Electricity</label>
-<label><input type="checkbox" class="amenity" value="Furnished"> Furnished</label>
-<label><input type="checkbox" class="amenity" value="Parking"> Parking</label>
-<label><input type="checkbox" class="amenity" value="Security"> Security</label>
+<label><input type="checkbox" class="amenity" value="WiFi"> WiFi</label><br>
+<label><input type="checkbox" class="amenity" value="Water"> Water</label><br>
+<label><input type="checkbox" class="amenity" value="Electricity"> Electricity</label><br>
+<label><input type="checkbox" class="amenity" value="Furnished"> Furnished</label><br>
+<label><input type="checkbox" class="amenity" value="Parking"> Parking</label><br>
+<label><input type="checkbox" class="amenity" value="Security"> Security</label><br>
+<label><input type="checkbox" class="amenity" value="Balcony"> Balcony</label><br>
+
+</div>
 
 <input id="extraAmenities" placeholder="Other amenities">
-</div>
 
-<!-- PHOTOS -->
-<div class="section">
-<h3>Photos</h3>
-
+<!-- IMAGES -->
 <input type="file" id="images" multiple>
 <div class="preview" id="preview"></div>
-</div>
 
-<!-- LOCATION (NOW LAST) -->
-<div class="section">
-<h3>Location</h3>
+<!-- ✅ LOCATION TEXT FIRST (FIXED ORDER) -->
+<input id="location" placeholder="Location (e.g. Bomas, Nanyuki)">
 
-<button onclick="getLocation()">📍 Share GPS Location</button>
+<!-- GPS AFTER LOCATION -->
+<button onclick="getLocation()">📍 Share Location</button>
 <p id="locStatus">No location selected</p>
 
-<input id="location" placeholder="Estate / Area (e.g. Bomas, Nanyuki)">
-</div>
-
-<!-- UPLOAD BUTTON -->
+<!-- UPLOAD LAST -->
 <button onclick="upload()">Upload Property</button>
 </div>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain: "dekut-housing.firebaseapp.com",
+  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId: "dekut-housing",
+  storageBucket: "dekut-housing.appspot.com",
+  messagingSenderId: "784034754945",
+  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let lat = "", lng = "";
+
+/* LOCATION */
+function getLocation(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    lat = pos.coords.latitude;
+    lng = pos.coords.longitude;
+    document.getElementById("locStatus").innerText = "Location captured ✔";
+  });
+}
+
+/* IMAGES */
+function toBase64(file){
+  return new Promise(res=>{
+    let r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.readAsDataURL(file);
+  });
+}
+
+document.getElementById("images").onchange = async e=>{
+  let preview = document.getElementById("preview");
+  preview.innerHTML = "";
+
+  for(let f of e.target.files){
+    let img = document.createElement("img");
+    img.src = await toBase64(f);
+    preview.appendChild(img);
+  }
+};
+
+/* UPLOAD */
+async function upload(){
+
+  if(!lat || !lng){
+    alert("Share location first");
+    return;
+  }
+
+  let files = document.getElementById("images").files;
+  let images = [];
+
+  for(let f of files){
+    images.push(await toBase64(f));
+  }
+
+  let selected = [];
+  document.querySelectorAll(".amenity:checked").forEach(a=>{
+    selected.push(a.value);
+  });
+
+  let extraA = document.getElementById("extraAmenities").value;
+
+  let amenities = selected.join(", ");
+  if(extraA) amenities += (amenities ? ", " : "") + extraA;
+
+  db.ref("properties").push({
+    type: type.value,
+    rent: rent.value,
+    gender: gender.value,
+    phone: phone.value,
+    extra: extra.value,
+    location: location.value,
+    amenities,
+    lat,
+    lng,
+    images,
+    createdAt: Date.now()
+  });
+
+  alert("Uploaded ✔");
+}
+
+</script>
+
+</body>
+</html>
