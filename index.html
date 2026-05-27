@@ -2,15 +2,17 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Pro</title>
+<title>DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Firebase -->
+<!-- Firebase CORE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<!-- Firebase REALTIME DATABASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
 body{
@@ -124,33 +126,11 @@ button{
 <body>
 
 <header>
-
-<h2>🏠 DeKUT Housing Pro</h2>
+<h2>🏠 DeKUT Housing</h2>
 
 <div class="top-bar">
 
 <input id="search" placeholder="Search..." onkeyup="applyFilters()">
-
-<select id="rentFilter" onchange="applyFilters()">
-<option value="">All Rent</option>
-<option value="low">Under 5,000</option>
-<option value="mid">5,000 - 10,000</option>
-<option value="high">10,000+</option>
-</select>
-
-<select id="typeFilter" onchange="applyFilters()">
-<option value="">All Types</option>
-<option value="bedsitter">Bedsitter</option>
-<option value="one bedroom">One Bedroom</option>
-<option value="shared">Shared</option>
-</select>
-
-<select id="genderFilter" onchange="applyFilters()">
-<option value="">Any Gender</option>
-<option value="male">Male</option>
-<option value="female">Female</option>
-<option value="any">Any</option>
-</select>
 
 <button onclick="toggleMap()">🗺 Map</button>
 
@@ -166,99 +146,59 @@ button{
 
 <script>
 
-/////////////////////////////////////////////////////////
-// 🔥 FIREBASE CONFIG (PASTE YOUR CONFIG HERE LATER)
-/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+// FIREBASE CONFIG
+/////////////////////////////////////////////////////
 
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT.firebaseapp.com",
   projectId: "YOUR_PROJECT_ID",
+  databaseURL: "YOUR_DATABASE_URL",
   storageBucket: "YOUR_PROJECT.appspot.com",
   messagingSenderId: "XXXX",
   appId: "XXXX"
 };
 
 firebase.initializeApp(firebaseConfig);
-const storage = firebase.storage();
 
-/////////////////////////////////////////////////////////
-// DATA SOURCE (Google Sheets CSV)
-/////////////////////////////////////////////////////////
+const db = firebase.database();
 
-const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
+/////////////////////////////////////////////////////
+// DATA
+/////////////////////////////////////////////////////
 
 let allData = [];
 let map;
 let isMap = false;
 let markers = [];
 
-/////////////////////////////////////////////////////////
-// SAFE CSV PARSER
-/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+// LOAD REALTIME DATA
+/////////////////////////////////////////////////////
 
-function parseCSV(text){
+function loadData(){
 
-    const rows = text.split("\n");
+    db.ref("properties").on("value", snapshot => {
 
-    let result = [];
+        let data = snapshot.val();
 
-    for(let i=1;i<rows.length;i++){
+        allData = [];
 
-        if(!rows[i].trim()) continue;
+        for(let id in data){
+            allData.push({
+                id,
+                ...data[id]
+            });
+        }
 
-        const cols = rows[i].split(",");
-
-        result.push({
-            type: cols[2] || "",
-            rent: parseInt(cols[3]) || 0,
-            location: cols[4] || "",
-            distance: cols[5] || "",
-            gender: cols[6] || "",
-            phone: cols[8] || "",
-            image: cols[11] || "",
-            lat: parseFloat(cols[12]) || null,
-            lng: parseFloat(cols[13]) || null
-        });
-    }
-
-    return result;
+        render(allData);
+    });
 }
 
-/////////////////////////////////////////////////////////
-// LOAD DATA
-/////////////////////////////////////////////////////////
-
-async function loadData(){
-
-    const res = await fetch(SHEET_URL);
-    const text = await res.text();
-
-    allData = parseCSV(text);
-
-    render(allData);
-}
-
-/////////////////////////////////////////////////////////
-// IMAGE (NOW FIREBASE READY)
-/////////////////////////////////////////////////////////
-
-function getImage(url){
-    if(!url) return "";
-
-    // If already Firebase URL
-    if(url.includes("firebasestorage.googleapis.com")){
-        return url;
-    }
-
-    // fallback (future uploads will always be Firebase)
-    return url;
-}
-
-/////////////////////////////////////////////////////////
-// RENDER GRID
-/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+// RENDER
+/////////////////////////////////////////////////////
 
 function render(data){
 
@@ -267,13 +207,7 @@ function render(data){
 
     data.forEach((item,index)=>{
 
-        let img = getImage(item.image);
-
-        let phone = (item.phone || "").replace(/\D/g,'');
-
-        if(phone.startsWith("0")){
-            phone = "254" + phone.substring(1);
-        }
+        let img = item.image || "";
 
         grid.innerHTML += `
         <div class="card">
@@ -285,19 +219,18 @@ function render(data){
                 <div class="title">${item.type}</div>
                 <div class="price">KSh ${item.rent}</div>
 
-                <div class="meta">📍 ${item.location}</div>
-                <div class="meta">🚶 ${item.distance}</div>
-                <div class="meta">🚻 ${item.gender}</div>
+                <div class="meta">${item.location}</div>
+                <div class="meta">${item.distance}</div>
 
                 <a class="whatsapp"
-                   href="https://wa.me/${phone}"
+                   href="https://wa.me/${item.phone}"
                    target="_blank">
                    WhatsApp
                 </a>
 
                 <button class="map-btn"
                         onclick="viewOnMap(${index})">
-                    📍 View on Map
+                    View on Map
                 </button>
 
             </div>
@@ -305,44 +238,9 @@ function render(data){
     });
 }
 
-/////////////////////////////////////////////////////////
-// FILTERS
-/////////////////////////////////////////////////////////
-
-function applyFilters(){
-
-    const search = document.getElementById("search").value.toLowerCase();
-    const rentFilter = document.getElementById("rentFilter").value;
-    const typeFilter = document.getElementById("typeFilter").value;
-    const genderFilter = document.getElementById("genderFilter").value;
-
-    let filtered = allData.filter(item=>{
-
-        let matchSearch =
-        (item.location + item.type)
-        .toLowerCase()
-        .includes(search);
-
-        let matchRent = true;
-        if(rentFilter === "low") matchRent = item.rent < 5000;
-        if(rentFilter === "mid") matchRent = item.rent >= 5000 && item.rent <= 10000;
-        if(rentFilter === "high") matchRent = item.rent > 10000;
-
-        let matchType = true;
-        if(typeFilter) matchType = (item.type || "").toLowerCase().includes(typeFilter);
-
-        let matchGender = true;
-        if(genderFilter) matchGender = (item.gender || "").toLowerCase().includes(genderFilter);
-
-        return matchSearch && matchRent && matchType && matchGender;
-    });
-
-    render(filtered);
-}
-
-/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
 // MAP
-/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
 
 function toggleMap(){
 
@@ -366,13 +264,11 @@ function initMap(){
         return;
     }
 
-    map = L.map("map");
+    map = L.map("map").setView([-0.39,37.81],13);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
         attribution:"© OpenStreetMap"
     }).addTo(map);
-
-    let bounds = [];
 
     allData.forEach((item,index)=>{
 
@@ -382,32 +278,19 @@ function initMap(){
 
         marker.bindPopup(`
             <b>${item.type}</b><br>
-            KSh ${item.rent}<br>
-            📍 ${item.location}
+            KSh ${item.rent}
         `);
 
         markers[index] = marker;
-
-        bounds.push([item.lat,item.lng]);
     });
-
-    if(bounds.length){
-        map.fitBounds(bounds,{padding:[50,50]});
-    }else{
-        map.setView([-0.39,37.81],13);
-    }
 }
-
-/////////////////////////////////////////////////////////
-// VIEW ON MAP
-/////////////////////////////////////////////////////////
 
 function viewOnMap(index){
 
-    const item = allData[index];
+    let item = allData[index];
 
     if(!item.lat || !item.lng){
-        alert("No coordinates available.");
+        alert("No coordinates");
         return;
     }
 
@@ -416,13 +299,7 @@ function viewOnMap(index){
     }
 
     setTimeout(()=>{
-
         map.setView([item.lat,item.lng],17);
-
-        if(markers[index]){
-            markers[index].openPopup();
-        }
-
     },300);
 }
 
