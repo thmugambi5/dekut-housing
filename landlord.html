@@ -2,12 +2,17 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard - DeKUT Housing</title>
+<title>Landlord Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
+<!-- Firebase CORE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+
+<!-- Firebase STORAGE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<!-- Firebase REALTIME DATABASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
 body{
@@ -45,14 +50,13 @@ button{
     border:none;
     border-radius:10px;
     cursor:pointer;
-    margin-top:10px;
 }
 
-.preview{
+#preview{
     width:100%;
     margin-top:10px;
-    border-radius:10px;
     display:none;
+    border-radius:10px;
 }
 </style>
 </head>
@@ -65,12 +69,9 @@ button{
 
 <h2>🏠 Add Property</h2>
 
-<input id="type" placeholder="Property Type (Bedsitter, One Bedroom...)">
-
+<input id="type" placeholder="Property Type">
 <input id="rent" type="number" placeholder="Rent (KSh)">
-
 <input id="location" placeholder="Location">
-
 <input id="distance" placeholder="Distance from DeKUT">
 
 <select id="gender">
@@ -80,14 +81,12 @@ button{
 </select>
 
 <input id="phone" placeholder="Phone / WhatsApp">
-
 <input id="lat" placeholder="Latitude">
-
 <input id="lng" placeholder="Longitude">
 
 <input type="file" id="image">
 
-<img id="preview" class="preview">
+<img id="preview">
 
 <button onclick="uploadProperty()">Upload Property</button>
 
@@ -100,7 +99,7 @@ button{
 <script>
 
 /////////////////////////////////////////////////////
-// FIREBASE CONFIG (PUT YOUR REAL CONFIG HERE)
+// FIREBASE CONFIG (ADD YOUR OWN LATER)
 /////////////////////////////////////////////////////
 
 const firebaseConfig = {
@@ -113,7 +112,9 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const storage = firebase.storage();
+const db = firebase.database();
 
 /////////////////////////////////////////////////////
 // IMAGE PREVIEW
@@ -126,16 +127,16 @@ document.getElementById("image").onchange = function(e){
     if(file){
         const reader = new FileReader();
         reader.onload = function(){
-            const img = document.getElementById("preview");
+            let img = document.getElementById("preview");
             img.src = reader.result;
             img.style.display = "block";
-        }
+        };
         reader.readAsDataURL(file);
     }
 };
 
 /////////////////////////////////////////////////////
-// UPLOAD IMAGE TO FIREBASE
+// UPLOAD IMAGE
 /////////////////////////////////////////////////////
 
 async function uploadImage(file){
@@ -148,14 +149,13 @@ async function uploadImage(file){
 }
 
 /////////////////////////////////////////////////////
-// SUBMIT PROPERTY (MAIN FUNCTION)
+// MAIN UPLOAD FUNCTION
 /////////////////////////////////////////////////////
 
 async function uploadProperty(){
 
-    let file = document.getElementById("image").files[0];
-
     let status = document.getElementById("status");
+    let file = document.getElementById("image").files[0];
 
     status.innerText = "Uploading...";
 
@@ -165,23 +165,24 @@ async function uploadProperty(){
         imageUrl = await uploadImage(file);
     }
 
-    let data = {
+    let property = {
         type: document.getElementById("type").value,
-        rent: document.getElementById("rent").value,
+        rent: Number(document.getElementById("rent").value),
         location: document.getElementById("location").value,
         distance: document.getElementById("distance").value,
         gender: document.getElementById("gender").value,
         phone: document.getElementById("phone").value,
-        lat: document.getElementById("lat").value,
-        lng: document.getElementById("lng").value,
-        image: imageUrl
+        lat: Number(document.getElementById("lat").value),
+        lng: Number(document.getElementById("lng").value),
+        image: imageUrl,
+        createdAt: Date.now()
     };
 
-    console.log("PROPERTY DATA:", data);
+    const newRef = db.ref("properties").push();
+    await newRef.set(property);
 
-    status.innerText = "Uploaded successfully! (Next step: connect to database)";
-
-    alert("Property uploaded. Next we connect it to your main site database.");
+    status.innerText = "Saved successfully!";
+    alert("Property uploaded!");
 }
 
 </script>
