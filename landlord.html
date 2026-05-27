@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Landlord Dashboard - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<style>
+body{
+    font-family:Arial;
+    margin:0;
+    background:#f7f7f7;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+input, select{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border:1px solid #ddd;
+    border-radius:10px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    background:#ff385c;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+.preview{
+    width:100%;
+    margin-top:10px;
+    border-radius:10px;
+    display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<h2>🏠 Add Property</h2>
+
+<input id="type" placeholder="Property Type (Bedsitter, One Bedroom...)">
+
+<input id="rent" type="number" placeholder="Rent (KSh)">
+
+<input id="location" placeholder="Location">
+
+<input id="distance" placeholder="Distance from DeKUT">
+
+<select id="gender">
+<option>Any</option>
+<option>Male</option>
+<option>Female</option>
+</select>
+
+<input id="phone" placeholder="Phone / WhatsApp">
+
+<input id="lat" placeholder="Latitude">
+
+<input id="lng" placeholder="Longitude">
+
+<input type="file" id="image">
+
+<img id="preview" class="preview">
+
+<button onclick="uploadProperty()">Upload Property</button>
+
+<p id="status"></p>
+
+</div>
+
+</div>
+
+<script>
+
+/////////////////////////////////////////////////////
+// FIREBASE CONFIG (PUT YOUR REAL CONFIG HERE)
+/////////////////////////////////////////////////////
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+
+/////////////////////////////////////////////////////
+// IMAGE PREVIEW
+/////////////////////////////////////////////////////
+
+document.getElementById("image").onchange = function(e){
+
+    const file = e.target.files[0];
+
+    if(file){
+        const reader = new FileReader();
+        reader.onload = function(){
+            const img = document.getElementById("preview");
+            img.src = reader.result;
+            img.style.display = "block";
+        }
+        reader.readAsDataURL(file);
+    }
+};
+
+/////////////////////////////////////////////////////
+// UPLOAD IMAGE TO FIREBASE
+/////////////////////////////////////////////////////
+
+async function uploadImage(file){
+
+    const ref = storage.ref("properties/" + Date.now() + "_" + file.name);
+
+    await ref.put(file);
+
+    return await ref.getDownloadURL();
+}
+
+/////////////////////////////////////////////////////
+// SUBMIT PROPERTY (MAIN FUNCTION)
+/////////////////////////////////////////////////////
+
+async function uploadProperty(){
+
+    let file = document.getElementById("image").files[0];
+
+    let status = document.getElementById("status");
+
+    status.innerText = "Uploading...";
+
+    let imageUrl = "";
+
+    if(file){
+        imageUrl = await uploadImage(file);
+    }
+
+    let data = {
+        type: document.getElementById("type").value,
+        rent: document.getElementById("rent").value,
+        location: document.getElementById("location").value,
+        distance: document.getElementById("distance").value,
+        gender: document.getElementById("gender").value,
+        phone: document.getElementById("phone").value,
+        lat: document.getElementById("lat").value,
+        lng: document.getElementById("lng").value,
+        image: imageUrl
+    };
+
+    console.log("PROPERTY DATA:", data);
+
+    status.innerText = "Uploaded successfully! (Next step: connect to database)";
+
+    alert("Property uploaded. Next we connect it to your main site database.");
+}
+
+</script>
+
+</body>
+</html>
