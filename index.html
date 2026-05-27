@@ -101,6 +101,17 @@ button{
     text-decoration:none;
 }
 
+.map-btn{
+    width:100%;
+    margin-top:8px;
+    background:#4285F4;
+    color:white;
+    border:none;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
 #map{
     height:550px;
     display:none;
@@ -146,6 +157,7 @@ const SHEET_URL =
 let allData = [];
 let map;
 let isMap = false;
+let propertyMarkers = [];
 
 /* LOAD */
 async function loadData() {
@@ -158,7 +170,7 @@ async function loadData() {
     render(allData);
 }
 
-/* CSV PARSER */
+/* CSV */
 function parseCSV(text){
 
     return text
@@ -189,19 +201,19 @@ function render(data){
 
     grid.innerHTML = "";
 
-    data.forEach(item=>{
+    data.forEach((item,index)=>{
 
         let img = item.image || "";
 
         if(img.includes("drive.google")){
-            let id = img.match(/[-\w]{25,}/);
+            let id = img.match(/[-\\w]{25,}/);
 
             if(id){
                 img = `https://lh3.googleusercontent.com/d/${id[0]}`;
             }
         }
 
-        let phone = item.phone.replace(/\D/g,'');
+        let phone = (item.phone || "").replace(/\D/g,'');
 
         if(phone.startsWith("0")){
             phone = "254" + phone.substring(1);
@@ -239,6 +251,12 @@ function render(data){
                 target="_blank">
                 Contact on WhatsApp
                 </a>
+
+                <button
+                class="map-btn"
+                onclick="viewOnMap(${index})">
+                📍 View on Map
+                </button>
 
             </div>
 
@@ -321,6 +339,8 @@ function initMap(){
             🚶 ${item.distance}
         `);
 
+        propertyMarkers.push(marker);
+
         bounds.push([item.lat,item.lng]);
     });
 
@@ -329,6 +349,34 @@ function initMap(){
     }else{
         map.setView([-0.39,37.81],13);
     }
+}
+
+/* VIEW ON MAP */
+function viewOnMap(index){
+
+    const item = allData[index];
+
+    if(!item.lat || !item.lng){
+        alert("Coordinates not available for this property.");
+        return;
+    }
+
+    if(!isMap){
+        toggleMap();
+    }
+
+    setTimeout(()=>{
+
+        map.setView(
+            [item.lat,item.lng],
+            17
+        );
+
+        if(propertyMarkers[index]){
+            propertyMarkers[index].openPopup();
+        }
+
+    },300);
 }
 
 loadData();
