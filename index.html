@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
 <style>
 body{
     margin:0;
@@ -156,12 +160,31 @@ button{
 <div class="container">
 
 <div id="map"></div>
-
 <div id="grid" class="grid">Loading...</div>
 
 </div>
 
 <script>
+
+/////////////////////////////////////////////////////////
+// 🔥 FIREBASE CONFIG (PASTE YOUR CONFIG HERE LATER)
+/////////////////////////////////////////////////////////
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+
+/////////////////////////////////////////////////////////
+// DATA SOURCE (Google Sheets CSV)
+/////////////////////////////////////////////////////////
 
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
@@ -171,24 +194,10 @@ let map;
 let isMap = false;
 let markers = [];
 
-/* 🔥 FIXED IMAGE CONVERTER (RECOMMENDED) */
-function convertDriveImage(url){
+/////////////////////////////////////////////////////////
+// SAFE CSV PARSER
+/////////////////////////////////////////////////////////
 
-    if(!url) return "";
-
-    if(url.includes("drive.google.com")){
-
-        let match = url.match(/\/d\/(.*?)\//);
-
-        if(match && match[1]){
-            return "https://drive.google.com/uc?export=view&id=" + match[1];
-        }
-    }
-
-    return url;
-}
-
-/* SAFE CSV PARSER */
 function parseCSV(text){
 
     const rows = text.split("\n");
@@ -217,7 +226,10 @@ function parseCSV(text){
     return result;
 }
 
-/* LOAD DATA */
+/////////////////////////////////////////////////////////
+// LOAD DATA
+/////////////////////////////////////////////////////////
+
 async function loadData(){
 
     const res = await fetch(SHEET_URL);
@@ -228,7 +240,26 @@ async function loadData(){
     render(allData);
 }
 
-/* RENDER */
+/////////////////////////////////////////////////////////
+// IMAGE (NOW FIREBASE READY)
+/////////////////////////////////////////////////////////
+
+function getImage(url){
+    if(!url) return "";
+
+    // If already Firebase URL
+    if(url.includes("firebasestorage.googleapis.com")){
+        return url;
+    }
+
+    // fallback (future uploads will always be Firebase)
+    return url;
+}
+
+/////////////////////////////////////////////////////////
+// RENDER GRID
+/////////////////////////////////////////////////////////
+
 function render(data){
 
     let grid = document.getElementById("grid");
@@ -236,7 +267,7 @@ function render(data){
 
     data.forEach((item,index)=>{
 
-        let img = convertDriveImage(item.image);
+        let img = getImage(item.image);
 
         let phone = (item.phone || "").replace(/\D/g,'');
 
@@ -245,7 +276,6 @@ function render(data){
         }
 
         grid.innerHTML += `
-
         <div class="card">
 
             ${img ? `<img src="${img}">` : ""}
@@ -271,13 +301,14 @@ function render(data){
                 </button>
 
             </div>
-
-        </div>
-        `;
+        </div>`;
     });
 }
 
-/* FILTERS */
+/////////////////////////////////////////////////////////
+// FILTERS
+/////////////////////////////////////////////////////////
+
 function applyFilters(){
 
     const search = document.getElementById("search").value.toLowerCase();
@@ -309,7 +340,10 @@ function applyFilters(){
     render(filtered);
 }
 
-/* MAP TOGGLE */
+/////////////////////////////////////////////////////////
+// MAP
+/////////////////////////////////////////////////////////
+
 function toggleMap(){
 
     isMap = !isMap;
@@ -325,7 +359,6 @@ function toggleMap(){
     }
 }
 
-/* INIT MAP */
 function initMap(){
 
     if(map){
@@ -350,11 +383,11 @@ function initMap(){
         marker.bindPopup(`
             <b>${item.type}</b><br>
             KSh ${item.rent}<br>
-            📍 ${item.location}<br>
-            🚶 ${item.distance}
+            📍 ${item.location}
         `);
 
         markers[index] = marker;
+
         bounds.push([item.lat,item.lng]);
     });
 
@@ -365,13 +398,16 @@ function initMap(){
     }
 }
 
-/* VIEW ON MAP */
+/////////////////////////////////////////////////////////
+// VIEW ON MAP
+/////////////////////////////////////////////////////////
+
 function viewOnMap(index){
 
     const item = allData[index];
 
     if(!item.lat || !item.lng){
-        alert("No coordinates for this property.");
+        alert("No coordinates available.");
         return;
     }
 
