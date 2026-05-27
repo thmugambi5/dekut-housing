@@ -15,7 +15,6 @@ body{
     background:#f7f7f7;
 }
 
-/* HEADER */
 header{
     background:white;
     padding:15px;
@@ -48,7 +47,6 @@ button{
     cursor:pointer;
 }
 
-/* LAYOUT */
 .container{
     padding:20px;
 }
@@ -59,7 +57,6 @@ button{
     gap:15px;
 }
 
-/* CARD */
 .card{
     background:white;
     border-radius:15px;
@@ -113,7 +110,6 @@ button{
     cursor:pointer;
 }
 
-/* MAP */
 #map{
     height:550px;
     display:none;
@@ -129,7 +125,7 @@ button{
 
 <div class="top-bar">
 
-<input id="search" placeholder="Search location or type..." onkeyup="applyFilters()">
+<input id="search" placeholder="Search..." onkeyup="applyFilters()">
 
 <select id="rentFilter" onchange="applyFilters()">
 <option value="">All Rent</option>
@@ -161,9 +157,7 @@ button{
 
 <div id="map"></div>
 
-<div id="grid" class="grid">
-Loading listings...
-</div>
+<div id="grid" class="grid">Loading...</div>
 
 </div>
 
@@ -177,23 +171,35 @@ let map;
 let isMap = false;
 let markers = [];
 
-/* SAFE CSV PARSER (FIXES COMMAS ISSUE) */
+/* 🔥 FIXED IMAGE CONVERTER (RECOMMENDED) */
+function convertDriveImage(url){
+
+    if(!url) return "";
+
+    if(url.includes("drive.google.com")){
+
+        let match = url.match(/\/d\/(.*?)\//);
+
+        if(match && match[1]){
+            return "https://drive.google.com/uc?export=view&id=" + match[1];
+        }
+    }
+
+    return url;
+}
+
+/* SAFE CSV PARSER */
 function parseCSV(text){
 
     const rows = text.split("\n");
-    const headers = rows[0].split(",");
 
     let result = [];
 
     for(let i=1;i<rows.length;i++){
 
-        let row = rows[i];
+        if(!rows[i].trim()) continue;
 
-        if(!row.trim()) continue;
-
-        let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
-
-        if(!cols) continue;
+        const cols = rows[i].split(",");
 
         result.push({
             type: cols[2] || "",
@@ -211,7 +217,7 @@ function parseCSV(text){
     return result;
 }
 
-/* LOAD */
+/* LOAD DATA */
 async function loadData(){
 
     const res = await fetch(SHEET_URL);
@@ -230,14 +236,7 @@ function render(data){
 
     data.forEach((item,index)=>{
 
-        let img = item.image || "";
-
-        if(img.includes("drive.google")){
-            let id = img.match(/[-\w]{25,}/);
-            if(id){
-                img = `https://lh3.googleusercontent.com/d/${id[0]}`;
-            }
-        }
+        let img = convertDriveImage(item.image);
 
         let phone = (item.phone || "").replace(/\D/g,'');
 
@@ -254,7 +253,6 @@ function render(data){
             <div class="content">
 
                 <div class="title">${item.type}</div>
-
                 <div class="price">KSh ${item.rent}</div>
 
                 <div class="meta">📍 ${item.location}</div>
@@ -311,7 +309,7 @@ function applyFilters(){
     render(filtered);
 }
 
-/* MAP */
+/* MAP TOGGLE */
 function toggleMap(){
 
     isMap = !isMap;
