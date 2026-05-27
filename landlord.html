@@ -9,22 +9,72 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f5f5f5;margin:0;padding:15px;}
-.card{max-width:650px;margin:auto;background:#fff;padding:15px;border-radius:12px;}
-input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc;}
-button{background:#ff385c;color:#fff;border:none;cursor:pointer;}
-.amenitiesBox{background:#f1f1f1;padding:10px;border-radius:8px;margin:10px 0;}
-small{color:gray;}
-.preview{display:flex;flex-wrap:wrap;}
-.preview img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
+body{
+    font-family:Arial;
+    background:#f5f5f5;
+    margin:0;
+    padding:15px;
+}
+.card{
+    max-width:650px;
+    margin:auto;
+    background:#fff;
+    padding:15px;
+    border-radius:12px;
+}
+input,select,button{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+}
+button{
+    background:#ff385c;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+}
+.amenitiesBox{
+    background:#f1f1f1;
+    padding:10px;
+    border-radius:8px;
+    margin:10px 0;
+}
+small{
+    color:gray;
+    display:block;
+    margin-top:3px;
+}
+.warning{
+    color:#c62828;
+    font-weight:bold;
+}
+.preview{
+    display:flex;
+    flex-wrap:wrap;
+}
+.preview img{
+    width:70px;
+    height:70px;
+    object-fit:cover;
+    margin:5px;
+    border-radius:8px;
+}
+label{
+    font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 
 <div class="card">
+
 <h2>🏠 Landlord Form</h2>
 
+<label>🏠 House Type</label>
 <select id="type">
 <option>Bedsitter</option>
 <option>Single Room</option>
@@ -33,8 +83,13 @@ small{color:gray;}
 <option>Shared Single Room</option>
 </select>
 
-<input id="rent" placeholder="Rent (KSh)">
+<label>💰 Monthly Rent (KSh)</label>
+<input id="rent" type="number" placeholder="e.g. 5500">
 
+<label>💳 Deposit Amount (KSh)</label>
+<input id="deposit" type="number" placeholder="e.g. 3000">
+
+<label>👥 Preferred Occupants</label>
 <select id="gender">
 <option>Any Gender</option>
 <option>Male Only</option>
@@ -42,14 +97,32 @@ small{color:gray;}
 <option>Mixed</option>
 </select>
 
-<input id="phone" placeholder="Phone (Kenya format e.g. 2547XXXXXXXX)">
-<small>Use Kenyan format starting with 254</small>
+<label>📌 Availability Status</label>
+<select id="availability">
+<option>Available</option>
+<option>Occupied</option>
+</select>
 
-<input id="extra" placeholder="Extra Information">
+<label>🚪 Number of Rooms Available</label>
+<input id="roomsAvailable" type="number" min="1" placeholder="e.g. 2">
 
-<!-- AMENITIES -->
+<label>💡 Utilities Included In Rent?</label>
+<select id="utilities">
+<option>Yes</option>
+<option>No</option>
+<option>Partially Included</option>
+</select>
+
+<label>📞 Contact Number</label>
+<input id="phone" placeholder="e.g. 254712345678">
+<small>This number will be used for WhatsApp and phone calls.</small>
+
+<label>📝 Property Description</label>
+<input id="extra" placeholder="e.g. Spacious rooms, tiled floors, quiet environment">
+
 <div class="amenitiesBox">
-<b>Amenities</b><br>
+
+<b>🧰 Amenities</b><br><br>
 
 <label><input type="checkbox" class="amenity" value="WiFi"> WiFi</label><br>
 <label><input type="checkbox" class="amenity" value="Water"> Water</label><br>
@@ -57,25 +130,41 @@ small{color:gray;}
 <label><input type="checkbox" class="amenity" value="Furnished"> Furnished</label><br>
 <label><input type="checkbox" class="amenity" value="Parking"> Parking</label><br>
 <label><input type="checkbox" class="amenity" value="Security"> Security</label><br>
-<label><input type="checkbox" class="amenity" value="Balcony"> Balcony</label><br>
+<label><input type="checkbox" class="amenity" value="Balcony"> Balcony</label>
 
 </div>
 
-<input id="extraAmenities" placeholder="Other amenities">
+<label>➕ Other Amenities</label>
+<input id="extraAmenities"
+placeholder="e.g. CCTV, Laundry Area, Solar Water Heating">
 
-<!-- IMAGES -->
-<input type="file" id="images" multiple>
+<label>📸 Property Photos</label>
+<small>
+Upload one or more clear photos showing rooms, washrooms,
+compound and exterior of the property.
+</small>
+
+<input type="file" id="images" multiple accept="image/*">
+
 <div class="preview" id="preview"></div>
 
-<!-- ✅ LOCATION TEXT FIRST (FIXED ORDER) -->
-<input id="location" placeholder="Location (e.g. Bomas, Nanyuki)">
+<!-- LOCATION LAST -->
+<label>📍 Property Location</label>
+<input id="location"
+placeholder="e.g. Bomas, Embassy, Nyeri View">
 
-<!-- GPS AFTER LOCATION -->
+<small class="warning">
+⚠️ Important: Stand within the property compound/grounds before
+tapping "Share Location". This GPS location is used to place the
+property on the map and calculate the distance from DeKUT.
+</small>
+
 <button onclick="getLocation()">📍 Share Location</button>
+
 <p id="locStatus">No location selected</p>
 
-<!-- UPLOAD LAST -->
 <button onclick="upload()">Upload Property</button>
+
 </div>
 
 <script>
@@ -93,77 +182,150 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let lat = "", lng = "";
+let lat = "";
+let lng = "";
+
+/* DEKUT COORDINATES */
+const DEKUT_LAT = -0.3977905;
+const DEKUT_LNG = 36.9608515;
+
+/* DISTANCE CALCULATOR */
+function calculateDistance(lat1, lon1, lat2, lon2){
+
+  const R = 6371;
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI/180) *
+    Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLon/2) *
+    Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return (R * c).toFixed(1);
+}
 
 /* LOCATION */
 function getLocation(){
+
   navigator.geolocation.getCurrentPosition(pos=>{
+
     lat = pos.coords.latitude;
     lng = pos.coords.longitude;
-    document.getElementById("locStatus").innerText = "Location captured ✔";
+
+    document.getElementById("locStatus").innerText =
+      "Location captured ✔";
+
   });
 }
 
-/* IMAGES */
+/* IMAGE TO BASE64 */
 function toBase64(file){
+
   return new Promise(res=>{
+
     let r = new FileReader();
+
     r.onload = ()=>res(r.result);
+
     r.readAsDataURL(file);
+
   });
+
 }
 
+/* IMAGE PREVIEW */
 document.getElementById("images").onchange = async e=>{
+
   let preview = document.getElementById("preview");
+
   preview.innerHTML = "";
 
   for(let f of e.target.files){
+
     let img = document.createElement("img");
+
     img.src = await toBase64(f);
+
     preview.appendChild(img);
+
   }
+
 };
 
 /* UPLOAD */
 async function upload(){
 
   if(!lat || !lng){
-    alert("Share location first");
+
+    alert("Please share location first.");
+
     return;
+
   }
 
   let files = document.getElementById("images").files;
+
   let images = [];
 
   for(let f of files){
+
     images.push(await toBase64(f));
+
   }
 
   let selected = [];
+
   document.querySelectorAll(".amenity:checked").forEach(a=>{
+
     selected.push(a.value);
+
   });
 
   let extraA = document.getElementById("extraAmenities").value;
 
   let amenities = selected.join(", ");
-  if(extraA) amenities += (amenities ? ", " : "") + extraA;
+
+  if(extraA){
+
+    amenities += (amenities ? ", " : "") + extraA;
+
+  }
+
+  const distance = calculateDistance(
+    parseFloat(lat),
+    parseFloat(lng),
+    DEKUT_LAT,
+    DEKUT_LNG
+  );
 
   db.ref("properties").push({
+
     type: type.value,
     rent: rent.value,
+    deposit: deposit.value,
     gender: gender.value,
+    availability: availability.value,
+    roomsAvailable: roomsAvailable.value,
+    utilities: utilities.value,
     phone: phone.value,
     extra: extra.value,
     location: location.value,
-    amenities,
-    lat,
-    lng,
-    images,
+    amenities: amenities,
+    lat: lat,
+    lng: lng,
+    distance: distance,
+    images: images,
     createdAt: Date.now()
+
   });
 
-  alert("Uploaded ✔");
+  alert("Property uploaded successfully ✔");
+
 }
 
 </script>
