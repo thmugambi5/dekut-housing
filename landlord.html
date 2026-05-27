@@ -30,10 +30,6 @@ body{
     box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-h2{
-    text-align:center;
-}
-
 input, select{
     width:100%;
     padding:10px;
@@ -64,6 +60,11 @@ button{
     height:70px;
     object-fit:cover;
     border-radius:8px;
+}
+
+#status{
+    margin-top:10px;
+    font-weight:bold;
 }
 </style>
 </head>
@@ -100,14 +101,13 @@ button{
 <input id="phone" placeholder="Phone / WhatsApp">
 <input id="extra" placeholder="Extra Info">
 
-<!-- MULTI IMAGE INPUT -->
 <input type="file" id="images" multiple>
 
 <div id="previewContainer"></div>
 
 <button onclick="uploadProperty()">Upload Property</button>
 
-<p id="status"></p>
+<div id="status">Idle</div>
 
 </div>
 
@@ -116,7 +116,7 @@ button{
 <script>
 
 /////////////////////////////////////////////////////
-// FIREBASE CONFIG
+// FIREBASE CONFIG (ADD YOUR OWN)
 /////////////////////////////////////////////////////
 
 const firebaseConfig = {
@@ -134,17 +134,15 @@ const storage = firebase.storage();
 const db = firebase.database();
 
 /////////////////////////////////////////////////////
-// IMAGE PREVIEW (MULTIPLE)
+// IMAGE PREVIEW
 /////////////////////////////////////////////////////
 
 document.getElementById("images").onchange = function(e){
 
-    const files = e.target.files;
     const container = document.getElementById("previewContainer");
-
     container.innerHTML = "";
 
-    for(let file of files){
+    for(let file of e.target.files){
 
         const reader = new FileReader();
 
@@ -159,63 +157,80 @@ document.getElementById("images").onchange = function(e){
 };
 
 /////////////////////////////////////////////////////
-// UPLOAD MULTIPLE IMAGES
+// PARALLEL IMAGE UPLOAD (FAST)
 /////////////////////////////////////////////////////
 
 async function uploadImages(files){
 
-    let urls = [];
+    let uploads = [];
 
     for(let file of files){
 
         const ref = storage.ref("properties/" + Date.now() + "_" + file.name);
 
-        await ref.put(file);
+        let task = ref.put(file).then(async ()=>{
 
-        let url = await ref.getDownloadURL();
+            return await ref.getDownloadURL();
+        });
 
-        urls.push(url);
+        uploads.push(task);
     }
 
-    return urls;
+    return await Promise.all(uploads);
 }
 
 /////////////////////////////////////////////////////
-// MAIN UPLOAD FUNCTION
+// MAIN UPLOAD
 /////////////////////////////////////////////////////
 
 async function uploadProperty(){
 
-    let status = document.getElementById("status");
-    let files = document.getElementById("images").files;
+    const status = document.getElementById("status");
+    const files = document.getElementById("images").files;
 
-    status.innerText = "Uploading images...";
+    try{
 
-    let imageUrls = [];
+        // STEP 1
+        status.innerText = "Starting upload...";
 
-    if(files.length > 0){
-        imageUrls = await uploadImages(files);
+        let imageUrls = [];
+
+        if(files.length > 0){
+            status.innerText = "Uploading images...";
+            imageUrls = await uploadImages(files);
+        }
+
+        // STEP 2
+        status.innerText = "Saving property...";
+
+        let property = {
+            type: document.getElementById("type").value,
+            rent: Number(document.getElementById("rent").value),
+            location: document.getElementById("location").value,
+            distance: Number(document.getElementById("distance").value),
+            gender: document.getElementById("gender").value,
+            amenities: document.getElementById("amenities").value,
+            phone: document.getElementById("phone").value,
+            extra: document.getElementById("extra").value,
+            images: imageUrls,
+            createdAt: Date.now()
+        };
+
+        const newRef = db.ref("properties").push();
+        await newRef.set(property);
+
+        // ✅ SUCCESS STATE
+        status.innerText = "✅ Upload Successful!";
+        alert("Property uploaded successfully!");
+
+        // reset form (optional)
+        document.getElementById("images").value = "";
+        document.getElementById("previewContainer").innerHTML = "";
+
+    } catch(err){
+        console.error(err);
+        status.innerText = "❌ Upload failed. Check internet or Firebase rules.";
     }
-
-    status.innerText = "Saving property...";
-
-    let property = {
-        type: document.getElementById("type").value,
-        rent: Number(document.getElementById("rent").value),
-        location: document.getElementById("location").value,
-        distance: Number(document.getElementById("distance").value),
-        gender: document.getElementById("gender").value,
-        amenities: document.getElementById("amenities").value,
-        phone: document.getElementById("phone").value,
-        extra: document.getElementById("extra").value,
-        images: imageUrls,   // 🔥 ARRAY NOW
-        createdAt: Date.now()
-    };
-
-    await db.ref("properties").push(property);
-
-    status.innerText = "✅ Property saved successfully!";
-    alert("Uploaded!");
 }
 
 </script>
