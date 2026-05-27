@@ -16,7 +16,7 @@ body{margin:0;font-family:Arial;background:#f6f6f6;}
 
 header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
 
-/* ✅ FILTER BAR */
+/* FILTER + SEARCH */
 .filters{
   background:#fff;
   padding:10px;
@@ -30,7 +30,7 @@ header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
   padding:6px;
   border:1px solid #ccc;
   border-radius:6px;
-  width:140px;
+  width:160px;
 }
 
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
@@ -62,13 +62,18 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 
 <header>🏠 DeKUT Housing</header>
 
-<!-- ✅ FILTER UI ADDED -->
+<!-- ✅ SEARCH + FILTER BAR -->
 <div class="filters">
+
+  <input id="searchBox" placeholder="Search (Bomas, wifi, bedsitter...)" oninput="applyFilters()">
+
   <input id="minRent" type="number" placeholder="Min Rent">
   <input id="maxRent" type="number" placeholder="Max Rent">
   <input id="maxDist" type="number" placeholder="Max Distance (km)">
+
   <button onclick="applyFilters()">Filter</button>
   <button onclick="resetFilters()">Reset</button>
+
 </div>
 
 <div class="grid" id="list"></div>
@@ -103,14 +108,9 @@ let filteredData={};
 /* LOAD */
 db.ref("properties").on("value",snap=>{
   data=snap.val()||{};
-  filteredData=data; // start unfiltered
+  filteredData=data;
   render();
 });
-
-/* DISTANCE CALC (optional safety) */
-function getDistance(p){
-  return parseFloat(p.distance || 999);
-}
 
 /* RENDER */
 function render(){
@@ -146,8 +146,10 @@ function render(){
   }
 }
 
-/* ✅ FILTER LOGIC */
+/* ✅ SEARCH + FILTER */
 function applyFilters(){
+
+  let search = document.getElementById("searchBox").value.toLowerCase();
 
   let min = parseInt(document.getElementById("minRent").value) || 0;
   let max = parseInt(document.getElementById("maxRent").value) || 999999;
@@ -159,9 +161,22 @@ function applyFilters(){
     let p=data[id];
 
     let rent = parseInt(p.rent || 0);
-    let distance = getDistance(p);
+    let distance = parseFloat(p.distance || 999);
 
-    if(rent>=min && rent<=max && distance<=dist){
+    let text = (
+      (p.location||"") + " " +
+      (p.type||"") + " " +
+      (p.amenities||"")
+    ).toLowerCase();
+
+    let matchesSearch = search==="" || text.includes(search);
+
+    if(
+      rent>=min &&
+      rent<=max &&
+      distance<=dist &&
+      matchesSearch
+    ){
       filteredData[id]=p;
     }
   }
@@ -173,6 +188,7 @@ function applyFilters(){
 function resetFilters(){
   filteredData=data;
 
+  document.getElementById("searchBox").value="";
   document.getElementById("minRent").value="";
   document.getElementById("maxRent").value="";
   document.getElementById("maxDist").value="";
