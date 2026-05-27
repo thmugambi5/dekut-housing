@@ -15,6 +15,7 @@ body{
     margin:0;
     padding:15px;
 }
+
 .card{
     max-width:650px;
     margin:auto;
@@ -22,6 +23,7 @@ body{
     padding:15px;
     border-radius:12px;
 }
+
 input,select,button{
     width:100%;
     padding:10px;
@@ -30,31 +32,50 @@ input,select,button{
     border:1px solid #ccc;
     box-sizing:border-box;
 }
+
 button{
     background:#ff385c;
     color:#fff;
     border:none;
     cursor:pointer;
 }
+
 .amenitiesBox{
     background:#f1f1f1;
-    padding:10px;
+    padding:12px;
     border-radius:8px;
     margin:10px 0;
 }
+
+/* ✅ FIXED ALIGNMENT */
+.amenity-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:6px 0;
+}
+
+.amenity-item input{
+    width:auto;
+    transform:scale(1.1);
+}
+
 small{
     color:gray;
     display:block;
     margin-top:3px;
 }
+
 .warning{
     color:#c62828;
     font-weight:bold;
 }
+
 .preview{
     display:flex;
     flex-wrap:wrap;
 }
+
 .preview img{
     width:70px;
     height:70px;
@@ -62,6 +83,7 @@ small{
     margin:5px;
     border-radius:8px;
 }
+
 label{
     font-weight:bold;
 }
@@ -104,7 +126,7 @@ label{
 </select>
 
 <label>🚪 Number of Rooms Available</label>
-<input id="roomsAvailable" type="number" min="1" placeholder="e.g. 2">
+<input id="roomsAvailable" type="number" placeholder="e.g. 2">
 
 <label>💡 Utilities Included In Rent?</label>
 <select id="utilities">
@@ -115,48 +137,64 @@ label{
 
 <label>📞 Contact Number</label>
 <input id="phone" placeholder="e.g. 254712345678">
-<small>This number will be used for WhatsApp and phone calls.</small>
+<small>Use Kenyan format starting with 254</small>
 
 <label>📝 Property Description</label>
 <input id="extra" placeholder="e.g. Spacious rooms, tiled floors, quiet environment">
 
 <div class="amenitiesBox">
+<b>🧰 Amenities</b>
 
-<b>🧰 Amenities</b><br><br>
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="WiFi">
+<label>WiFi</label>
+</div>
 
-<label><input type="checkbox" class="amenity" value="WiFi"> WiFi</label><br>
-<label><input type="checkbox" class="amenity" value="Water"> Water</label><br>
-<label><input type="checkbox" class="amenity" value="Electricity"> Electricity</label><br>
-<label><input type="checkbox" class="amenity" value="Furnished"> Furnished</label><br>
-<label><input type="checkbox" class="amenity" value="Parking"> Parking</label><br>
-<label><input type="checkbox" class="amenity" value="Security"> Security</label><br>
-<label><input type="checkbox" class="amenity" value="Balcony"> Balcony</label>
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Water">
+<label>Water</label>
+</div>
+
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Electricity">
+<label>Electricity</label>
+</div>
+
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Furnished">
+<label>Furnished</label>
+</div>
+
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Parking">
+<label>Parking</label>
+</div>
+
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Security">
+<label>Security</label>
+</div>
+
+<div class="amenity-item">
+<input type="checkbox" class="amenity" value="Balcony">
+<label>Balcony</label>
+</div>
 
 </div>
 
 <label>➕ Other Amenities</label>
-<input id="extraAmenities"
-placeholder="e.g. CCTV, Laundry Area, Solar Water Heating">
+<input id="extraAmenities" placeholder="e.g. CCTV, Laundry Area">
 
 <label>📸 Property Photos</label>
-<small>
-Upload one or more clear photos showing rooms, washrooms,
-compound and exterior of the property.
-</small>
-
 <input type="file" id="images" multiple accept="image/*">
 
 <div class="preview" id="preview"></div>
 
-<!-- LOCATION LAST -->
 <label>📍 Property Location</label>
-<input id="location"
-placeholder="e.g. Bomas, Embassy, Nyeri View">
+<input id="location" placeholder="e.g. Bomas, Embassy, Nyeri View">
 
 <small class="warning">
-⚠️ Important: Stand within the property compound/grounds before
-tapping "Share Location". This GPS location is used to place the
-property on the map and calculate the distance from DeKUT.
+⚠️ Stand inside the property before sharing location.
 </small>
 
 <button onclick="getLocation()">📍 Share Location</button>
@@ -185,147 +223,97 @@ const db = firebase.database();
 let lat = "";
 let lng = "";
 
-/* DEKUT COORDINATES */
 const DEKUT_LAT = -0.3977905;
 const DEKUT_LNG = 36.9608515;
 
-/* DISTANCE CALCULATOR */
 function calculateDistance(lat1, lon1, lat2, lon2){
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLon = (lon2-lon1)*Math.PI/180;
 
-  const R = 6371;
+    const a =
+      Math.sin(dLat/2)**2 +
+      Math.cos(lat1*Math.PI/180) *
+      Math.cos(lat2*Math.PI/180) *
+      Math.sin(dLon/2)**2;
 
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-
-  const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI/180) *
-    Math.cos(lat2 * Math.PI/180) *
-    Math.sin(dLon/2) *
-    Math.sin(dLon/2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return (R * c).toFixed(1);
+    return (2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
 }
 
-/* LOCATION */
 function getLocation(){
-
-  navigator.geolocation.getCurrentPosition(pos=>{
-
-    lat = pos.coords.latitude;
-    lng = pos.coords.longitude;
-
-    document.getElementById("locStatus").innerText =
-      "Location captured ✔";
-
-  });
+    navigator.geolocation.getCurrentPosition(pos=>{
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        document.getElementById("locStatus").innerText =
+        "Location captured ✔";
+    });
 }
 
-/* IMAGE TO BASE64 */
 function toBase64(file){
-
-  return new Promise(res=>{
-
-    let r = new FileReader();
-
-    r.onload = ()=>res(r.result);
-
-    r.readAsDataURL(file);
-
-  });
-
+    return new Promise(res=>{
+        let r = new FileReader();
+        r.onload = ()=>res(r.result);
+        r.readAsDataURL(file);
+    });
 }
 
-/* IMAGE PREVIEW */
 document.getElementById("images").onchange = async e=>{
+    let preview = document.getElementById("preview");
+    preview.innerHTML = "";
 
-  let preview = document.getElementById("preview");
-
-  preview.innerHTML = "";
-
-  for(let f of e.target.files){
-
-    let img = document.createElement("img");
-
-    img.src = await toBase64(f);
-
-    preview.appendChild(img);
-
-  }
-
+    for(let f of e.target.files){
+        let img = document.createElement("img");
+        img.src = await toBase64(f);
+        preview.appendChild(img);
+    }
 };
 
-/* UPLOAD */
 async function upload(){
 
-  if(!lat || !lng){
+    if(!lat || !lng){
+        alert("Please share location first");
+        return;
+    }
 
-    alert("Please share location first.");
+    let files = document.getElementById("images").files;
+    let images = [];
 
-    return;
+    for(let f of files){
+        images.push(await toBase64(f));
+    }
 
-  }
+    let selected = [];
+    document.querySelectorAll(".amenity:checked").forEach(a=>{
+        selected.push(a.value);
+    });
 
-  let files = document.getElementById("images").files;
+    let extraA = document.getElementById("extraAmenities").value;
 
-  let images = [];
+    let amenities = selected.join(", ");
+    if(extraA) amenities += (amenities?", ":"")+extraA;
 
-  for(let f of files){
+    const distance = calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
 
-    images.push(await toBase64(f));
+    db.ref("properties").push({
+        type:type.value,
+        rent:rent.value,
+        deposit:deposit.value,
+        gender:gender.value,
+        availability:availability.value,
+        roomsAvailable:roomsAvailable.value,
+        utilities:utilities.value,
+        phone:phone.value,
+        extra:extra.value,
+        location:location.value,
+        amenities,
+        lat,
+        lng,
+        distance,
+        images,
+        createdAt:Date.now()
+    });
 
-  }
-
-  let selected = [];
-
-  document.querySelectorAll(".amenity:checked").forEach(a=>{
-
-    selected.push(a.value);
-
-  });
-
-  let extraA = document.getElementById("extraAmenities").value;
-
-  let amenities = selected.join(", ");
-
-  if(extraA){
-
-    amenities += (amenities ? ", " : "") + extraA;
-
-  }
-
-  const distance = calculateDistance(
-    parseFloat(lat),
-    parseFloat(lng),
-    DEKUT_LAT,
-    DEKUT_LNG
-  );
-
-  db.ref("properties").push({
-
-    type: type.value,
-    rent: rent.value,
-    deposit: deposit.value,
-    gender: gender.value,
-    availability: availability.value,
-    roomsAvailable: roomsAvailable.value,
-    utilities: utilities.value,
-    phone: phone.value,
-    extra: extra.value,
-    location: location.value,
-    amenities: amenities,
-    lat: lat,
-    lng: lng,
-    distance: distance,
-    images: images,
-    createdAt: Date.now()
-
-  });
-
-  alert("Property uploaded successfully ✔");
-
+    alert("Property uploaded ✔");
 }
 
 </script>
