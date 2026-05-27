@@ -16,6 +16,23 @@ body{margin:0;font-family:Arial;background:#f6f6f6;}
 
 header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
 
+/* ✅ FILTER BAR */
+.filters{
+  background:#fff;
+  padding:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.filters input{
+  padding:6px;
+  border:1px solid #ccc;
+  border-radius:6px;
+  width:140px;
+}
+
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
 
 .card{background:#fff;border-radius:10px;overflow:hidden;}
@@ -27,13 +44,13 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 .mapbtn{background:#007bff;color:#fff;}
 .photos{background:#333;color:#fff;}
 
-/* MAP */
 .modal,.photoModal{
   display:none;position:fixed;top:0;left:0;width:100%;height:100%;
   background:#000;
 }
 
 .photoModal img{width:100%;height:100%;object-fit:contain;}
+
 .backBtn{
   position:absolute;top:10px;left:10px;
   background:white;padding:6px 10px;border-radius:6px;
@@ -44,6 +61,15 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 <body>
 
 <header>🏠 DeKUT Housing</header>
+
+<!-- ✅ FILTER UI ADDED -->
+<div class="filters">
+  <input id="minRent" type="number" placeholder="Min Rent">
+  <input id="maxRent" type="number" placeholder="Max Rent">
+  <input id="maxDist" type="number" placeholder="Max Distance (km)">
+  <button onclick="applyFilters()">Filter</button>
+  <button onclick="resetFilters()">Reset</button>
+</div>
 
 <div class="grid" id="list"></div>
 
@@ -72,20 +98,27 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 
 let data={};
+let filteredData={};
 
 /* LOAD */
 db.ref("properties").on("value",snap=>{
   data=snap.val()||{};
+  filteredData=data; // start unfiltered
   render();
 });
+
+/* DISTANCE CALC (optional safety) */
+function getDistance(p){
+  return parseFloat(p.distance || 999);
+}
 
 /* RENDER */
 function render(){
   let list=document.getElementById("list");
   list.innerHTML="";
 
-  for(let id in data){
-    let p=data[id];
+  for(let id in filteredData){
+    let p=filteredData[id];
     let img=p.images?.[0]||"";
 
     list.innerHTML+=`
@@ -111,6 +144,40 @@ function render(){
       </div>
     `;
   }
+}
+
+/* ✅ FILTER LOGIC */
+function applyFilters(){
+
+  let min = parseInt(document.getElementById("minRent").value) || 0;
+  let max = parseInt(document.getElementById("maxRent").value) || 999999;
+  let dist = parseFloat(document.getElementById("maxDist").value) || 999;
+
+  filteredData={};
+
+  for(let id in data){
+    let p=data[id];
+
+    let rent = parseInt(p.rent || 0);
+    let distance = getDistance(p);
+
+    if(rent>=min && rent<=max && distance<=dist){
+      filteredData[id]=p;
+    }
+  }
+
+  render();
+}
+
+/* RESET */
+function resetFilters(){
+  filteredData=data;
+
+  document.getElementById("minRent").value="";
+  document.getElementById("maxRent").value="";
+  document.getElementById("maxDist").value="";
+
+  render();
 }
 
 /* WHATSAPP */
