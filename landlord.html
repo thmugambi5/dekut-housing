@@ -47,7 +47,6 @@ button{
     margin:10px 0;
 }
 
-/* ✅ FIXED ALIGNMENT */
 .amenity-item{
     display:flex;
     align-items:center;
@@ -57,7 +56,6 @@ button{
 
 .amenity-item input{
     width:auto;
-    transform:scale(1.1);
 }
 
 small{
@@ -137,47 +135,39 @@ label{
 
 <label>📞 Contact Number</label>
 <input id="phone" placeholder="e.g. 254712345678">
-<small>Use Kenyan format starting with 254</small>
 
 <label>📝 Property Description</label>
-<input id="extra" placeholder="e.g. Spacious rooms, tiled floors, quiet environment">
+<input id="extra" placeholder="e.g. Spacious rooms, tiled floors">
 
 <div class="amenitiesBox">
 <b>🧰 Amenities</b>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="WiFi">
-<label>WiFi</label>
+<input type="checkbox" class="amenity" value="WiFi"><label>WiFi</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Water">
-<label>Water</label>
+<input type="checkbox" class="amenity" value="Water"><label>Water</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Electricity">
-<label>Electricity</label>
+<input type="checkbox" class="amenity" value="Electricity"><label>Electricity</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Furnished">
-<label>Furnished</label>
+<input type="checkbox" class="amenity" value="Furnished"><label>Furnished</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Parking">
-<label>Parking</label>
+<input type="checkbox" class="amenity" value="Parking"><label>Parking</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Security">
-<label>Security</label>
+<input type="checkbox" class="amenity" value="Security"><label>Security</label>
 </div>
 
 <div class="amenity-item">
-<input type="checkbox" class="amenity" value="Balcony">
-<label>Balcony</label>
+<input type="checkbox" class="amenity" value="Balcony"><label>Balcony</label>
 </div>
 
 </div>
@@ -228,24 +218,26 @@ const DEKUT_LNG = 36.9608515;
 
 function calculateDistance(lat1, lon1, lat2, lon2){
     const R = 6371;
-    const dLat = (lat2-lat1)*Math.PI/180;
-    const dLon = (lon2-lon1)*Math.PI/180;
+
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
 
     const a =
-      Math.sin(dLat/2)**2 +
-      Math.cos(lat1*Math.PI/180) *
-      Math.cos(lat2*Math.PI/180) *
-      Math.sin(dLon/2)**2;
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI/180) *
+        Math.cos(lat2 * Math.PI/180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
 
-    return (2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return (R * c).toFixed(1);
 }
 
 function getLocation(){
     navigator.geolocation.getCurrentPosition(pos=>{
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
-        document.getElementById("locStatus").innerText =
-        "Location captured ✔";
+        document.getElementById("locStatus").innerText = "Location captured ✔";
     });
 }
 
@@ -270,6 +262,17 @@ document.getElementById("images").onchange = async e=>{
 
 async function upload(){
 
+    const typeVal = document.getElementById("type").value || "";
+    const rentVal = document.getElementById("rent").value || "";
+    const depositVal = document.getElementById("deposit").value || "";
+    const genderVal = document.getElementById("gender").value || "";
+    const availabilityVal = document.getElementById("availability").value || "";
+    const roomsVal = document.getElementById("roomsAvailable").value || "";
+    const utilitiesVal = document.getElementById("utilities").value || "";
+    const phoneVal = document.getElementById("phone").value || "";
+    const extraVal = document.getElementById("extra").value || "";
+    const locationVal = document.getElementById("location").value || "";
+
     if(!lat || !lng){
         alert("Please share location first");
         return;
@@ -287,30 +290,30 @@ async function upload(){
         selected.push(a.value);
     });
 
-    let extraA = document.getElementById("extraAmenities").value;
+    let extraA = document.getElementById("extraAmenities").value || "";
 
     let amenities = selected.join(", ");
-    if(extraA) amenities += (amenities?", ":"")+extraA;
+    if(extraA) amenities += (amenities ? ", " : "") + extraA;
 
     const distance = calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
 
     db.ref("properties").push({
-        type:type.value,
-        rent:rent.value,
-        deposit:deposit.value,
-        gender:gender.value,
-        availability:availability.value,
-        roomsAvailable:roomsAvailable.value,
-        utilities:utilities.value,
-        phone:phone.value,
-        extra:extra.value,
-        location:location.value,
+        type: typeVal,
+        rent: rentVal,
+        deposit: depositVal,
+        gender: genderVal,
+        availability: availabilityVal,
+        roomsAvailable: roomsVal,
+        utilities: utilitiesVal,
+        phone: phoneVal,
+        extra: extraVal,
+        location: locationVal,
         amenities,
         lat,
         lng,
         distance,
         images,
-        createdAt:Date.now()
+        createdAt: Date.now()
     });
 
     alert("Property uploaded ✔");
