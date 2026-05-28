@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 
@@ -17,7 +16,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-
 body{
   margin:0;
   font-family:Arial;
@@ -33,25 +31,6 @@ header{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* ADMIN BAR */
-.adminBar{
-  display:none;
-  background:#111;
-  color:white;
-  padding:8px;
-  text-align:center;
-}
-
-.adminBar button{
-  background:#e91e63;
-  color:white;
-  border:none;
-  padding:8px 12px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-/* FILTERS */
 .filters{
   background:#fff;
   padding:10px;
@@ -106,16 +85,21 @@ button{
   font-weight:bold;
 }
 
-.whatsapp{background:#25D366;color:#fff;}
-.call{background:#ff9800;color:#fff;}
-.mapbtn{background:#007bff;color:#fff;}
-.photos{background:#333;color:#fff;}
-.savebtn{background:#e91e63;color:white;}
-.detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
+.whatsapp{ background:#25D366; color:#fff; }
+.call{ background:#ff9800; color:#fff; }
+.mapbtn{ background:#007bff; color:#fff; }
+.photos{ background:#333; color:#fff; }
+.savebtn{ background:#e91e63; color:white; }
+.deletebtn{ background:#d32f2f; color:white; }
 
-.modal,
-.photoModal,
-.detailsModal{
+.detailsbtn{
+  background:#111;
+  color:white;
+  width:100%;
+  margin-top:10px;
+}
+
+.modal, .photoModal, .detailsModal{
   display:none;
   position:fixed;
   top:0;
@@ -152,8 +136,8 @@ button{
   margin-top:4px;
 }
 
-.available{background:green;}
-.occupied{background:red;}
+.available{ background:green; }
+.occupied{ background:red; }
 
 .detailsContent{
   background:#fff;
@@ -173,19 +157,26 @@ button{
   line-height:1.8;
 }
 
+/* ADMIN BUTTON */
+.adminBtn{
+  background:black;
+  color:white;
+  padding:8px 12px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+}
 </style>
 </head>
 
 <body>
 
-<header>🏠 DeKUT Housing</header>
-
-<!-- ADMIN BAR (hidden unless admin logs in) -->
-<div class="adminBar" id="adminBar">
-  🔐 Admin Mode Active
-  <button onclick="goAdmin()">Go to Admin Panel</button>
-  <button onclick="logoutAdmin()">Logout</button>
-</div>
+<header>
+  🏠 DeKUT Housing
+  <button class="adminBtn" onclick="goAdmin()" style="float:right;">
+    Admin
+  </button>
+</header>
 
 <div style="text-align:center;padding:10px;">
   <button class="mapbtn" onclick="openAllHousesMap()">
@@ -195,9 +186,7 @@ button{
 
 <div class="filters">
 
-  <input id="searchBox"
-  placeholder="Search (wifi, Bomas, bedsitter...)"
-  oninput="applyFilters()">
+  <input id="searchBox" placeholder="Search (wifi, Bomas, bedsitter...)" oninput="applyFilters()">
 
   <input id="minRent" type="number" placeholder="Min Rent">
   <input id="maxRent" type="number" placeholder="Max Rent">
@@ -222,7 +211,6 @@ button{
 
 <div class="grid" id="list"></div>
 
-<!-- MODALS -->
 <div class="modal" id="mapModal"></div>
 
 <div class="photoModal" id="photoModal">
@@ -249,43 +237,39 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let data = {};
-let filteredArray = [];
+/* ADMIN STATE */
+let isAdmin = localStorage.getItem("admin") === "true";
 
-/* ---------------- ADMIN SYSTEM ---------------- */
-
-function checkAdmin(){
-  let isAdmin = localStorage.getItem("isAdmin");
-  if(isAdmin === "true"){
-    document.getElementById("adminBar").style.display = "block";
+function goAdmin(){
+  if(isAdmin){
+    window.location.href = "admin.html";
+  } else {
+    window.location.href = "admin-login.html";
   }
 }
 
-function goAdmin(){
-  window.location.href = "admin.html";
-}
+let data = {};
+let filteredArray = [];
 
-function logoutAdmin(){
-  localStorage.removeItem("isAdmin");
-  location.reload();
-}
-
-/* ---------------- LOAD DATA ---------------- */
-
-db.ref("properties").on("value",snap=>{
+db.ref("properties").on("value", snap=>{
   data = snap.val() || {};
   applyFilters();
-  checkAdmin();
 });
 
-/* ---------------- RENDER ---------------- */
+/* DELETE PROPERTY (ADMIN ONLY) */
+function deleteProperty(id){
+  if(confirm("Delete this property?")){
+    db.ref("properties/"+id).remove();
+  }
+}
 
+/* RENDER */
 function render(){
 
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  if(filteredArray.length===0){
+  if(filteredArray.length === 0){
     list.innerHTML = "<p style='padding:20px'>No houses found.</p>";
     return;
   }
@@ -303,8 +287,7 @@ function render(){
       <div class="card">
 
         ${img ? `
-          <img src="${img}"
-          onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+          <img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>
         ` : ""}
 
         <div class="cardContent">
@@ -319,19 +302,61 @@ function render(){
           </div>
 
           <button class="detailsbtn"
-          onclick='openDetails(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
-          View Details
+            onclick='openDetails(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
+            View Details
           </button>
 
-        </div>
+          ${isAdmin ? `
+            <button class="deletebtn" onclick="deleteProperty('${p.id}')">
+              🗑 Delete
+            </button>
+          ` : ""}
 
+        </div>
       </div>
     `;
   });
 }
 
-/* ---------------- FILTER ---------------- */
+/* DETAILS */
+function openDetails(p){
 
+  let img = p.images?.[0] || "";
+
+  let content = document.getElementById("detailsContent");
+
+  content.innerHTML = `
+    <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
+
+    ${img ? `
+      <img class="detailsImage" src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+    ` : ""}
+
+    <div class="detailsBody">
+
+      <h2>🏠 ${p.type || ""}</h2>
+      <b>💰 Rent:</b> KSh ${p.rent || ""}<br>
+      <b>📍 Location:</b> ${p.location || ""}<br>
+      <b>📏 Distance:</b> ${p.distance || ""} KM from DeKUT<br>
+
+      <b>🧰 Amenities:</b><br>${p.amenities || "N/A"}<br><br>
+
+      <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
+      <button class="call" onclick="call('${p.phone}')">Call</button>
+      <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">Map</button>
+      <button class="savebtn" onclick='saveHouse(${JSON.stringify(p).replace(/'/g,"&apos;")})'>❤️ Save</button>
+
+    </div>
+  `;
+
+  detailsModal.style.display = "block";
+}
+
+function closeDetails(){
+  detailsModal.style.display = "none";
+}
+
+/* FILTERS (UNCHANGED) */
 function applyFilters(){
 
   let search = document.getElementById("searchBox").value.toLowerCase();
@@ -353,14 +378,12 @@ function applyFilters(){
     let matches = search==="" || text.includes(search);
 
     if(rent>=min && rent<=max && distance<=dist && matches){
-      filteredArray.push(p);
+      filteredArray.push({id, ...p}); // IMPORTANT FIX
     }
   }
 
   render();
 }
-
-/* ---------------- RESET ---------------- */
 
 function resetFilters(){
   document.getElementById("searchBox").value="";
@@ -370,27 +393,17 @@ function resetFilters(){
   applyFilters();
 }
 
-/* ---------------- NAVIGATION ---------------- */
-
-function openDetails(p){
-  document.getElementById("detailsModal").style.display="block";
-  document.getElementById("detailsContent").innerHTML = `
-    <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
-    <div style="padding:20px">
-      <h2>${p.type}</h2>
-      <p>${p.location}</p>
-      <p>KSh ${p.rent}</p>
-    </div>
-  `;
+/* SAVE */
+function saveHouse(house){
+  let saved = JSON.parse(localStorage.getItem("savedHouses")||"[]");
+  saved.push(house);
+  localStorage.setItem("savedHouses", JSON.stringify(saved));
+  alert("House saved ❤️");
 }
 
-function closeDetails(){
-  document.getElementById("detailsModal").style.display="none";
-}
-
-/* ---------------- ADMIN CHECK ON LOAD ---------------- */
-
-checkAdmin();
+/* OTHER FUNCTIONS (UNCHANGED) */
+function wa(n){ window.open("https://wa.me/"+n,"_blank"); }
+function call(n){ window.location.href="tel:"+n; }
 
 </script>
 
