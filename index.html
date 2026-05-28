@@ -6,15 +6,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<!-- ✅ CLUSTER CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- ✅ CLUSTER JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f6f6f6;}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f6f6f6;
+}
 
-header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
+header{
+  padding:10px;
+  background:#fff;
+  text-align:center;
+  font-weight:bold;
+}
 
 /* FILTER + SEARCH */
 .filters{
@@ -33,27 +50,79 @@ header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
   width:160px;
 }
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
-
-.card{background:#fff;border-radius:10px;overflow:hidden;}
-.card img{width:100%;height:180px;object-fit:cover;}
-
-button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
-.whatsapp{background:#25D366;color:#fff;}
-.call{background:#ff9800;color:#fff;}
-.mapbtn{background:#007bff;color:#fff;}
-.photos{background:#333;color:#fff;}
-
-.modal,.photoModal{
-  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  background:#000;
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:10px;
+  padding:10px;
 }
 
-.photoModal img{width:100%;height:100%;object-fit:contain;}
+.card{
+  background:#fff;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.card img{
+  width:100%;
+  height:180px;
+  object-fit:cover;
+}
+
+button{
+  margin:4px;
+  padding:6px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.whatsapp{
+  background:#25D366;
+  color:#fff;
+}
+
+.call{
+  background:#ff9800;
+  color:#fff;
+}
+
+.mapbtn{
+  background:#007bff;
+  color:#fff;
+}
+
+.photos{
+  background:#333;
+  color:#fff;
+}
+
+/* MAP + PHOTO MODAL */
+.modal,.photoModal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  z-index:9999;
+}
+
+.photoModal img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
 
 .backBtn{
-  position:absolute;top:10px;left:10px;
-  background:white;padding:6px 10px;border-radius:6px;
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:white;
+  padding:6px 10px;
+  border-radius:6px;
+  z-index:99999;
 }
 </style>
 </head>
@@ -62,16 +131,29 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 
 <header>🏠 DeKUT Housing</header>
 
+<!-- ✅ VIEW ALL HOUSES MAP BUTTON -->
+<div style="text-align:center;padding:10px;">
+  <button class="mapbtn" onclick="openAllHousesMap()">
+    🗺 View All Houses on Map
+  </button>
+</div>
+
 <!-- ✅ SEARCH + FILTER BAR -->
 <div class="filters">
 
-  <input id="searchBox" placeholder="Search (Bomas, wifi, bedsitter...)" oninput="applyFilters()">
+  <input id="searchBox"
+  placeholder="Search (Bomas, wifi, bedsitter...)"
+  oninput="applyFilters()">
 
   <input id="minRent" type="number" placeholder="Min Rent">
+
   <input id="maxRent" type="number" placeholder="Max Rent">
-  <input id="maxDist" type="number" placeholder="Max Distance (km)">
+
+  <input id="maxDist" type="number"
+  placeholder="Max Distance (km)">
 
   <button onclick="applyFilters()">Filter</button>
+
   <button onclick="resetFilters()">Reset</button>
 
 </div>
@@ -83,8 +165,11 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 
 <!-- PHOTOS -->
 <div class="photoModal" id="photoModal">
-<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
-<img id="photoView">
+
+  <div class="backBtn" onclick="closePhotos()">⬅ Back</div>
+
+  <img id="photoView">
+
 </div>
 
 <script>
@@ -100,6 +185,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const db=firebase.database();
 
 let data={};
@@ -107,37 +193,66 @@ let filteredData={};
 
 /* LOAD */
 db.ref("properties").on("value",snap=>{
+
   data=snap.val()||{};
   filteredData=data;
+
   render();
+
 });
 
 /* RENDER */
 function render(){
+
   let list=document.getElementById("list");
+
   list.innerHTML="";
 
   for(let id in filteredData){
+
     let p=filteredData[id];
+
     let img=p.images?.[0]||"";
 
     list.innerHTML+=`
       <div class="card">
 
-        ${img?`<img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>`:""}
+        ${img ? `
+          <img src="${img}"
+          onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+        ` : ""}
 
         <div style="padding:10px">
 
           <b>🏠 ${p.type}</b><br>
+
           💰 KSh ${p.rent}<br>
+
           📍 ${p.location}<br>
+
           📏 ${p.distance||""} KM from DeKUT<br>
+
           🧰 ${p.amenities||""}<br>
 
-          <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
-          <button class="call" onclick="call('${p.phone}')">Call</button>
-          <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">View on Map</button>
-          <button class="photos" onclick='openPhotos(${JSON.stringify(p.images||[])})'>Photos</button>
+          <button class="whatsapp"
+          onclick="wa('${p.phone}')">
+          WhatsApp
+          </button>
+
+          <button class="call"
+          onclick="call('${p.phone}')">
+          Call
+          </button>
+
+          <button class="mapbtn"
+          onclick="openMap(${p.lat},${p.lng})">
+          View on Map
+          </button>
+
+          <button class="photos"
+          onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+          Photos
+          </button>
 
         </div>
 
@@ -146,30 +261,42 @@ function render(){
   }
 }
 
-/* ✅ SEARCH + FILTER */
+/* SEARCH + FILTER */
 function applyFilters(){
 
-  let search = document.getElementById("searchBox").value.toLowerCase();
+  let search=document.getElementById("searchBox")
+  .value.toLowerCase();
 
-  let min = parseInt(document.getElementById("minRent").value) || 0;
-  let max = parseInt(document.getElementById("maxRent").value) || 999999;
-  let dist = parseFloat(document.getElementById("maxDist").value) || 999;
+  let min=parseInt(
+    document.getElementById("minRent").value
+  ) || 0;
+
+  let max=parseInt(
+    document.getElementById("maxRent").value
+  ) || 999999;
+
+  let dist=parseFloat(
+    document.getElementById("maxDist").value
+  ) || 999;
 
   filteredData={};
 
   for(let id in data){
+
     let p=data[id];
 
-    let rent = parseInt(p.rent || 0);
-    let distance = parseFloat(p.distance || 999);
+    let rent=parseInt(p.rent||0);
 
-    let text = (
-      (p.location||"") + " " +
-      (p.type||"") + " " +
+    let distance=parseFloat(p.distance||999);
+
+    let text=(
+      (p.location||"")+" "+
+      (p.type||"")+" "+
       (p.amenities||"")
     ).toLowerCase();
 
-    let matchesSearch = search==="" || text.includes(search);
+    let matchesSearch=
+      search==="" || text.includes(search);
 
     if(
       rent>=min &&
@@ -186,6 +313,7 @@ function applyFilters(){
 
 /* RESET */
 function resetFilters(){
+
   filteredData=data;
 
   document.getElementById("searchBox").value="";
@@ -197,39 +325,162 @@ function resetFilters(){
 }
 
 /* WHATSAPP */
-function wa(n){window.open("https://wa.me/"+n,"_blank");}
+function wa(n){
+  window.open("https://wa.me/"+n,"_blank");
+}
 
 /* CALL */
-function call(n){window.location.href="tel:"+n;}
+function call(n){
+  window.location.href="tel:"+n;
+}
 
-/* MAP */
+/* SINGLE HOUSE MAP */
 function openMap(lat,lng){
+
   let m=document.getElementById("mapModal");
+
   m.style.display="block";
-  m.innerHTML="<div id='map' style='width:100%;height:100%'></div>";
+
+  m.innerHTML=`
+
+    <div class="backBtn"
+    onclick="closeMap()">
+    ⬅ Back
+    </div>
+
+    <div id="map"
+    style="width:100%;height:100%"></div>
+  `;
 
   setTimeout(()=>{
-    let map=L.map("map").setView([lat,lng],16);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-      attribution:"© OpenStreetMap"
-    }).addTo(map);
+    let map=L.map("map")
+    .setView([lat,lng],16);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:"© OpenStreetMap"
+      }
+    ).addTo(map);
 
     L.marker([lat,lng]).addTo(map);
+
   },100);
 }
 
-document.getElementById("mapModal").onclick=()=>mapModal.style.display="none";
+/* ALL HOUSES MAP */
+function openAllHousesMap(){
+
+  let m=document.getElementById("mapModal");
+
+  m.style.display="block";
+
+  m.innerHTML=`
+
+    <div class="backBtn"
+    onclick="closeMap()">
+    ⬅ Back
+    </div>
+
+    <div id="map"
+    style="width:100%;height:100%"></div>
+  `;
+
+  setTimeout(()=>{
+
+    let map=L.map("map")
+    .setView([-0.3977905,36.9608515],14);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:"© OpenStreetMap"
+      }
+    ).addTo(map);
+
+    /* CLUSTERS */
+    let markers=L.markerClusterGroup();
+
+    for(let id in data){
+
+      let p=data[id];
+
+      if(!p.lat || !p.lng) continue;
+
+      let marker=L.marker([p.lat,p.lng]);
+
+      let photo=p.images?.[0] || "";
+
+      marker.bindPopup(`
+
+        <div style="width:200px">
+
+          ${photo ? `
+            <img src="${photo}"
+            style="
+            width:100%;
+            height:120px;
+            object-fit:cover;
+            border-radius:8px;
+            ">
+          ` : ""}
+
+          <br>
+
+          <b>${p.type||""}</b><br>
+
+          💰 KSh ${p.rent||""}<br>
+
+          📍 ${p.location||""}<br>
+
+          📏 ${p.distance||""} KM from DeKUT<br>
+
+          <button
+          onclick="wa('${p.phone}')"
+          style="
+          background:#25D366;
+          color:white;
+          border:none;
+          padding:6px;
+          border-radius:6px;
+          ">
+          WhatsApp
+          </button>
+
+        </div>
+
+      `);
+
+      markers.addLayer(marker);
+    }
+
+    map.addLayer(markers);
+
+  },100);
+}
+
+/* CLOSE MAP */
+function closeMap(){
+  document.getElementById("mapModal")
+  .style.display="none";
+}
 
 /* PHOTOS */
-let imgs=[],index=0,startX=0;
+let imgs=[];
+let index=0;
+let startX=0;
 
 function openPhotos(images){
+
   imgs=images||[];
+
   index=0;
-  if(!imgs.length)return;
+
+  if(!imgs.length) return;
 
   photoModal.style.display="block";
+
   photoView.src=imgs[0];
 }
 
@@ -239,23 +490,32 @@ function closePhotos(){
 
 /* SWIPE */
 photoModal.addEventListener("touchstart",e=>{
+
   startX=e.touches[0].clientX;
+
 });
 
 photoModal.addEventListener("touchend",e=>{
+
   let endX=e.changedTouches[0].clientX;
 
   if(endX<startX-50) next();
+
   if(endX>startX+50) prev();
+
 });
 
 function next(){
+
   index=(index+1)%imgs.length;
+
   photoView.src=imgs[index];
 }
 
 function prev(){
+
   index=(index-1+imgs.length)%imgs.length;
+
   photoView.src=imgs[index];
 }
 
