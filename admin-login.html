@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Login - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#f4f4f4;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.loginBox{
+    width:320px;
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+}
+
+h2{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin:10px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    background:#007bff;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+.error{
+    color:red;
+    font-size:13px;
+    text-align:center;
+    margin-top:10px;
+}
+
+.success{
+    color:green;
+    font-size:13px;
+    text-align:center;
+    margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="loginBox">
+
+<h2>🔐 Admin Login</h2>
+
+<input type="email" id="email" placeholder="Admin Email">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+
+<div id="msg"></div>
+
+</div>
+
+<script>
+
+// 🔥 Firebase config (same as your project)
+const firebaseConfig = {
+  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain: "dekut-housing.firebaseapp.com",
+  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId: "dekut-housing",
+  storageBucket: "dekut-housing.appspot.com",
+  messagingSenderId: "784034754945",
+  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+
+/* LOGIN */
+function login(){
+
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
+    let msg = document.getElementById("msg");
+
+    msg.innerHTML = "Logging in...";
+
+    auth.signInWithEmailAndPassword(email, password)
+    .then(userCredential => {
+
+        msg.innerHTML = "<div class='success'>Login successful ✔ Redirecting...</div>";
+
+        setTimeout(() => {
+            window.location.href = "admin.html";
+        }, 1000);
+
+    })
+    .catch(error => {
+
+        msg.innerHTML = "<div class='error'>" + error.message + "</div>";
+
+    });
+}
+
+/* AUTO REDIRECT IF ALREADY LOGGED IN */
+auth.onAuthStateChanged(user => {
+    if(user){
+        window.location.href = "admin.html";
+    }
+});
+
+</script>
+
+</body>
+</html>
