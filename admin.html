@@ -9,14 +9,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-
 body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
 }
 
-/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -26,11 +24,6 @@ body{
   background:#111;
   color:white;
   padding:20px;
-}
-
-.sidebar h2{
-  font-size:18px;
-  margin-bottom:20px;
 }
 
 .sidebar button{
@@ -44,17 +37,13 @@ body{
   color:white;
 }
 
-.sidebar button:hover{
-  background:#333;
-}
+.sidebar button:hover{background:#333;}
 
-/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
 }
 
-/* STATS */
 .stats{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -69,15 +58,6 @@ body{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* SEARCH */
-.searchBar input{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
-}
-
-/* CARDS */
 .card{
   background:white;
   margin:10px 0;
@@ -91,14 +71,14 @@ body{
   border-radius:6px;
   font-size:12px;
   color:white;
+  margin-right:5px;
 }
 
-.available{ background:green; }
-.occupied{ background:red; }
-.pending{ background:orange; }
+.available{background:green;}
+.occupied{background:red;}
+.pending{background:orange;}
 
-/* BUTTONS */
-.btn{
+button{
   padding:8px;
   border:none;
   border-radius:6px;
@@ -106,11 +86,9 @@ body{
   margin:4px;
 }
 
-.delete{ background:#e74c3c; color:white; }
-.toggle{ background:#007bff; color:white; }
-.approve{ background:#28a745; color:white; }
-.reject{ background:#ff9800; color:white; }
-
+.approve{background:#28a745;color:white;}
+.reject{background:#ff9800;color:white;}
+.delete{background:#e74c3c;color:white;}
 </style>
 </head>
 
@@ -119,42 +97,32 @@ body{
 <div class="sidebar">
   <h2>🏠 Admin Panel</h2>
 
-  <button onclick="loadAll()">📦 All Properties</button>
-  <button onclick="showPending()">🟡 Pending Approval</button>
-  <button onclick="filterStatus('available')">🟢 Available</button>
-  <button onclick="filterStatus('occupied')">🔴 Occupied</button>
-  <button onclick="loadAll()">🔄 Refresh</button>
+  <button onclick="showPending()">🟡 Pending</button>
+  <button onclick="showApproved()">🟢 Approved</button>
+  <button onclick="loadAll()">📦 All</button>
 </div>
 
 <div class="main">
 
-  <h1>Dashboard</h1>
+<h1>Dashboard</h1>
 
-  <!-- STATS -->
-  <div class="stats">
-    <div class="statBox">
-      <h3 id="total">0</h3>
-      <p>Total Houses</p>
-    </div>
-
-    <div class="statBox">
-      <h3 id="available">0</h3>
-      <p>Available</p>
-    </div>
-
-    <div class="statBox">
-      <h3 id="pending">0</h3>
-      <p>Pending Approval</p>
-    </div>
+<div class="stats">
+  <div class="statBox">
+    <h3 id="totalPending">0</h3>
+    <p>Pending</p>
   </div>
 
-  <!-- SEARCH -->
-  <div class="searchBar">
-    <input id="search" placeholder="Search..." oninput="render()">
+  <div class="statBox">
+    <h3 id="totalApproved">0</h3>
+    <p>Approved</p>
   </div>
+</div>
 
-  <!-- LIST -->
-  <div id="list"></div>
+<br>
+
+<input id="search" placeholder="Search..." oninput="render()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;">
+
+<div id="list"></div>
 
 </div>
 
@@ -174,153 +142,104 @@ firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
-let data = {};
-let filtered = {};
-let mode = "all";
+let pending = {};
+let approved = {};
+let mode = "pending";
 
-/* LOAD */
-db.ref("properties").on("value", snap => {
-  data = snap.val() || {};
-  applyMode();
+/* LOAD BOTH DATABASES */
+db.ref("pendingProperties").on("value", snap=>{
+  pending = snap.val() || {};
   updateStats();
+  render();
+});
+
+db.ref("properties").on("value", snap=>{
+  approved = snap.val() || {};
+  updateStats();
+  render();
 });
 
 /* STATS */
 function updateStats(){
-
-  let total = 0;
-  let available = 0;
-  let pending = 0;
-
-  for(let id in data){
-    total++;
-
-    let p = data[id];
-
-    let status = (p.status || "").toLowerCase();
-
-    if(p.approved !== true){
-      pending++;
-    }
-
-    if(status === "available") available++;
-  }
-
-  document.getElementById("total").innerText = total;
-  document.getElementById("available").innerText = available;
-  document.getElementById("pending").innerText = pending;
+  document.getElementById("totalPending").innerText = Object.keys(pending).length;
+  document.getElementById("totalApproved").innerText = Object.keys(approved).length;
 }
 
-/* MODE HANDLING */
-function applyMode(){
-
-  filtered = {};
-
-  for(let id in data){
-    let p = data[id];
-
-    if(mode === "pending" && p.approved === true) continue;
-
-    if(mode === "available" && (p.status||"").toLowerCase() !== "available") continue;
-
-    if(mode === "occupied" && (p.status||"").toLowerCase() !== "occupied") continue;
-
-    if(mode === "pending"){
-      if(p.approved === true) continue;
-    }
-
-    filtered[id] = p;
-  }
-
-  render();
-}
-
-function showPending(){
-  mode = "pending";
-  applyMode();
-}
-
-function filterStatus(status){
-  mode = status;
-  applyMode();
-}
-
-function loadAll(){
-  mode = "all";
-  applyMode();
-}
+/* MODE */
+function showPending(){ mode="pending"; render(); }
+function showApproved(){ mode="approved"; render(); }
+function loadAll(){ mode="all"; render(); }
 
 /* RENDER */
 function render(){
 
   let q = document.getElementById("search").value.toLowerCase();
-
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  for(let id in filtered){
+  let source = {};
 
-    let p = filtered[id];
+  if(mode === "pending") source = pending;
+  else if(mode === "approved") source = approved;
+  else source = {...pending, ...approved};
 
-    let text =
-      (p.location + " " + p.type + " " + p.phone).toLowerCase();
+  for(let id in source){
+
+    let p = source[id];
+
+    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
-    let statusClass =
-      (p.status || "").toLowerCase() === "available"
-      ? "available" : "occupied";
-
-    let approved = p.approved === true;
+    let isPending = pending[id] ? true : false;
 
     list.innerHTML += `
       <div class="card">
 
-        <b>🏠 ${p.type}</b> - ${p.location}<br>
+        <b>🏠 ${p.type}</b><br>
+        📍 ${p.location}<br>
         💰 KSh ${p.rent}<br>
-        📞 ${p.phone}<br>
+        📞 ${p.phone || ""}<br>
 
-        <span class="badge ${approved ? "available" : "pending"}">
-          ${approved ? "Approved" : "Pending"}
-        </span>
-
-        <span class="badge ${statusClass}">
-          ${p.status}
+        <span class="badge ${isPending ? "pending" : "available"}">
+          ${isPending ? "Pending" : "Approved"}
         </span>
 
         <br><br>
 
-        ${!approved ? `
-          <button class="approve"
-          onclick="approve('${id}')">
-          ✔ Approve
-          </button>
+        ${isPending ? `
+          <button class="approve" onclick="approve('${id}')">✔ Approve</button>
+          <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
         ` : ""}
 
-        <button class="delete"
-        onclick="deleteProperty('${id}')">
-        Delete
-        </button>
+        <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
 
       </div>
     `;
   }
 }
 
-/* APPROVE */
+/* APPROVE → MOVE DATA */
 function approve(id){
 
-  db.ref("properties/" + id).update({
-    approved:true
-  });
+  let item = pending[id];
+
+  if(!item) return;
+
+  db.ref("properties/" + id).set(item);
+  db.ref("pendingProperties/" + id).remove();
+}
+
+/* REJECT */
+function rejectItem(id){
+  db.ref("pendingProperties/" + id).remove();
 }
 
 /* DELETE */
-function deleteProperty(id){
+function deleteItem(id){
 
-  if(confirm("Delete this property?")){
-    db.ref("properties/" + id).remove();
-  }
+  db.ref("pendingProperties/" + id).remove();
+  db.ref("properties/" + id).remove();
 }
 
 </script>
