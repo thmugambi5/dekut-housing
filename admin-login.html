@@ -56,6 +56,11 @@ button:hover{
     background:#0056b3;
 }
 
+button:disabled{
+    background:#999;
+    cursor:not-allowed;
+}
+
 .error{
     color:red;
     font-size:13px;
@@ -81,7 +86,7 @@ button:hover{
 <input type="email" id="email" placeholder="Admin Email">
 <input type="password" id="password" placeholder="Password">
 
-<button onclick="login()">Login</button>
+<button id="loginBtn" onclick="login()">Login</button>
 
 <div id="msg"></div>
 
@@ -89,7 +94,7 @@ button:hover{
 
 <script>
 
-// 🔥 Firebase config (same as your project)
+// 🔥 Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
   authDomain: "dekut-housing.firebaseapp.com",
@@ -104,17 +109,38 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 
+/* ONLY ALLOWED ADMIN EMAIL */
+const ADMIN_EMAIL = "admin@dekut.com";
+
 /* LOGIN */
 function login(){
 
     let email = document.getElementById("email").value;
     let password = document.getElementById("password").value;
     let msg = document.getElementById("msg");
+    let btn = document.getElementById("loginBtn");
 
-    msg.innerHTML = "Logging in...";
+    msg.innerHTML = "";
+    btn.disabled = true;
+    btn.innerText = "Logging in...";
 
     auth.signInWithEmailAndPassword(email, password)
     .then(userCredential => {
+
+        const user = userCredential.user;
+
+        // 🔒 ADMIN RESTRICTION CHECK
+        if(user.email !== ADMIN_EMAIL){
+
+            auth.signOut();
+
+            msg.innerHTML = "<div class='error'>❌ Not authorized as admin</div>";
+
+            btn.disabled = false;
+            btn.innerText = "Login";
+
+            return;
+        }
 
         msg.innerHTML = "<div class='success'>Login successful ✔ Redirecting...</div>";
 
@@ -127,13 +153,21 @@ function login(){
 
         msg.innerHTML = "<div class='error'>" + error.message + "</div>";
 
+        btn.disabled = false;
+        btn.innerText = "Login";
+
     });
 }
 
 /* AUTO REDIRECT IF ALREADY LOGGED IN */
 auth.onAuthStateChanged(user => {
     if(user){
-        window.location.href = "admin.html";
+
+        if(user.email === ADMIN_EMAIL){
+            window.location.href = "admin.html";
+        } else {
+            auth.signOut();
+        }
     }
 });
 
