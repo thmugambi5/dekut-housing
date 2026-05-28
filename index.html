@@ -16,197 +16,68 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f6f6f6;
+body{margin:0;font-family:Arial;background:#f6f6f6;}
+header{padding:14px;background:#fff;text-align:center;font-weight:bold;font-size:20px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+
+.filters{background:#fff;padding:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;position:sticky;top:0;z-index:1000;}
+.filters input,.filters select{padding:8px;border:1px solid #ccc;border-radius:8px;width:160px;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:12px;}
+
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.card img{width:100%;height:220px;object-fit:cover;}
+.cardContent{padding:12px;line-height:1.7;}
+
+button{margin:4px;padding:8px 10px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;}
+
+.whatsapp{background:#25D366;color:#fff;}
+.call{background:#ff9800;color:#fff;}
+.mapbtn{background:#007bff;color:#fff;}
+.photos{background:#333;color:#fff;}
+.savebtn{background:#e91e63;color:white;}
+.deletebtn{background:#d32f2f;color:white;}
+
+.detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
+
+.modal,.photoModal,.detailsModal{
+display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;
 }
 
-header{
-  padding:14px;
-  background:#fff;
-  text-align:center;
-  font-weight:bold;
-  font-size:20px;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
-}
+.photoModal img{width:100%;height:100%;object-fit:contain;}
 
-.filters{
-  background:#fff;
-  padding:10px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:center;
-  position:sticky;
-  top:0;
-  z-index:1000;
-}
+.backBtn{position:absolute;top:10px;left:10px;background:white;padding:8px 12px;border-radius:8px;z-index:99999;font-weight:bold;}
 
-.filters input,
-.filters select{
-  padding:8px;
-  border:1px solid #ccc;
-  border-radius:8px;
-  width:160px;
-}
+.badge{display:inline-block;padding:4px 8px;border-radius:6px;font-size:12px;color:white;margin-top:4px;}
+.available{background:green;}
+.occupied{background:red;}
 
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:12px;
-  padding:12px;
-}
+.detailsContent{background:#fff;width:100%;height:100%;overflow:auto;}
+.detailsImage{width:100%;height:300px;object-fit:cover;}
+.detailsBody{padding:15px;line-height:1.8;}
 
-.card{
-  background:#fff;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-.card img{
-  width:100%;
-  height:220px;
-  object-fit:cover;
-}
-
-.cardContent{
-  padding:12px;
-  line-height:1.7;
-}
-
-button{
-  margin:4px;
-  padding:8px 10px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-.whatsapp{ background:#25D366; color:#fff; }
-.call{ background:#ff9800; color:#fff; }
-.mapbtn{ background:#007bff; color:#fff; }
-.photos{ background:#333; color:#fff; }
-.savebtn{ background:#e91e63; color:white; }
-.deletebtn{ background:#d32f2f; color:white; }
-
-.detailsbtn{
-  background:#111;
-  color:white;
-  width:100%;
-  margin-top:10px;
-}
-
-.modal, .photoModal, .detailsModal{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:#000;
-  z-index:9999;
-}
-
-.photoModal img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-.backBtn{
-  position:absolute;
-  top:10px;
-  left:10px;
-  background:white;
-  padding:8px 12px;
-  border-radius:8px;
-  z-index:99999;
-  font-weight:bold;
-}
-
-.badge{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:12px;
-  color:white;
-  margin-top:4px;
-}
-
-.available{ background:green; }
-.occupied{ background:red; }
-
-.detailsContent{
-  background:#fff;
-  width:100%;
-  height:100%;
-  overflow:auto;
-}
-
-.detailsImage{
-  width:100%;
-  height:300px;
-  object-fit:cover;
-}
-
-.detailsBody{
-  padding:15px;
-  line-height:1.8;
-}
-
-/* ADMIN BUTTON */
-.adminBtn{
-  background:black;
-  color:white;
-  padding:8px 12px;
-  border-radius:8px;
-  border:none;
-  cursor:pointer;
-}
+.adminBtn{background:black;color:white;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;}
 </style>
 </head>
 
 <body>
 
 <header>
-  🏠 DeKUT Housing
-  <button class="adminBtn" onclick="goAdmin()" style="float:right;">
-    Admin
-  </button>
+🏠 DeKUT Housing
+<button class="adminBtn" onclick="goAdmin()" style="float:right;">Admin</button>
 </header>
 
 <div style="text-align:center;padding:10px;">
-  <button class="mapbtn" onclick="openAllHousesMap()">
-    🗺 View All Houses on Map
-  </button>
+<button class="mapbtn" onclick="openAllHousesMap()">🗺 View All Houses on Map</button>
 </div>
 
 <div class="filters">
+<input id="searchBox" placeholder="Search..." oninput="applyFilters()">
+<input id="minRent" type="number" placeholder="Min Rent">
+<input id="maxRent" type="number" placeholder="Max Rent">
+<input id="maxDist" type="number" placeholder="Max Distance (km)">
 
-  <input id="searchBox" placeholder="Search (wifi, Bomas, bedsitter...)" oninput="applyFilters()">
-
-  <input id="minRent" type="number" placeholder="Min Rent">
-  <input id="maxRent" type="number" placeholder="Max Rent">
-  <input id="maxDist" type="number" placeholder="Max Distance (km)">
-
-  <select id="sortRent" onchange="applyFilters()">
-    <option value="">Sort Rent</option>
-    <option value="low">Lowest Rent</option>
-    <option value="high">Highest Rent</option>
-  </select>
-
-  <select id="sortDistance" onchange="applyFilters()">
-    <option value="">Sort Distance</option>
-    <option value="near">Nearest First</option>
-    <option value="far">Farthest First</option>
-  </select>
-
-  <button onclick="applyFilters()">Filter</button>
-  <button onclick="resetFilters()">Reset</button>
-
+<button onclick="applyFilters()">Filter</button>
+<button onclick="resetFilters()">Reset</button>
 </div>
 
 <div class="grid" id="list"></div>
@@ -214,196 +85,192 @@ button{
 <div class="modal" id="mapModal"></div>
 
 <div class="photoModal" id="photoModal">
-  <div class="backBtn" onclick="closePhotos()">⬅ Back</div>
-  <img id="photoView">
+<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
+<img id="photoView">
 </div>
 
 <div class="detailsModal" id="detailsModal">
-  <div class="detailsContent" id="detailsContent"></div>
+<div class="detailsContent" id="detailsContent"></div>
 </div>
 
 <script>
 
 const firebaseConfig = {
-  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain:"dekut-housing.firebaseapp.com",
-  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId:"dekut-housing",
-  storageBucket:"dekut-housing.appspot.com",
-  messagingSenderId:"784034754945",
-  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ADMIN STATE */
-let isAdmin = localStorage.getItem("admin") === "true";
-
-function goAdmin(){
-  if(isAdmin){
-    window.location.href = "admin.html";
-  } else {
-    window.location.href = "admin-login.html";
-  }
-}
-
 let data = {};
 let filteredArray = [];
+let imgs = [];
+let index = 0;
 
+/* LOAD DATA */
 db.ref("properties").on("value", snap=>{
-  data = snap.val() || {};
-  applyFilters();
+data = snap.val() || {};
+applyFilters();
 });
 
-/* DELETE PROPERTY (ADMIN ONLY) */
-function deleteProperty(id){
-  if(confirm("Delete this property?")){
-    db.ref("properties/"+id).remove();
-  }
+/* SAFE JSON */
+function safe(obj){
+return encodeURIComponent(JSON.stringify(obj));
 }
 
 /* RENDER */
 function render(){
+let list = document.getElementById("list");
+list.innerHTML = "";
 
-  let list = document.getElementById("list");
-  list.innerHTML = "";
+if(filteredArray.length === 0){
+list.innerHTML = "<p style='padding:20px'>No houses found.</p>";
+return;
+}
 
-  if(filteredArray.length === 0){
-    list.innerHTML = "<p style='padding:20px'>No houses found.</p>";
-    return;
-  }
+filteredArray.forEach(p=>{
+let img = p.images?.[0] || "";
+let statusClass = (p.status || "").toLowerCase()==="available" ? "available":"occupied";
 
-  filteredArray.forEach(p=>{
+list.innerHTML += `
+<div class="card">
 
-    let img = p.images?.[0] || "";
+${img ? `<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>` : ""}
 
-    let statusClass =
-      (p.status || "").toLowerCase() === "available"
-      ? "available"
-      : "occupied";
+<div class="cardContent">
+<b>🏠 ${p.type||""}</b><br>
+💰 KSh ${p.rent||""}<br>
+📍 ${p.location||""}<br>
+📏 ${p.distance||""} KM<br>
 
-    list.innerHTML += `
-      <div class="card">
+<div class="badge ${statusClass}">${p.status||"Unknown"}</div>
 
-        ${img ? `
-          <img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>
-        ` : ""}
+<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>View Details</button>
 
-        <div class="cardContent">
-
-          <b>🏠 ${p.type || ""}</b><br>
-          💰 KSh ${p.rent || ""}<br>
-          📍 ${p.location || ""}<br>
-          📏 ${p.distance || ""} KM from DeKUT<br>
-
-          <div class="badge ${statusClass}">
-            ${p.status || "Unknown"}
-          </div>
-
-          <button class="detailsbtn"
-            onclick='openDetails(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
-            View Details
-          </button>
-
-          ${isAdmin ? `
-            <button class="deletebtn" onclick="deleteProperty('${p.id}')">
-              🗑 Delete
-            </button>
-          ` : ""}
-
-        </div>
-      </div>
-    `;
-  });
+</div>
+</div>
+`;
+});
 }
 
 /* DETAILS */
 function openDetails(p){
+p = JSON.parse(decodeURIComponent(p));
 
-  let img = p.images?.[0] || "";
+let img = p.images?.[0] || "";
+let content = document.getElementById("detailsContent");
 
-  let content = document.getElementById("detailsContent");
+content.innerHTML = `
+<div class="backBtn" onclick="closeDetails()">⬅ Back</div>
 
-  content.innerHTML = `
-    <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
+${img ? `<img class="detailsImage" src="${img}">` : ""}
 
-    ${img ? `
-      <img class="detailsImage" src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>
-    ` : ""}
+<div class="detailsBody">
+<h2>${p.type||""}</h2>
+💰 ${p.rent||""}<br>
+📍 ${p.location||""}<br>
+📏 ${p.distance||""}<br>
 
-    <div class="detailsBody">
+<button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
+<button class="call" onclick="call('${p.phone}')">Call</button>
+<button class="mapbtn" onclick="openMap(${p.lat||0},${p.lng||0})">Map</button>
+</div>
+`;
 
-      <h2>🏠 ${p.type || ""}</h2>
-      <b>💰 Rent:</b> KSh ${p.rent || ""}<br>
-      <b>📍 Location:</b> ${p.location || ""}<br>
-      <b>📏 Distance:</b> ${p.distance || ""} KM from DeKUT<br>
-
-      <b>🧰 Amenities:</b><br>${p.amenities || "N/A"}<br><br>
-
-      <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
-      <button class="call" onclick="call('${p.phone}')">Call</button>
-      <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">Map</button>
-      <button class="savebtn" onclick='saveHouse(${JSON.stringify(p).replace(/'/g,"&apos;")})'>❤️ Save</button>
-
-    </div>
-  `;
-
-  detailsModal.style.display = "block";
+detailsModal.style.display="block";
 }
 
 function closeDetails(){
-  detailsModal.style.display = "none";
+detailsModal.style.display="none";
 }
 
-/* FILTERS (UNCHANGED) */
+/* FILTERS */
 function applyFilters(){
+let search = document.getElementById("searchBox").value.toLowerCase();
+let min = parseInt(document.getElementById("minRent").value)||0;
+let max = parseInt(document.getElementById("maxRent").value)||999999;
+let dist = parseFloat(document.getElementById("maxDist").value)||999;
 
-  let search = document.getElementById("searchBox").value.toLowerCase();
-  let min = parseInt(document.getElementById("minRent").value) || 0;
-  let max = parseInt(document.getElementById("maxRent").value) || 999999;
-  let dist = parseFloat(document.getElementById("maxDist").value) || 999;
+filteredArray = [];
 
-  filteredArray = [];
+for(let id in data){
+let p = data[id];
 
-  for(let id in data){
+let text = ((p.location||"")+" "+(p.type||"")).toLowerCase();
+let rent = parseInt(p.rent||0);
+let distance = parseFloat(p.distance||999);
 
-    let p = data[id];
+if(rent>=min && rent<=max && distance<=dist && text.includes(search)){
+filteredArray.push(p);
+}
+}
 
-    let rent = parseInt(p.rent||0);
-    let distance = parseFloat(p.distance||999);
-
-    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.amenities||"")).toLowerCase();
-
-    let matches = search==="" || text.includes(search);
-
-    if(rent>=min && rent<=max && distance<=dist && matches){
-      filteredArray.push({id, ...p}); // IMPORTANT FIX
-    }
-  }
-
-  render();
+render();
 }
 
 function resetFilters(){
-  document.getElementById("searchBox").value="";
-  document.getElementById("minRent").value="";
-  document.getElementById("maxRent").value="";
-  document.getElementById("maxDist").value="";
-  applyFilters();
+document.getElementById("searchBox").value="";
+document.getElementById("minRent").value="";
+document.getElementById("maxRent").value="";
+document.getElementById("maxDist").value="";
+applyFilters();
 }
 
-/* SAVE */
-function saveHouse(house){
-  let saved = JSON.parse(localStorage.getItem("savedHouses")||"[]");
-  saved.push(house);
-  localStorage.setItem("savedHouses", JSON.stringify(saved));
-  alert("House saved ❤️");
+/* PHOTOS */
+function openPhotos(images){
+imgs = JSON.parse(decodeURIComponent(images));
+index = 0;
+if(!imgs.length) return;
+photoView.src = imgs[0];
+photoModal.style.display="block";
 }
 
-/* OTHER FUNCTIONS (UNCHANGED) */
-function wa(n){ window.open("https://wa.me/"+n,"_blank"); }
-function call(n){ window.location.href="tel:"+n; }
+function closePhotos(){
+photoModal.style.display="none";
+}
+
+/* MAP */
+function openMap(lat,lng){
+mapModal.style.display="block";
+mapModal.innerHTML = `<div id="map" style="width:100%;height:100%"></div><div class="backBtn" onclick="closeMap()">⬅ Back</div>`;
+
+setTimeout(()=>{
+let map = L.map("map").setView([lat,lng],15);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.marker([lat,lng]).addTo(map);
+},100);
+}
+
+function openAllHousesMap(){
+mapModal.style.display="block";
+mapModal.innerHTML = `<div id="map" style="width:100%;height:100%"></div><div class="backBtn" onclick="closeMap()">⬅ Back</div>`;
+
+setTimeout(()=>{
+let map = L.map("map").setView([-0.3977,36.9608],14);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+for(let id in data){
+let p = data[id];
+if(p.lat && p.lng){
+L.marker([p.lat,p.lng]).addTo(map);
+}
+}
+},100);
+}
+
+function closeMap(){
+mapModal.style.display="none";
+}
+
+/* CALLS */
+function wa(n){window.open("https://wa.me/"+n,"_blank");}
+function call(n){window.location.href="tel:"+n;}
 
 </script>
 
