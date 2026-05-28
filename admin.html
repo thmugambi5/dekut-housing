@@ -1,1 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f4f6f9;
+}
+
+/* SIDEBAR */
+.sidebar{
+  position:fixed;
+  left:0;
+  top:0;
+  width:220px;
+  height:100%;
+  background:#111;
+  color:white;
+  padding:20px;
+}
+
+.sidebar h2{
+  font-size:18px;
+  margin-bottom:20px;
+}
+
+.sidebar button{
+  width:100%;
+  margin:5px 0;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+}
+
+.sidebar button:hover{
+  background:#333;
+}
+
+/* MAIN */
+.main{
+  margin-left:240px;
+  padding:20px;
+}
+
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+
+.statBox{
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+.statBox h3{
+  margin:0;
+}
+
+/* SEARCH */
+.searchBar{
+  margin:15px 0;
+}
+
+.searchBar input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+/* CARDS */
+.card{
+  background:white;
+  margin:10px 0;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+.badge{
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  color:white;
+}
+
+.available{ background:green; }
+.occupied{ background:red; }
+
+/* BUTTONS */
+.btn{
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  margin:4px;
+}
+
+.delete{ background:#e74c3c; color:white; }
+.toggle{ background:#007bff; color:white; }
+.view{ background:#333; color:white; }
+
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>🏠 Admin Panel</h2>
+
+  <button onclick="loadData()">📦 All Properties</button>
+  <button onclick="filterStatus('available')">🟢 Available</button>
+  <button onclick="filterStatus('occupied')">🔴 Occupied</button>
+  <button onclick="loadData()">🔄 Refresh</button>
+</div>
+
+<div class="main">
+
+  <h1>Dashboard</h1>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="statBox">
+      <h3 id="total">0</h3>
+      <p>Total Houses</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="available">0</h3>
+      <p>Available</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="occupied">0</h3>
+      <p>Occupied</p>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="searchBar">
+    <input id="search" placeholder="Search by location, type..." oninput="render()">
+  </div>
+
+  <!-- LIST -->
+  <div id="list"></div>
+
+</div>
+
+<script>
+
+const firebaseConfig = {
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+let data = {};
+let filtered = {};
+let currentFilter = "all";
+
+/* LOAD */
+db.ref("properties").on("value",snap=>{
+  data = snap.val() || {};
+  filtered = data;
+  updateStats();
+  render();
+});
+
+/* STATS */
+function updateStats(){
+
+  let total = Object.keys(data).length;
+  let available = 0;
+  let occupied = 0;
+
+  for(let id in data){
+    let s = (data[id].status || "").toLowerCase();
+    if(s === "available") available++;
+    else occupied++;
+  }
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("available").innerText = available;
+  document.getElementById("occupied").innerText = occupied;
+}
+
+/* FILTER STATUS */
+function filterStatus(status){
+
+  currentFilter = status;
+
+  filtered = {};
+
+  for(let id in data){
+    let s = (data[id].status || "").toLowerCase();
+    if(s === status){
+      filtered[id] = data[id];
+    }
+  }
+
+  render();
+}
+
+/* SEARCH + RENDER */
+function render(){
+
+  let q = document.getElementById("search").value.toLowerCase();
+
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  for(let id in filtered){
+
+    let p = filtered[id];
+
+    let text =
+    (p.location + " " + p.type + " " + p.phone).toLowerCase();
+
+    if(q && !text.includes(q)) continue;
+
+    let statusClass =
+    (p.status || "").toLowerCase() === "available"
+    ? "available" : "occupied";
+
+    list.innerHTML += `
+      <div class="card">
+
+        <b>🏠 ${p.type}</b> - ${p.location}<br>
+        💰 KSh ${p.rent}<br>
+        📞 ${p.phone}<br>
+
+        <span class="badge ${statusClass}">
+          ${p.status}
+        </span>
+
+        <br><br>
+
+        <button class="toggle"
+        onclick="toggleStatus('${id}','${p.status}')">
+        Toggle Status
+        </button>
+
+        <button class="delete"
+        onclick="deleteProperty('${id}')">
+        Delete
+        </button>
+
+      </div>
+    `;
+  }
+}
+
+/* TOGGLE STATUS */
+function toggleStatus(id,status){
+
+  let newStatus =
+  (status || "").toLowerCase() === "available"
+  ? "Occupied"
+  : "Available";
+
+  db.ref("properties/" + id).update({
+    status:newStatus
+  });
+}
+
+/* DELETE */
+function deleteProperty(id){
+
+  if(confirm("Delete this property?")){
+    db.ref("properties/" + id).remove();
+  }
+}
+
+/* LOAD ALL */
+function loadData(){
+  filtered = data;
+  render();
+}
+
+</script>
+
+</body>
+</html>
