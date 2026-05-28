@@ -313,10 +313,14 @@ async function upload(){
         lng,
         distance,
         images,
+
+        // ⭐ IMPORTANT FOR ADMIN SYSTEM
+        status: "pending",
+
         createdAt: Date.now()
     });
 
-    alert("Property uploaded ✔");
+    alert("Property uploaded ✔ (Pending admin approval)");
 }
 
 </script>
