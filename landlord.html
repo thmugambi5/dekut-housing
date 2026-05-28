@@ -2,325 +2,325 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Form</title>
+<title>Admin Dashboard - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 body{
-    font-family:Arial;
-    background:#f5f5f5;
-    margin:0;
-    padding:15px;
+  margin:0;
+  font-family:Arial;
+  background:#f4f6f9;
 }
 
+/* SIDEBAR */
+.sidebar{
+  position:fixed;
+  left:0;
+  top:0;
+  width:220px;
+  height:100%;
+  background:#111;
+  color:white;
+  padding:20px;
+}
+
+.sidebar h2{
+  font-size:18px;
+  margin-bottom:20px;
+}
+
+.sidebar button{
+  width:100%;
+  margin:5px 0;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+}
+
+.sidebar button:hover{
+  background:#333;
+}
+
+/* MAIN */
+.main{
+  margin-left:240px;
+  padding:20px;
+}
+
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+
+.statBox{
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* SEARCH */
+.searchBar input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+/* CARDS */
 .card{
-    max-width:650px;
-    margin:auto;
-    background:#fff;
-    padding:15px;
-    border-radius:12px;
+  background:white;
+  margin:10px 0;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-input,select,button{
-    width:100%;
-    padding:10px;
-    margin:8px 0;
-    border-radius:8px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
+.badge{
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  color:white;
 }
 
-button{
-    background:#ff385c;
-    color:#fff;
-    border:none;
-    cursor:pointer;
+.available{ background:green; }
+.occupied{ background:red; }
+.pending{ background:orange; }
+
+/* BUTTONS */
+.btn{
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  margin:4px;
 }
 
-.amenitiesBox{
-    background:#f1f1f1;
-    padding:12px;
-    border-radius:8px;
-    margin:10px 0;
-}
+.delete{ background:#e74c3c; color:white; }
+.toggle{ background:#007bff; color:white; }
+.approve{ background:#28a745; color:white; }
+.reject{ background:#ff9800; color:white; }
 
-.amenity-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:6px 0;
-}
-
-.amenity-item input{
-    width:auto;
-}
-
-small{
-    color:gray;
-    display:block;
-    margin-top:3px;
-}
-
-.warning{
-    color:#c62828;
-    font-weight:bold;
-}
-
-.preview{
-    display:flex;
-    flex-wrap:wrap;
-}
-
-.preview img{
-    width:70px;
-    height:70px;
-    object-fit:cover;
-    margin:5px;
-    border-radius:8px;
-}
-
-label{
-    font-weight:bold;
-}
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="sidebar">
+  <h2>🏠 Admin Panel</h2>
 
-<h2>🏠 Landlord Form</h2>
-
-<label>🏠 House Type</label>
-<select id="type">
-<option>Bedsitter</option>
-<option>Single Room</option>
-<option>One Bedroom</option>
-<option>Shared Bedsitter</option>
-<option>Shared Single Room</option>
-</select>
-
-<label>💰 Monthly Rent (KSh)</label>
-<input id="rent" type="number" placeholder="e.g. 5500">
-
-<label>💳 Deposit Amount (KSh)</label>
-<input id="deposit" type="number" placeholder="e.g. 3000">
-
-<label>👥 Preferred Occupants</label>
-<select id="gender">
-<option>Any Gender</option>
-<option>Male Only</option>
-<option>Female Only</option>
-<option>Mixed</option>
-</select>
-
-<label>📌 Availability Status</label>
-<select id="availability">
-<option>Available</option>
-<option>Occupied</option>
-</select>
-
-<label>🚪 Number of Rooms Available</label>
-<input id="roomsAvailable" type="number" placeholder="e.g. 2">
-
-<label>💡 Utilities Included In Rent?</label>
-<select id="utilities">
-<option>Yes</option>
-<option>No</option>
-<option>Partially Included</option>
-</select>
-
-<label>📞 Contact Number</label>
-<input id="phone" placeholder="e.g. 254712345678">
-
-<label>📝 Property Description</label>
-<input id="extra" placeholder="e.g. Spacious rooms, tiled floors">
-
-<div class="amenitiesBox">
-<b>🧰 Amenities</b>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="WiFi"><label>WiFi</label>
+  <button onclick="loadAll()">📦 All Properties</button>
+  <button onclick="showPending()">🟡 Pending Approval</button>
+  <button onclick="filterStatus('available')">🟢 Available</button>
+  <button onclick="filterStatus('occupied')">🔴 Occupied</button>
+  <button onclick="loadAll()">🔄 Refresh</button>
 </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Water"><label>Water</label>
-</div>
+<div class="main">
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Electricity"><label>Electricity</label>
-</div>
+  <h1>Dashboard</h1>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Furnished"><label>Furnished</label>
-</div>
+  <!-- STATS -->
+  <div class="stats">
+    <div class="statBox">
+      <h3 id="total">0</h3>
+      <p>Total Houses</p>
+    </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Parking"><label>Parking</label>
-</div>
+    <div class="statBox">
+      <h3 id="available">0</h3>
+      <p>Available</p>
+    </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Security"><label>Security</label>
-</div>
+    <div class="statBox">
+      <h3 id="pending">0</h3>
+      <p>Pending Approval</p>
+    </div>
+  </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Balcony"><label>Balcony</label>
-</div>
+  <!-- SEARCH -->
+  <div class="searchBar">
+    <input id="search" placeholder="Search..." oninput="render()">
+  </div>
 
-</div>
-
-<label>➕ Other Amenities</label>
-<input id="extraAmenities" placeholder="e.g. CCTV, Laundry Area">
-
-<label>📸 Property Photos</label>
-<input type="file" id="images" multiple accept="image/*">
-
-<div class="preview" id="preview"></div>
-
-<label>📍 Property Location</label>
-<input id="location" placeholder="e.g. Bomas, Embassy, Nyeri View">
-
-<small class="warning">
-⚠️ Stand inside the property before sharing location.
-</small>
-
-<button onclick="getLocation()">📍 Share Location</button>
-
-<p id="locStatus">No location selected</p>
-
-<button onclick="upload()">Upload Property</button>
+  <!-- LIST -->
+  <div id="list"></div>
 
 </div>
 
 <script>
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain: "dekut-housing.firebaseapp.com",
-  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId: "dekut-housing",
-  storageBucket: "dekut-housing.appspot.com",
-  messagingSenderId: "784034754945",
-  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const db = firebase.database();
 
-let lat = "";
-let lng = "";
+let data = {};
+let filtered = {};
+let mode = "all";
 
-const DEKUT_LAT = -0.3977905;
-const DEKUT_LNG = 36.9608515;
+/* LOAD */
+db.ref("properties").on("value", snap => {
+  data = snap.val() || {};
+  applyMode();
+  updateStats();
+});
 
-function calculateDistance(lat1, lon1, lat2, lon2){
-    const R = 6371;
+/* STATS */
+function updateStats(){
 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+  let total = 0;
+  let available = 0;
+  let pending = 0;
 
-    const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI/180) *
-        Math.cos(lat2 * Math.PI/180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
+  for(let id in data){
+    total++;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    let p = data[id];
 
-    return (R * c).toFixed(1);
-}
+    let status = (p.status || "").toLowerCase();
 
-function getLocation(){
-    navigator.geolocation.getCurrentPosition(pos=>{
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-        document.getElementById("locStatus").innerText = "Location captured ✔";
-    });
-}
-
-function toBase64(file){
-    return new Promise(res=>{
-        let r = new FileReader();
-        r.onload = ()=>res(r.result);
-        r.readAsDataURL(file);
-    });
-}
-
-document.getElementById("images").onchange = async e=>{
-    let preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    for(let f of e.target.files){
-        let img = document.createElement("img");
-        img.src = await toBase64(f);
-        preview.appendChild(img);
-    }
-};
-
-async function upload(){
-
-    const typeVal = document.getElementById("type").value || "";
-    const rentVal = document.getElementById("rent").value || "";
-    const depositVal = document.getElementById("deposit").value || "";
-    const genderVal = document.getElementById("gender").value || "";
-    const availabilityVal = document.getElementById("availability").value || "";
-    const roomsVal = document.getElementById("roomsAvailable").value || "";
-    const utilitiesVal = document.getElementById("utilities").value || "";
-    const phoneVal = document.getElementById("phone").value || "";
-    const extraVal = document.getElementById("extra").value || "";
-    const locationVal = document.getElementById("location").value || "";
-
-    if(!lat || !lng){
-        alert("Please share location first");
-        return;
+    if(p.approved !== true){
+      pending++;
     }
 
-    let files = document.getElementById("images").files;
-    let images = [];
+    if(status === "available") available++;
+  }
 
-    for(let f of files){
-        images.push(await toBase64(f));
+  document.getElementById("total").innerText = total;
+  document.getElementById("available").innerText = available;
+  document.getElementById("pending").innerText = pending;
+}
+
+/* MODE HANDLING */
+function applyMode(){
+
+  filtered = {};
+
+  for(let id in data){
+    let p = data[id];
+
+    if(mode === "pending" && p.approved === true) continue;
+
+    if(mode === "available" && (p.status||"").toLowerCase() !== "available") continue;
+
+    if(mode === "occupied" && (p.status||"").toLowerCase() !== "occupied") continue;
+
+    if(mode === "pending"){
+      if(p.approved === true) continue;
     }
 
-    let selected = [];
-    document.querySelectorAll(".amenity:checked").forEach(a=>{
-        selected.push(a.value);
-    });
+    filtered[id] = p;
+  }
 
-    let extraA = document.getElementById("extraAmenities").value || "";
+  render();
+}
 
-    let amenities = selected.join(", ");
-    if(extraA) amenities += (amenities ? ", " : "") + extraA;
+function showPending(){
+  mode = "pending";
+  applyMode();
+}
 
-    const distance = calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
+function filterStatus(status){
+  mode = status;
+  applyMode();
+}
 
-    db.ref("properties").push({
-        type: typeVal,
-        rent: rentVal,
-        deposit: depositVal,
-        gender: genderVal,
-        availability: availabilityVal,
-        roomsAvailable: roomsVal,
-        utilities: utilitiesVal,
-        phone: phoneVal,
-        extra: extraVal,
-        location: locationVal,
-        amenities,
-        lat,
-        lng,
-        distance,
-        images,
+function loadAll(){
+  mode = "all";
+  applyMode();
+}
 
-        // ⭐ IMPORTANT FOR ADMIN SYSTEM
-        status: "pending",
+/* RENDER */
+function render(){
 
-        createdAt: Date.now()
-    });
+  let q = document.getElementById("search").value.toLowerCase();
 
-    alert("Property uploaded ✔ (Pending admin approval)");
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  for(let id in filtered){
+
+    let p = filtered[id];
+
+    let text =
+      (p.location + " " + p.type + " " + p.phone).toLowerCase();
+
+    if(q && !text.includes(q)) continue;
+
+    let statusClass =
+      (p.status || "").toLowerCase() === "available"
+      ? "available" : "occupied";
+
+    let approved = p.approved === true;
+
+    list.innerHTML += `
+      <div class="card">
+
+        <b>🏠 ${p.type}</b> - ${p.location}<br>
+        💰 KSh ${p.rent}<br>
+        📞 ${p.phone}<br>
+
+        <span class="badge ${approved ? "available" : "pending"}">
+          ${approved ? "Approved" : "Pending"}
+        </span>
+
+        <span class="badge ${statusClass}">
+          ${p.status}
+        </span>
+
+        <br><br>
+
+        ${!approved ? `
+          <button class="approve"
+          onclick="approve('${id}')">
+          ✔ Approve
+          </button>
+        ` : ""}
+
+        <button class="delete"
+        onclick="deleteProperty('${id}')">
+        Delete
+        </button>
+
+      </div>
+    `;
+  }
+}
+
+/* APPROVE */
+function approve(id){
+
+  db.ref("properties/" + id).update({
+    approved:true
+  });
+}
+
+/* DELETE */
+function deleteProperty(id){
+
+  if(confirm("Delete this property?")){
+    db.ref("properties/" + id).remove();
+  }
 }
 
 </script>
