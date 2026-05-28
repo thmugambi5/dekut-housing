@@ -2,326 +2,395 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Form</title>
+<title>DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 body{
-    font-family:Arial;
-    background:#f5f5f5;
-    margin:0;
-    padding:15px;
+  margin:0;
+  font-family:Arial;
+  background:#f6f6f6;
+}
+
+header{
+  padding:14px;
+  background:#fff;
+  text-align:center;
+  font-weight:bold;
+  font-size:20px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* ADMIN BAR */
+.adminBar{
+  display:none;
+  background:#111;
+  color:white;
+  padding:8px;
+  text-align:center;
+}
+
+.adminBar button{
+  background:#e91e63;
+  color:white;
+  border:none;
+  padding:8px 12px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+/* FILTERS */
+.filters{
+  background:#fff;
+  padding:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+  position:sticky;
+  top:0;
+  z-index:1000;
+}
+
+.filters input,
+.filters select{
+  padding:8px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  width:160px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px;
+  padding:12px;
 }
 
 .card{
-    max-width:650px;
-    margin:auto;
-    background:#fff;
-    padding:15px;
-    border-radius:12px;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
-input,select,button{
-    width:100%;
-    padding:10px;
-    margin:8px 0;
-    border-radius:8px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+
+.cardContent{
+  padding:12px;
+  line-height:1.7;
 }
 
 button{
-    background:#ff385c;
-    color:#fff;
-    border:none;
-    cursor:pointer;
+  margin:4px;
+  padding:8px 10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
 }
 
-.amenitiesBox{
-    background:#f1f1f1;
-    padding:12px;
-    border-radius:8px;
-    margin:10px 0;
+.whatsapp{background:#25D366;color:#fff;}
+.call{background:#ff9800;color:#fff;}
+.mapbtn{background:#007bff;color:#fff;}
+.photos{background:#333;color:#fff;}
+.savebtn{background:#e91e63;color:white;}
+.detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
+
+.modal,
+.photoModal,
+.detailsModal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  z-index:9999;
 }
 
-.amenity-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:6px 0;
+.photoModal img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
 }
 
-.amenity-item input{
-    width:auto;
+.backBtn{
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:white;
+  padding:8px 12px;
+  border-radius:8px;
+  z-index:99999;
+  font-weight:bold;
 }
 
-small{
-    color:gray;
-    display:block;
-    margin-top:3px;
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  color:white;
+  margin-top:4px;
 }
 
-.warning{
-    color:#c62828;
-    font-weight:bold;
+.available{background:green;}
+.occupied{background:red;}
+
+.detailsContent{
+  background:#fff;
+  width:100%;
+  height:100%;
+  overflow:auto;
 }
 
-.preview{
-    display:flex;
-    flex-wrap:wrap;
+.detailsImage{
+  width:100%;
+  height:300px;
+  object-fit:cover;
 }
 
-.preview img{
-    width:70px;
-    height:70px;
-    object-fit:cover;
-    margin:5px;
-    border-radius:8px;
+.detailsBody{
+  padding:15px;
+  line-height:1.8;
 }
 
-label{
-    font-weight:bold;
-}
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<header>🏠 DeKUT Housing</header>
 
-<h2>🏠 Landlord Form</h2>
-
-<label>🏠 House Type</label>
-<select id="type">
-<option>Bedsitter</option>
-<option>Single Room</option>
-<option>One Bedroom</option>
-<option>Shared Bedsitter</option>
-<option>Shared Single Room</option>
-</select>
-
-<label>💰 Monthly Rent (KSh)</label>
-<input id="rent" type="number" placeholder="e.g. 5500">
-
-<label>💳 Deposit Amount (KSh)</label>
-<input id="deposit" type="number" placeholder="e.g. 3000">
-
-<label>👥 Preferred Occupants</label>
-<select id="gender">
-<option>Any Gender</option>
-<option>Male Only</option>
-<option>Female Only</option>
-<option>Mixed</option>
-</select>
-
-<label>📌 Availability Status</label>
-<select id="availability">
-<option>Available</option>
-<option>Occupied</option>
-</select>
-
-<label>🚪 Number of Rooms Available</label>
-<input id="roomsAvailable" type="number" placeholder="e.g. 2">
-
-<label>💡 Utilities Included In Rent?</label>
-<select id="utilities">
-<option>Yes</option>
-<option>No</option>
-<option>Partially Included</option>
-</select>
-
-<label>📞 Contact Number</label>
-<input id="phone" placeholder="e.g. 254712345678">
-
-<label>📝 Property Description</label>
-<input id="extra" placeholder="e.g. Spacious rooms, tiled floors">
-
-<div class="amenitiesBox">
-<b>🧰 Amenities</b>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="WiFi"><label>WiFi</label>
+<!-- ADMIN BAR (hidden unless admin logs in) -->
+<div class="adminBar" id="adminBar">
+  🔐 Admin Mode Active
+  <button onclick="goAdmin()">Go to Admin Panel</button>
+  <button onclick="logoutAdmin()">Logout</button>
 </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Water"><label>Water</label>
+<div style="text-align:center;padding:10px;">
+  <button class="mapbtn" onclick="openAllHousesMap()">
+    🗺 View All Houses on Map
+  </button>
 </div>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Electricity"><label>Electricity</label>
-</div>
+<div class="filters">
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Furnished"><label>Furnished</label>
-</div>
+  <input id="searchBox"
+  placeholder="Search (wifi, Bomas, bedsitter...)"
+  oninput="applyFilters()">
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Parking"><label>Parking</label>
-</div>
+  <input id="minRent" type="number" placeholder="Min Rent">
+  <input id="maxRent" type="number" placeholder="Max Rent">
+  <input id="maxDist" type="number" placeholder="Max Distance (km)">
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Security"><label>Security</label>
-</div>
+  <select id="sortRent" onchange="applyFilters()">
+    <option value="">Sort Rent</option>
+    <option value="low">Lowest Rent</option>
+    <option value="high">Highest Rent</option>
+  </select>
 
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Balcony"><label>Balcony</label>
-</div>
+  <select id="sortDistance" onchange="applyFilters()">
+    <option value="">Sort Distance</option>
+    <option value="near">Nearest First</option>
+    <option value="far">Farthest First</option>
+  </select>
+
+  <button onclick="applyFilters()">Filter</button>
+  <button onclick="resetFilters()">Reset</button>
 
 </div>
 
-<label>➕ Other Amenities</label>
-<input id="extraAmenities" placeholder="e.g. CCTV, Laundry Area">
+<div class="grid" id="list"></div>
 
-<label>📸 Property Photos</label>
-<input type="file" id="images" multiple accept="image/*">
+<!-- MODALS -->
+<div class="modal" id="mapModal"></div>
 
-<div class="preview" id="preview"></div>
+<div class="photoModal" id="photoModal">
+  <div class="backBtn" onclick="closePhotos()">⬅ Back</div>
+  <img id="photoView">
+</div>
 
-<label>📍 Property Location</label>
-<input id="location" placeholder="e.g. Bomas, Embassy, Nyeri View">
-
-<small class="warning">
-⚠️ Stand inside the property before sharing location.
-</small>
-
-<button onclick="getLocation()">📍 Share Location</button>
-
-<p id="locStatus">No location selected</p>
-
-<button onclick="upload()">Upload Property</button>
-
+<div class="detailsModal" id="detailsModal">
+  <div class="detailsContent" id="detailsContent"></div>
 </div>
 
 <script>
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain: "dekut-housing.firebaseapp.com",
-  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId: "dekut-housing",
-  storageBucket: "dekut-housing.appspot.com",
-  messagingSenderId: "784034754945",
-  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let lat = "";
-let lng = "";
+let data = {};
+let filteredArray = [];
 
-const DEKUT_LAT = -0.3977905;
-const DEKUT_LNG = 36.9608515;
+/* ---------------- ADMIN SYSTEM ---------------- */
 
-function calculateDistance(lat1, lon1, lat2, lon2){
-    const R = 6371;
-
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-
-    const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI/180) *
-        Math.cos(lat2 * Math.PI/180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return (R * c).toFixed(1);
+function checkAdmin(){
+  let isAdmin = localStorage.getItem("isAdmin");
+  if(isAdmin === "true"){
+    document.getElementById("adminBar").style.display = "block";
+  }
 }
 
-function getLocation(){
-    navigator.geolocation.getCurrentPosition(pos=>{
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-        document.getElementById("locStatus").innerText = "Location captured ✔";
-    });
+function goAdmin(){
+  window.location.href = "admin.html";
 }
 
-function toBase64(file){
-    return new Promise(res=>{
-        let r = new FileReader();
-        r.onload = ()=>res(r.result);
-        r.readAsDataURL(file);
-    });
+function logoutAdmin(){
+  localStorage.removeItem("isAdmin");
+  location.reload();
 }
 
-document.getElementById("images").onchange = async e=>{
-    let preview = document.getElementById("preview");
-    preview.innerHTML = "";
+/* ---------------- LOAD DATA ---------------- */
 
-    for(let f of e.target.files){
-        let img = document.createElement("img");
-        img.src = await toBase64(f);
-        preview.appendChild(img);
+db.ref("properties").on("value",snap=>{
+  data = snap.val() || {};
+  applyFilters();
+  checkAdmin();
+});
+
+/* ---------------- RENDER ---------------- */
+
+function render(){
+
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  if(filteredArray.length===0){
+    list.innerHTML = "<p style='padding:20px'>No houses found.</p>";
+    return;
+  }
+
+  filteredArray.forEach(p=>{
+
+    let img = p.images?.[0] || "";
+
+    let statusClass =
+      (p.status || "").toLowerCase() === "available"
+      ? "available"
+      : "occupied";
+
+    list.innerHTML += `
+      <div class="card">
+
+        ${img ? `
+          <img src="${img}"
+          onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+        ` : ""}
+
+        <div class="cardContent">
+
+          <b>🏠 ${p.type || ""}</b><br>
+          💰 KSh ${p.rent || ""}<br>
+          📍 ${p.location || ""}<br>
+          📏 ${p.distance || ""} KM from DeKUT<br>
+
+          <div class="badge ${statusClass}">
+            ${p.status || "Unknown"}
+          </div>
+
+          <button class="detailsbtn"
+          onclick='openDetails(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
+          View Details
+          </button>
+
+        </div>
+
+      </div>
+    `;
+  });
+}
+
+/* ---------------- FILTER ---------------- */
+
+function applyFilters(){
+
+  let search = document.getElementById("searchBox").value.toLowerCase();
+  let min = parseInt(document.getElementById("minRent").value) || 0;
+  let max = parseInt(document.getElementById("maxRent").value) || 999999;
+  let dist = parseFloat(document.getElementById("maxDist").value) || 999;
+
+  filteredArray = [];
+
+  for(let id in data){
+
+    let p = data[id];
+
+    let rent = parseInt(p.rent||0);
+    let distance = parseFloat(p.distance||999);
+
+    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.amenities||"")).toLowerCase();
+
+    let matches = search==="" || text.includes(search);
+
+    if(rent>=min && rent<=max && distance<=dist && matches){
+      filteredArray.push(p);
     }
-};
+  }
 
-async function upload(){
-
-    const typeVal = document.getElementById("type").value || "";
-    const rentVal = document.getElementById("rent").value || "";
-    const depositVal = document.getElementById("deposit").value || "";
-    const genderVal = document.getElementById("gender").value || "";
-    const availabilityVal = document.getElementById("availability").value || "";
-    const roomsVal = document.getElementById("roomsAvailable").value || "";
-    const utilitiesVal = document.getElementById("utilities").value || "";
-    const phoneVal = document.getElementById("phone").value || "";
-    const extraVal = document.getElementById("extra").value || "";
-    const locationVal = document.getElementById("location").value || "";
-
-    if(!lat || !lng){
-        alert("Please share location first");
-        return;
-    }
-
-    let files = document.getElementById("images").files;
-    let images = [];
-
-    for(let f of files){
-        images.push(await toBase64(f));
-    }
-
-    let selected = [];
-    document.querySelectorAll(".amenity:checked").forEach(a=>{
-        selected.push(a.value);
-    });
-
-    let extraA = document.getElementById("extraAmenities").value || "";
-
-    let amenities = selected.join(", ");
-    if(extraA) amenities += (amenities ? ", " : "") + extraA;
-
-    const distance = calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
-
-    db.ref("properties").push({
-        type: typeVal,
-        rent: rentVal,
-        deposit: depositVal,
-        gender: genderVal,
-        availability: availabilityVal,
-        roomsAvailable: roomsVal,
-        utilities: utilitiesVal,
-        phone: phoneVal,
-        extra: extraVal,
-        location: locationVal,
-        amenities,
-        lat,
-        lng,
-        distance,
-        images,
-
-        // ⭐ IMPORTANT FOR ADMIN SYSTEM
-        status: "pending",
-
-        createdAt: Date.now()
-    });
-
-    alert("Property uploaded ✔ (Pending admin approval)");
+  render();
 }
+
+/* ---------------- RESET ---------------- */
+
+function resetFilters(){
+  document.getElementById("searchBox").value="";
+  document.getElementById("minRent").value="";
+  document.getElementById("maxRent").value="";
+  document.getElementById("maxDist").value="";
+  applyFilters();
+}
+
+/* ---------------- NAVIGATION ---------------- */
+
+function openDetails(p){
+  document.getElementById("detailsModal").style.display="block";
+  document.getElementById("detailsContent").innerHTML = `
+    <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
+    <div style="padding:20px">
+      <h2>${p.type}</h2>
+      <p>${p.location}</p>
+      <p>KSh ${p.rent}</p>
+    </div>
+  `;
+}
+
+function closeDetails(){
+  document.getElementById("detailsModal").style.display="none";
+}
+
+/* ---------------- ADMIN CHECK ON LOAD ---------------- */
+
+checkAdmin();
 
 </script>
 
