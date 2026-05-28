@@ -7,19 +7,17 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-<!-- CLUSTER CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- CLUSTER JS -->
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 body{
   margin:0;
   font-family:Arial;
@@ -35,7 +33,6 @@ header{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* FILTERS */
 .filters{
   background:#fff;
   padding:10px;
@@ -78,7 +75,7 @@ header{
 
 .cardContent{
   padding:12px;
-  line-height:1.6;
+  line-height:1.7;
 }
 
 button{
@@ -115,7 +112,16 @@ button{
   color:white;
 }
 
-.modal,.photoModal{
+.detailsbtn{
+  background:#111;
+  color:white;
+  width:100%;
+  margin-top:10px;
+}
+
+.modal,
+.photoModal,
+.detailsModal{
   display:none;
   position:fixed;
   top:0;
@@ -143,7 +149,6 @@ button{
   font-weight:bold;
 }
 
-/* BADGES */
 .badge{
   display:inline-block;
   padding:4px 8px;
@@ -160,6 +165,27 @@ button{
 .occupied{
   background:red;
 }
+
+/* PROPERTY DETAILS */
+
+.detailsContent{
+  background:#fff;
+  width:100%;
+  height:100%;
+  overflow:auto;
+}
+
+.detailsImage{
+  width:100%;
+  height:300px;
+  object-fit:cover;
+}
+
+.detailsBody{
+  padding:15px;
+  line-height:1.8;
+}
+
 </style>
 </head>
 
@@ -167,14 +193,12 @@ button{
 
 <header>🏠 DeKUT Housing</header>
 
-<!-- VIEW ALL HOUSES -->
 <div style="text-align:center;padding:10px;">
   <button class="mapbtn" onclick="openAllHousesMap()">
     🗺 View All Houses on Map
   </button>
 </div>
 
-<!-- FILTERS -->
 <div class="filters">
 
   <input id="searchBox"
@@ -193,14 +217,12 @@ button{
   type="number"
   placeholder="Max Distance (km)">
 
-  <!-- NEW -->
   <select id="sortRent" onchange="applyFilters()">
     <option value="">Sort Rent</option>
     <option value="low">Lowest Rent</option>
     <option value="high">Highest Rent</option>
   </select>
 
-  <!-- NEW -->
   <select id="sortDistance" onchange="applyFilters()">
     <option value="">Sort Distance</option>
     <option value="near">Nearest First</option>
@@ -229,6 +251,13 @@ button{
 
 </div>
 
+<!-- PROPERTY DETAILS -->
+<div class="detailsModal" id="detailsModal">
+
+  <div class="detailsContent" id="detailsContent"></div>
+
+</div>
+
 <script>
 
 const firebaseConfig = {
@@ -248,7 +277,6 @@ const db = firebase.database();
 let data = {};
 let filteredArray = [];
 
-/* LOAD */
 db.ref("properties").on("value",snap=>{
 
   data = snap.val() || {};
@@ -265,7 +293,10 @@ function render(){
   list.innerHTML = "";
 
   if(filteredArray.length===0){
-    list.innerHTML="<p style='padding:20px'>No houses found.</p>";
+
+    list.innerHTML =
+    "<p style='padding:20px'>No houses found.</p>";
+
     return;
   }
 
@@ -274,9 +305,9 @@ function render(){
     let img = p.images?.[0] || "";
 
     let statusClass =
-      (p.status || "").toLowerCase() === "available"
-      ? "available"
-      : "occupied";
+    (p.status || "").toLowerCase() === "available"
+    ? "available"
+    : "occupied";
 
     list.innerHTML += `
 
@@ -297,47 +328,13 @@ function render(){
 
           📏 ${p.distance || ""} KM from DeKUT<br>
 
-          🧰 ${p.amenities || ""}<br>
-
-          🛏 Rooms Available:
-          ${p.rooms || "N/A"}<br>
-
-          💵 Deposit:
-          KSh ${p.deposit || "N/A"}<br>
-
-          ⚡ Utilities Included:
-          ${p.utilities || "N/A"}<br>
-
           <div class="badge ${statusClass}">
             ${p.status || "Unknown"}
           </div>
 
-          <br><br>
-
-          <button class="whatsapp"
-          onclick="wa('${p.phone}')">
-          WhatsApp
-          </button>
-
-          <button class="call"
-          onclick="call('${p.phone}')">
-          Call
-          </button>
-
-          <button class="mapbtn"
-          onclick="openMap(${p.lat},${p.lng})">
-          View on Map
-          </button>
-
-          <button class="photos"
-          onclick='openPhotos(${JSON.stringify(p.images||[])})'>
-          Photos
-          </button>
-
-          <!-- NEW -->
-          <button class="savebtn"
-          onclick='saveHouse(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
-          ❤️ Save
+          <button class="detailsbtn"
+          onclick='openDetails(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
+          View Details
           </button>
 
         </div>
@@ -348,92 +345,176 @@ function render(){
   });
 }
 
-/* FILTER + SORT */
+/* DETAILS MODAL */
+function openDetails(p){
+
+  let img = p.images?.[0] || "";
+
+  let content = document.getElementById("detailsContent");
+
+  content.innerHTML = `
+
+    <div class="backBtn"
+    onclick="closeDetails()">
+    ⬅ Back
+    </div>
+
+    ${img ? `
+      <img class="detailsImage"
+      src="${img}"
+      onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+    ` : ""}
+
+    <div class="detailsBody">
+
+      <h2>🏠 ${p.type || ""}</h2>
+
+      <b>💰 Rent:</b>
+      KSh ${p.rent || ""}<br>
+
+      <b>📍 Location:</b>
+      ${p.location || ""}<br>
+
+      <b>📏 Distance:</b>
+      ${p.distance || ""} KM from DeKUT<br>
+
+      <b>🧰 Amenities:</b><br>
+      ${p.amenities || "N/A"}<br><br>
+
+      <b>🛏 Rooms Available:</b>
+      ${p.rooms || "N/A"}<br>
+
+      <b>💵 Deposit:</b>
+      KSh ${p.deposit || "N/A"}<br>
+
+      <b>⚡ Utilities Included:</b>
+      ${p.utilities || "N/A"}<br>
+
+      <b>📝 Description:</b><br>
+      ${p.extra || "N/A"}<br><br>
+
+      <div class="badge ${
+        (p.status || "").toLowerCase()==="available"
+        ? "available"
+        : "occupied"
+      }">
+        ${p.status || "Unknown"}
+      </div>
+
+      <br><br>
+
+      <button class="whatsapp"
+      onclick="wa('${p.phone}')">
+      WhatsApp
+      </button>
+
+      <button class="call"
+      onclick="call('${p.phone}')">
+      Call
+      </button>
+
+      <button class="mapbtn"
+      onclick="openMap(${p.lat},${p.lng})">
+      View on Map
+      </button>
+
+      <button class="photos"
+      onclick='openPhotos(${JSON.stringify(p.images||[])})'>
+      Photos
+      </button>
+
+      <button class="savebtn"
+      onclick='saveHouse(${JSON.stringify(p).replace(/'/g,"&apos;")})'>
+      ❤️ Save
+      </button>
+
+    </div>
+  `;
+
+  detailsModal.style.display="block";
+}
+
+function closeDetails(){
+  detailsModal.style.display="none";
+}
+
+/* FILTERS */
 function applyFilters(){
 
   let search =
-    document.getElementById("searchBox")
-    .value.toLowerCase();
+  document.getElementById("searchBox")
+  .value.toLowerCase();
 
   let min =
-    parseInt(document.getElementById("minRent").value)
-    || 0;
+  parseInt(document.getElementById("minRent").value)
+  || 0;
 
   let max =
-    parseInt(document.getElementById("maxRent").value)
-    || 999999;
+  parseInt(document.getElementById("maxRent").value)
+  || 999999;
 
   let dist =
-    parseFloat(document.getElementById("maxDist").value)
-    || 999;
+  parseFloat(document.getElementById("maxDist").value)
+  || 999;
 
   let rentSort =
-    document.getElementById("sortRent").value;
+  document.getElementById("sortRent").value;
 
   let distanceSort =
-    document.getElementById("sortDistance").value;
+  document.getElementById("sortDistance").value;
 
-  filteredArray = [];
+  filteredArray=[];
 
   for(let id in data){
 
-    let p = data[id];
+    let p=data[id];
 
-    let rent = parseInt(p.rent || 0);
+    let rent=parseInt(p.rent||0);
 
-    let distance =
-      parseFloat(p.distance || 999);
+    let distance=parseFloat(p.distance||999);
 
-    let text = (
-      (p.location || "") + " " +
-      (p.type || "") + " " +
-      (p.amenities || "")
+    let text=(
+      (p.location||"")+" "+
+      (p.type||"")+" "+
+      (p.amenities||"")
     ).toLowerCase();
 
-    let matches =
-      search === "" ||
-      text.includes(search);
+    let matches=
+    search==="" || text.includes(search);
 
     if(
-      rent >= min &&
-      rent <= max &&
-      distance <= dist &&
+      rent>=min &&
+      rent<=max &&
+      distance<=dist &&
       matches
     ){
       filteredArray.push(p);
     }
   }
 
-  /* SORT RENT */
   if(rentSort==="low"){
-    filteredArray.sort(
-      (a,b)=>(a.rent||0)-(b.rent||0)
-    );
+    filteredArray.sort((a,b)=>
+    (a.rent||0)-(b.rent||0));
   }
 
   if(rentSort==="high"){
-    filteredArray.sort(
-      (a,b)=>(b.rent||0)-(a.rent||0)
-    );
+    filteredArray.sort((a,b)=>
+    (b.rent||0)-(a.rent||0));
   }
 
-  /* SORT DISTANCE */
   if(distanceSort==="near"){
-    filteredArray.sort(
-      (a,b)=>(a.distance||999)-(b.distance||999)
-    );
+    filteredArray.sort((a,b)=>
+    (a.distance||999)-(b.distance||999));
   }
 
   if(distanceSort==="far"){
-    filteredArray.sort(
-      (a,b)=>(b.distance||0)-(a.distance||0)
-    );
+    filteredArray.sort((a,b)=>
+    (b.distance||0)-(a.distance||0));
   }
 
   render();
 }
 
-/* RESET */
 function resetFilters(){
 
   document.getElementById("searchBox").value="";
@@ -446,11 +527,11 @@ function resetFilters(){
   applyFilters();
 }
 
-/* SAVE HOUSE */
+/* SAVE */
 function saveHouse(house){
 
   let saved =
-    JSON.parse(localStorage.getItem("savedHouses") || "[]");
+  JSON.parse(localStorage.getItem("savedHouses")||"[]");
 
   saved.push(house);
 
@@ -472,7 +553,7 @@ function call(n){
   window.location.href="tel:"+n;
 }
 
-/* SINGLE MAP */
+/* MAP */
 function openMap(lat,lng){
 
   let m=document.getElementById("mapModal");
@@ -497,9 +578,7 @@ function openMap(lat,lng){
 
     L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution:"© OpenStreetMap"
-      }
+      { attribution:"© OpenStreetMap" }
     ).addTo(map);
 
     L.marker([lat,lng]).addTo(map);
@@ -507,7 +586,6 @@ function openMap(lat,lng){
   },100);
 }
 
-/* ALL HOUSES MAP */
 function openAllHousesMap(){
 
   let m=document.getElementById("mapModal");
@@ -532,9 +610,7 @@ function openAllHousesMap(){
 
     L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution:"© OpenStreetMap"
-      }
+      { attribution:"© OpenStreetMap" }
     ).addTo(map);
 
     let markers=L.markerClusterGroup();
@@ -547,34 +623,10 @@ function openAllHousesMap(){
 
       let marker=L.marker([p.lat,p.lng]);
 
-      let photo=p.images?.[0] || "";
-
       marker.bindPopup(`
-
-        <div style="width:200px">
-
-          ${photo ? `
-            <img src="${photo}"
-            style="
-            width:100%;
-            height:120px;
-            object-fit:cover;
-            border-radius:8px;
-            ">
-          ` : ""}
-
-          <br>
-
-          <b>${p.type||""}</b><br>
-
-          💰 KSh ${p.rent||""}<br>
-
-          📍 ${p.location||""}<br>
-
-          📏 ${p.distance||""} KM<br>
-
-        </div>
-
+        <b>${p.type||""}</b><br>
+        💰 KSh ${p.rent||""}<br>
+        📍 ${p.location||""}
       `);
 
       markers.addLayer(marker);
@@ -585,10 +637,8 @@ function openAllHousesMap(){
   },100);
 }
 
-/* CLOSE MAP */
 function closeMap(){
-  document.getElementById("mapModal")
-  .style.display="none";
+  mapModal.style.display="none";
 }
 
 /* PHOTOS */
@@ -602,7 +652,7 @@ function openPhotos(images){
 
   index=0;
 
-  if(!imgs.length) return;
+  if(!imgs.length)return;
 
   photoModal.style.display="block";
 
@@ -613,7 +663,6 @@ function closePhotos(){
   photoModal.style.display="none";
 }
 
-/* SWIPE */
 photoModal.addEventListener("touchstart",e=>{
   startX=e.touches[0].clientX;
 });
@@ -625,7 +674,6 @@ photoModal.addEventListener("touchend",e=>{
   if(endX<startX-50) next();
 
   if(endX>startX+50) prev();
-
 });
 
 function next(){
