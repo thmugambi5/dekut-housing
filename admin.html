@@ -28,6 +28,11 @@ body{
   padding:20px;
 }
 
+.sidebar h2{
+  font-size:18px;
+  margin-bottom:20px;
+}
+
 .sidebar button{
   width:100%;
   margin:5px 0;
@@ -39,12 +44,37 @@ body{
   color:white;
 }
 
-.sidebar button:hover{ background:#333; }
+.sidebar button:hover{
+  background:#333;
+}
 
 /* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
+}
+
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+
+.statBox{
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* SEARCH */
+.searchBar input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
 }
 
 /* CARDS */
@@ -76,9 +106,10 @@ body{
   margin:4px;
 }
 
-.approve{ background:green; color:white; }
-.reject{ background:red; color:white; }
 .delete{ background:#e74c3c; color:white; }
+.toggle{ background:#007bff; color:white; }
+.approve{ background:#28a745; color:white; }
+.reject{ background:#ff9800; color:white; }
 
 </style>
 </head>
@@ -88,16 +119,42 @@ body{
 <div class="sidebar">
   <h2>🏠 Admin Panel</h2>
 
-  <button onclick="loadApproved()">📦 Approved</button>
-  <button onclick="loadPending()">⏳ Pending Approval</button>
-  <button onclick="loadApproved()">🔄 Refresh</button>
+  <button onclick="loadAll()">📦 All Properties</button>
+  <button onclick="showPending()">🟡 Pending Approval</button>
+  <button onclick="filterStatus('available')">🟢 Available</button>
+  <button onclick="filterStatus('occupied')">🔴 Occupied</button>
+  <button onclick="loadAll()">🔄 Refresh</button>
 </div>
 
 <div class="main">
 
-<h1>Dashboard</h1>
+  <h1>Dashboard</h1>
 
-<div id="list"></div>
+  <!-- STATS -->
+  <div class="stats">
+    <div class="statBox">
+      <h3 id="total">0</h3>
+      <p>Total Houses</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="available">0</h3>
+      <p>Available</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="pending">0</h3>
+      <p>Pending Approval</p>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="searchBar">
+    <input id="search" placeholder="Search..." oninput="render()">
+  </div>
+
+  <!-- LIST -->
+  <div id="list"></div>
 
 </div>
 
@@ -114,74 +171,136 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const db = firebase.database();
 
-let currentMode = "approved";
 let data = {};
+let filtered = {};
+let mode = "all";
 
-/* LOAD APPROVED */
-function loadApproved(){
-  currentMode = "approved";
-  db.ref("properties").on("value",snap=>{
-    data = snap.val() || {};
-    render();
-  });
+/* LOAD */
+db.ref("properties").on("value", snap => {
+  data = snap.val() || {};
+  applyMode();
+  updateStats();
+});
+
+/* STATS */
+function updateStats(){
+
+  let total = 0;
+  let available = 0;
+  let pending = 0;
+
+  for(let id in data){
+    total++;
+
+    let p = data[id];
+
+    let status = (p.status || "").toLowerCase();
+
+    if(p.approved !== true){
+      pending++;
+    }
+
+    if(status === "available") available++;
+  }
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("available").innerText = available;
+  document.getElementById("pending").innerText = pending;
 }
 
-/* LOAD PENDING */
-function loadPending(){
-  currentMode = "pending";
-  db.ref("pendingProperties").on("value",snap=>{
-    data = snap.val() || {};
-    render();
-  });
+/* MODE HANDLING */
+function applyMode(){
+
+  filtered = {};
+
+  for(let id in data){
+    let p = data[id];
+
+    if(mode === "pending" && p.approved === true) continue;
+
+    if(mode === "available" && (p.status||"").toLowerCase() !== "available") continue;
+
+    if(mode === "occupied" && (p.status||"").toLowerCase() !== "occupied") continue;
+
+    if(mode === "pending"){
+      if(p.approved === true) continue;
+    }
+
+    filtered[id] = p;
+  }
+
+  render();
+}
+
+function showPending(){
+  mode = "pending";
+  applyMode();
+}
+
+function filterStatus(status){
+  mode = status;
+  applyMode();
+}
+
+function loadAll(){
+  mode = "all";
+  applyMode();
 }
 
 /* RENDER */
 function render(){
 
+  let q = document.getElementById("search").value.toLowerCase();
+
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  for(let id in data){
+  for(let id in filtered){
 
-    let p = data[id];
+    let p = filtered[id];
 
-    let badgeClass =
-      currentMode === "pending"
-      ? "pending"
-      : (p.status?.toLowerCase()==="available"?"available":"occupied");
+    let text =
+      (p.location + " " + p.type + " " + p.phone).toLowerCase();
+
+    if(q && !text.includes(q)) continue;
+
+    let statusClass =
+      (p.status || "").toLowerCase() === "available"
+      ? "available" : "occupied";
+
+    let approved = p.approved === true;
 
     list.innerHTML += `
       <div class="card">
 
-        <b>🏠 ${p.type}</b><br>
-        📍 ${p.location}<br>
+        <b>🏠 ${p.type}</b> - ${p.location}<br>
         💰 KSh ${p.rent}<br>
         📞 ${p.phone}<br>
 
-        <span class="badge ${badgeClass}">
-          ${currentMode==="pending" ? "Pending" : p.status}
+        <span class="badge ${approved ? "available" : "pending"}">
+          ${approved ? "Approved" : "Pending"}
+        </span>
+
+        <span class="badge ${statusClass}">
+          ${p.status}
         </span>
 
         <br><br>
 
-        ${currentMode==="pending" ? `
+        ${!approved ? `
           <button class="approve"
           onclick="approve('${id}')">
-          Approve
+          ✔ Approve
           </button>
+        ` : ""}
 
-          <button class="reject"
-          onclick="reject('${id}')">
-          Reject
-          </button>
-        ` : `
-          <button class="delete"
-          onclick="deleteProperty('${id}')">
-          Delete
-          </button>
-        `}
+        <button class="delete"
+        onclick="deleteProperty('${id}')">
+        Delete
+        </button>
 
       </div>
     `;
@@ -191,25 +310,18 @@ function render(){
 /* APPROVE */
 function approve(id){
 
-  let item = data[id];
-
-  db.ref("properties").push(item);
-  db.ref("pendingProperties/"+id).remove();
-
-  alert("Approved ✔");
+  db.ref("properties/" + id).update({
+    approved:true
+  });
 }
 
-/* REJECT */
-function reject(id){
-  db.ref("pendingProperties/"+id).remove();
-}
-
-/* DELETE APPROVED */
+/* DELETE */
 function deleteProperty(id){
-  db.ref("properties/"+id).remove();
-}
 
-loadApproved();
+  if(confirm("Delete this property?")){
+    db.ref("properties/" + id).remove();
+  }
+}
 
 </script>
 
