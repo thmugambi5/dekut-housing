@@ -17,20 +17,22 @@ body{
   background:#f4f6f9;
 }
 
-/* 🔐 LOCK SCREEN */
+/* HARD LOCK SCREEN */
 #lockScreen{
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:#111;
   color:white;
   display:flex;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
   flex-direction:column;
   z-index:999999;
+}
+
+/* HIDE EVERYTHING UNTIL VERIFIED */
+#app{
+  display:none;
 }
 
 /* SIDEBAR */
@@ -43,136 +45,28 @@ body{
   background:#111;
   color:white;
   padding:20px;
-  overflow:auto;
 }
-
-.sidebar h2{ margin-top:0; }
-
-.sidebar button{
-  width:100%;
-  margin:5px 0;
-  padding:12px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  background:#222;
-  color:white;
-  font-size:15px;
-}
-
-.sidebar button:hover{ background:#333; }
 
 /* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
-  display:none;
-}
-
-/* STATS */
-.stats{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
-}
-
-.statBox{
-  background:white;
-  padding:15px;
-  border-radius:12px;
-  text-align:center;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
-}
-
-/* SEARCH */
-.searchBox{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #ccc;
-  margin-top:15px;
 }
 
 /* CARD */
 .card{
   background:white;
   margin-top:15px;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-.card img{
-  width:100%;
-  height:220px;
-  object-fit:cover;
-}
-
-.cardContent{
   padding:15px;
-  line-height:1.8;
+  border-radius:10px;
 }
 
-/* BADGES */
-.badge{
-  display:inline-block;
-  padding:5px 10px;
-  border-radius:6px;
-  color:white;
-  font-size:12px;
-  margin-right:5px;
-}
-
-.pending{ background:orange; }
-.approved{ background:green; }
-
-/* BUTTONS */
 button{
-  padding:10px 12px;
+  padding:10px;
+  margin:5px;
   border:none;
   border-radius:8px;
   cursor:pointer;
-  margin:4px;
-  font-weight:bold;
-}
-
-.approve{ background:#28a745; color:white; }
-.reject{ background:#ff9800; color:white; }
-.delete{ background:#e74c3c; color:white; }
-.view{ background:#111; color:white; }
-.mapbtn{ background:#007bff; color:white; }
-
-/* MODAL */
-.modal{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:white;
-  z-index:9999;
-  overflow:auto;
-}
-
-.backBtn{
-  position:fixed;
-  top:10px;
-  left:10px;
-  background:black;
-  color:white;
-  padding:10px 14px;
-  border-radius:8px;
-  z-index:99999;
-}
-
-.modalContent{
-  padding:15px;
-}
-
-@media(max-width:768px){
-  .sidebar{ position:relative; width:100%; }
-  .main{ margin-left:0; }
 }
 
 </style>
@@ -180,49 +74,25 @@ button{
 
 <body>
 
-<!-- LOCK SCREEN -->
+<!-- LOCK SCREEN (DEFAULT) -->
 <div id="lockScreen">
-  <h2>🔐 Verifying Admin Access...</h2>
-  <p>Please wait...</p>
+  <h2>🔐 Verifying Secure Access...</h2>
+  <p>Please wait</p>
 </div>
 
-<div class="sidebar">
+<!-- APP (HIDDEN UNTIL VERIFIED) -->
+<div id="app">
 
-  <h2>🏠 Admin Panel</h2>
-
-  <button onclick="showPending()">🟡 Pending</button>
-  <button onclick="showApproved()">🟢 Approved</button>
-  <button onclick="loadAll()">📦 All Listings</button>
-
-  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
-
-</div>
-
-<div class="main">
-
-  <h1>Dashboard</h1>
-
-  <div class="stats">
-    <div class="statBox">
-      <h2 id="totalPending">0</h2>
-      <p>Pending</p>
-    </div>
-
-    <div class="statBox">
-      <h2 id="totalApproved">0</h2>
-      <p>Approved</p>
-    </div>
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <button onclick="logout()">Logout</button>
   </div>
 
-  <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
+  <div class="main">
+    <h1>Dashboard</h1>
+    <div id="list"></div>
+  </div>
 
-  <div id="list"></div>
-
-</div>
-
-<div class="modal" id="detailsModal">
-  <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
-  <div id="detailsContent"></div>
 </div>
 
 <script>
@@ -242,162 +112,129 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let pending = {};
-let approved = {};
-let mode = "pending";
+let SESSION_OK = false;
 
-/* 🔐 STEP G SECURITY CORE (UPDATED) */
+/* =========================
+   STEP H SECURITY CORE
+========================= */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
-    window.location.href = "admin-login.html";
+    forceLogout();
     return;
   }
 
-  const urlToken = new URLSearchParams(window.location.search).get("token");
+  const token =
+    new URLSearchParams(window.location.search).get("token");
 
-  if(!urlToken){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
+  if(!token){
+    forceLogout();
     return;
   }
 
-  const snap = await db.ref("adminSessions/" + user.uid).once("value");
+  const snap =
+    await db.ref("adminSessions/" + user.uid).once("value");
 
   if(!snap.exists()){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
+    forceLogout();
     return;
   }
 
   const session = snap.val();
 
-  if(session.token !== urlToken){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
+  if(session.token !== token){
+    forceLogout();
     return;
   }
 
-  const expired = Date.now() - session.createdAt > 86400000;
-
-  if(expired){
+  if(Date.now() - session.createdAt > 86400000){
     await db.ref("adminSessions/" + user.uid).remove();
-    await auth.signOut();
-    window.location.href = "admin-login.html";
+    forceLogout();
     return;
   }
 
-  // SUCCESS → UNLOCK DASHBOARD
+  /* ✅ VERIFIED */
+  SESSION_OK = true;
+
   document.getElementById("lockScreen").style.display = "none";
-  document.querySelector(".main").style.display = "block";
+  document.getElementById("app").style.display = "block";
+
+  startSessionMonitor(user.uid, token);
 });
 
-/* LOGOUT */
-function logout(){
+/* =========================
+   🔥 LIVE SESSION MONITOR
+   (STEP H UPGRADE)
+========================= */
+function startSessionMonitor(uid, token){
+
+  setInterval(async ()=>{
+
+    const snap =
+      await db.ref("adminSessions/" + uid).once("value");
+
+    if(!snap.exists()){
+      forceLogout();
+      return;
+    }
+
+    const session = snap.val();
+
+    if(session.token !== token){
+      forceLogout();
+      return;
+    }
+
+  }, 5000); // every 5 seconds
+}
+
+/* =========================
+   FORCE LOGOUT
+========================= */
+function forceLogout(){
+
+  SESSION_OK = false;
+
   auth.signOut().then(()=>{
+
     window.location.href = "admin-login.html";
+
+  }).catch(()=>{
+
+    window.location.href = "admin-login.html";
+
   });
 }
 
-/* REALTIME DATA */
-db.ref("pendingProperties").on("value", snap=>{
-  pending = snap.val() || {};
-  updateStats();
-  render();
-});
+/* =========================
+   LOGOUT BUTTON
+========================= */
+function logout(){
 
-db.ref("properties").on("value", snap=>{
-  approved = snap.val() || {};
-  updateStats();
-  render();
-});
+  const user = auth.currentUser;
 
-function updateStats(){
-  document.getElementById("totalPending").innerText = Object.keys(pending).length;
-  document.getElementById("totalApproved").innerText = Object.keys(approved).length;
-}
-
-function showPending(){ mode="pending"; render(); }
-function showApproved(){ mode="approved"; render(); }
-function loadAll(){ mode="all"; render(); }
-
-function render(){
-
-  let q = document.getElementById("search").value.toLowerCase();
-  let list = document.getElementById("list");
-  list.innerHTML = "";
-
-  let source =
-    mode==="pending" ? pending :
-    mode==="approved" ? approved :
-    {...pending, ...approved};
-
-  for(let id in source){
-
-    let p = source[id];
-
-    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
-
-    if(q && !text.includes(q)) continue;
-
-    let img = p.images?.[0] || "";
-    let isPending = pending[id] ? true : false;
-
-    list.innerHTML += `
-      <div class="card">
-
-        ${img ? `<img src="${img}">` : ""}
-
-        <div class="cardContent">
-
-          <b>🏠 ${p.type || ""}</b><br>
-          📍 ${p.location || ""}<br>
-          💰 KSh ${p.rent || ""}<br>
-
-          <span class="badge ${isPending ? "pending" : "approved"}">
-            ${isPending ? "Pending" : "Approved"}
-          </span>
-
-          <br><br>
-
-          <button class="view" onclick='openDetails("${encodeURIComponent(JSON.stringify(p))}")'>View</button>
-
-          ${isPending ? `
-            <button class="approve" onclick="approve('${id}')">✔ Approve</button>
-            <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
-          ` : ""}
-
-          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
-
-        </div>
-
-      </div>
-    `;
+  if(user){
+    db.ref("adminSessions/" + user.uid).remove();
   }
+
+  forceLogout();
 }
 
-function approve(id){
-  let item = pending[id];
-  if(!item) return;
+/* =========================
+   OPTIONAL SAFE DATA LOAD
+========================= */
+db.ref("pendingProperties").on("value", snap=>{
 
-  item.approved = true;
+  if(!SESSION_OK) return;
 
-  db.ref("properties/" + id).set(item);
-  db.ref("pendingProperties/" + id).remove();
-}
+  const data = snap.val() || {};
 
-function rejectItem(id){
-  db.ref("pendingProperties/" + id).remove();
-}
+  document.getElementById("list").innerHTML =
+    "<pre>"+JSON.stringify(data,null,2)+"</pre>";
 
-function deleteItem(id){
-  db.ref("pendingProperties/" + id).remove();
-  db.ref("properties/" + id).remove();
-}
+});
 
-function openDetails(encoded){
-  let p = JSON.parse(decodeURIComponent(encoded));
+</script>
 
-  document.getElementById("detailsContent").innerHTML = `
-    <div class="modalContent">
-      <h2>${p.type}</
+</body>
+</html>
