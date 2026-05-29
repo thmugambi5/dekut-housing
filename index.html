@@ -564,6 +564,9 @@ onclick="closeDetails(); openMap(${p.lat || 0},${p.lng || 0})"
 
 document.getElementById("detailsModal").style.display = "block";
 
+/* PHONE BACK SUPPORT */
+pushHistory("details");
+
 }
 
 /* CLOSE DETAILS */
@@ -600,6 +603,9 @@ container.innerHTML += `
 
 document.getElementById("photoModal").style.display = "block";
 
+/* PHONE BACK SUPPORT */
+pushHistory("photos");
+
 }
 
 function closePhotos(){
@@ -620,6 +626,9 @@ let modal =
 document.getElementById("mapModal");
 
 modal.style.display = "block";
+
+/* PHONE BACK SUPPORT */
+pushHistory("map");
 
 modal.innerHTML = `
 
@@ -656,6 +665,9 @@ let modal =
 document.getElementById("mapModal");
 
 modal.style.display = "block";
+
+/* PHONE BACK SUPPORT */
+pushHistory("map");
 
 modal.innerHTML = `
 
@@ -717,6 +729,50 @@ function closeMap(){
 document.getElementById("mapModal").style.display = "none";
 
 }
+
+/* =========================
+PHONE BACK BUTTON SUPPORT
+========================= */
+
+function pushHistory(type){
+
+history.pushState(
+{ modal:type },
+""
+);
+
+}
+
+window.addEventListener("popstate", function(){
+
+if(
+document.getElementById("photoModal").style.display === "block"
+){
+
+closePhotos();
+return;
+
+}
+
+if(
+document.getElementById("detailsModal").style.display === "block"
+){
+
+closeDetails();
+return;
+
+}
+
+if(
+document.getElementById("mapModal").style.display === "block"
+){
+
+closeMap();
+return;
+
+}
+
+});
 
 /* CONTACT */
 function wa(number){
