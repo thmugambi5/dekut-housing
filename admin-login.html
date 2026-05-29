@@ -19,35 +19,41 @@ body{
   align-items:center;
   height:100vh;
 }
-.box{
+.loginBox{
   width:320px;
   background:#fff;
   padding:20px;
   border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.15);
 }
 input,button{
   width:100%;
   padding:10px;
   margin:10px 0;
+  border-radius:8px;
 }
 button{
   background:#007bff;
   color:white;
   border:none;
-  cursor:pointer;
+  font-weight:bold;
 }
+.testBtn{ background:#111; }
+.error{ color:red; }
+.success{ color:green; }
+.loading{ color:#333; }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-<h2>Admin Login</h2>
+<div class="loginBox">
+<h2>🔐 Admin Login</h2>
 
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
 
-<button onclick="login()">Login</button>
+<button onclick="login()" id="loginBtn">Login</button>
 
 <div id="msg"></div>
 </div>
@@ -71,61 +77,55 @@ const db = firebase.database();
 
 /* TOKEN GENERATOR */
 function generateToken(){
-  return "adm_" + Math.random().toString(36).substring(2) + Date.now();
+  return "t_" + Math.random().toString(36).substring(2) + Date.now();
 }
 
 async function login(){
 
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const msg = document.getElementById("msg");
+  const btn = document.getElementById("loginBtn");
 
-  msg.innerHTML = "Logging in...";
+  msg.innerHTML = "<div class='loading'>Logging in...</div>";
+  btn.disabled = true;
 
   try{
 
-    const res = await auth.signInWithEmailAndPassword(email,password);
+    const res = await auth.signInWithEmailAndPassword(email, password);
     const user = res.user;
 
-    /* CHECK ADMIN EXISTS */
+    // OPTIONAL: check admin node exists
     const adminSnap = await db.ref("admins/" + user.uid).once("value");
 
     if(!adminSnap.exists()){
+      msg.innerHTML = "<div class='error'>Not registered as admin</div>";
       await auth.signOut();
-      msg.innerHTML = "❌ Not an admin";
+      btn.disabled = false;
       return;
     }
 
-    /* CREATE TOKEN */
+    // CREATE SESSION TOKEN
     const token = generateToken();
 
-    /* STORE SESSION */
     await db.ref("adminSessions/" + user.uid).set({
       token: token,
-      createdAt: Date.now(),
-      email: user.email
+      createdAt: Date.now()
     });
 
-    msg.innerHTML = "✔ Success... redirecting";
+    msg.innerHTML = "<div class='success'>Success</div>";
 
+    // IMPORTANT: redirect WITH TOKEN
     setTimeout(()=>{
       window.location.href = "admin.html?token=" + token;
     },800);
 
-  } catch(e){
-    msg.innerHTML = e.message;
+  }
+  catch(err){
+    msg.innerHTML = "<div class='error'>" + err.message + "</div>";
+    btn.disabled = false;
   }
 }
-
-/* AUTO REDIRECT */
-auth.onAuthStateChanged(async user=>{
-  if(user){
-    const snap = await db.ref("admins/" + user.uid).once("value");
-    if(snap.exists()){
-      window.location.href = "admin.html";
-    }
-  }
-});
 
 </script>
 
