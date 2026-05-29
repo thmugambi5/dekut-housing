@@ -17,26 +17,16 @@ body{
   background:#f5f7fb;
 }
 
-/* TOP BAR (MOBILE FRIENDLY) */
+/* TOP BAR */
 .topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
   background:#111;
   color:white;
-  padding:12px 15px;
+  padding:12px;
   position:sticky;
   top:0;
-  z-index:1000;
-}
-
-.menuBtn{
-  background:#222;
-  border:none;
-  color:white;
-  padding:8px 12px;
-  border-radius:6px;
-  cursor:pointer;
 }
 
 /* SIDEBAR */
@@ -48,7 +38,7 @@ body{
   height:100%;
   background:#111;
   color:white;
-  padding:20px;
+  padding:15px;
   transform:translateX(0);
   transition:0.3s;
   z-index:999;
@@ -60,35 +50,50 @@ body{
 
 .sidebar button{
   width:100%;
-  padding:12px;
+  padding:10px;
   margin:6px 0;
   border:none;
   border-radius:8px;
   cursor:pointer;
   background:#222;
   color:white;
-  font-size:14px;
-}
-
-.sidebar button:hover{
-  background:#333;
 }
 
 /* MAIN */
 .main{
   margin-left:260px;
   padding:15px;
-  transition:0.3s;
 }
 
-/* MOBILE MAIN FULL WIDTH */
 @media(max-width:768px){
-  .main{
-    margin-left:0;
-  }
+  .main{ margin-left:0; }
 }
 
-/* CARD */
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.statBox{
+  background:white;
+  padding:12px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* SEARCH */
+input{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+/* CARDS */
 .card{
   background:white;
   padding:15px;
@@ -102,9 +107,8 @@ button.action{
   padding:8px 10px;
   border:none;
   border-radius:6px;
-  margin:4px 3px;
+  margin:4px;
   cursor:pointer;
-  font-size:13px;
 }
 
 .approve{ background:green; color:white; }
@@ -122,33 +126,63 @@ button.action{
   display:flex;
   justify-content:center;
   align-items:center;
-  flex-direction:column;
   z-index:9999;
 }
+
+.badge{
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  color:white;
+}
+
+.pending{ background:orange; }
+.approved{ background:green; }
 
 </style>
 </head>
 
 <body>
 
-<div id="loading">
-  <h2>🔐 Verifying Access...</h2>
-</div>
+<div id="loading">🔐 Verifying Access...</div>
 
 <div class="topbar">
-  <button class="menuBtn" onclick="toggleMenu()">☰ Menu</button>
   <div>Admin Dashboard</div>
-  <button class="menuBtn" onclick="logout()">Logout</button>
+  <button onclick="logout()">Logout</button>
 </div>
 
-<div class="sidebar hidden" id="sidebar">
-  <h3>Panel</h3>
-  <button onclick="loadAll()">🏠 All Listings</button>
+<div class="sidebar" id="sidebar">
+  <h3>Menu</h3>
+  <button onclick="setMode('all')">All</button>
+  <button onclick="setMode('pending')">Pending</button>
+  <button onclick="setMode('approved')">Approved</button>
 </div>
 
 <div class="main">
-  <h2>Listings</h2>
+
+  <h2>Overview</h2>
+
+  <div class="stats">
+    <div class="statBox">
+      <h3 id="total">0</h3>
+      <p>Total</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="pending">0</h3>
+      <p>Pending</p>
+    </div>
+
+    <div class="statBox">
+      <h3 id="approved">0</h3>
+      <p>Approved</p>
+    </div>
+  </div>
+
+  <input id="search" placeholder="Search location, type, rent..." oninput="render()">
+
   <div id="list"></div>
+
 </div>
 
 <script>
@@ -168,17 +202,16 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
+let dataStore = {};
+let mode = "all";
 
-/* AUTH CHECK */
+/* AUTH */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
-
-  currentUser = user;
 
   const token = new URLSearchParams(window.location.search).get("token");
 
@@ -197,47 +230,87 @@ auth.onAuthStateChanged(async user => {
   }
 
   if(Date.now() - session.createdAt > 86400000){
-    await db.ref("adminSessions/" + user.uid).remove();
     window.location.href = "admin-login.html";
     return;
   }
 
   document.getElementById("loading").style.display = "none";
-  document.querySelector(".main").style.display = "block";
 
-  loadAll();
+  db.ref("properties").on("value", snap => {
+    dataStore = snap.val() || {};
+    updateStats();
+    render();
+  });
+
 });
 
-/* MENU TOGGLE (MOBILE) */
-function toggleMenu(){
-  document.getElementById("sidebar").classList.toggle("hidden");
+/* MODE */
+function setMode(m){
+  mode = m;
+  render();
 }
 
-/* LOAD DATA */
-function loadAll(){
-  db.ref("properties").on("value", snap => {
+/* STATS */
+function updateStats(){
 
-    const data = snap.val() || {};
-    const list = document.getElementById("list");
+  let total = Object.keys(dataStore).length;
+  let pending = 0;
+  let approved = 0;
 
-    list.innerHTML = "";
-
-    for(let id in data){
-      const p = data[id];
-
-      list.innerHTML += `
-        <div class="card">
-          <b>${p.type || ""}</b><br>
-          📍 ${p.location || ""}<br>
-          💰 KSh ${p.rent || ""}<br>
-
-          <button class="action approve" onclick="approve('${id}')">Approve</button>
-          <button class="action delete" onclick="removeItem('${id}')">Delete</button>
-        </div>
-      `;
+  for(let id in dataStore){
+    if(dataStore[id].approved){
+      approved++;
+    } else {
+      pending++;
     }
+  }
 
-  });
+  document.getElementById("total").innerText = total;
+  document.getElementById("pending").innerText = pending;
+  document.getElementById("approved").innerText = approved;
+}
+
+/* RENDER */
+function render(){
+
+  let q = document.getElementById("search").value.toLowerCase();
+  let list = document.getElementById("list");
+
+  list.innerHTML = "";
+
+  for(let id in dataStore){
+
+    let p = dataStore[id];
+
+    let status = p.approved ? "approved" : "pending";
+
+    if(mode !== "all" && mode !== status) continue;
+
+    let text = (p.type + p.location + p.rent).toLowerCase();
+    if(q && !text.includes(q)) continue;
+
+    list.innerHTML += `
+      <div class="card">
+
+        <b>${p.type}</b><br>
+        📍 ${p.location}<br>
+        💰 KSh ${p.rent}<br>
+
+        <span class="badge ${status}">
+          ${status}
+        </span>
+
+        <br><br>
+
+        ${!p.approved ? `
+          <button class="action approve" onclick="approve('${id}')">Approve</button>
+        ` : ""}
+
+        <button class="action delete" onclick="removeItem('${id}')">Delete</button>
+
+      </div>
+    `;
+  }
 }
 
 /* ACTIONS */
@@ -251,10 +324,7 @@ function removeItem(id){
 
 /* LOGOUT */
 async function logout(){
-  if(currentUser){
-    await db.ref("adminSessions/" + currentUser.uid).remove();
-    await auth.signOut();
-  }
+  await auth.signOut();
   window.location.href = "admin-login.html";
 }
 
