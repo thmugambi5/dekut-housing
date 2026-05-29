@@ -84,6 +84,11 @@ button:disabled{
     margin-top:10px;
 }
 
+.testBtn{
+    background:#111;
+    margin-top:5px;
+}
+
 </style>
 </head>
 
@@ -110,6 +115,14 @@ id="loginBtn"
 onclick="login()"
 >
 Login
+</button>
+
+<!-- TEST BUTTON -->
+<button
+class="testBtn"
+onclick="testWrite()"
+>
+TEST DATABASE WRITE
 </button>
 
 <div id="msg"></div>
@@ -157,7 +170,7 @@ async function login(){
 
     try{
 
-        /* FIREBASE LOGIN */
+        /* FIREBASE AUTH LOGIN */
         const userCredential =
           await auth.signInWithEmailAndPassword(
             email,
@@ -167,8 +180,9 @@ async function login(){
         const user = userCredential.user;
 
         console.log("LOGIN SUCCESS:", user.email);
+        console.log("USER UID:", user.uid);
 
-        /* ADMINS NODE */
+        /* CHECK ADMINS NODE */
         const adminRef = db.ref("admins");
 
         const snap =
@@ -199,7 +213,6 @@ async function login(){
         msg.innerHTML =
           "<div class='success'>✔ Login successful</div>";
 
-        /* REDIRECT ONLY AFTER DATABASE WRITE */
         setTimeout(()=>{
 
             window.location.href =
@@ -210,7 +223,7 @@ async function login(){
     }
     catch(error){
 
-        console.error(error);
+        console.error("LOGIN ERROR:", error);
 
         msg.innerHTML =
           "<div class='error'>❌ " +
@@ -224,14 +237,40 @@ async function login(){
 
 }
 
+/* TEST DATABASE WRITE */
+async function testWrite(){
+
+    try{
+
+        await db.ref("testAdmin").set({
+
+            hello:"admin works",
+            time:Date.now()
+
+        });
+
+        alert("WRITE SUCCESS");
+
+        console.log("DATABASE WRITE SUCCESS");
+
+    }
+    catch(error){
+
+        console.error("WRITE FAILED:", error);
+
+        alert("WRITE FAILED");
+
+    }
+
+}
+
 /* IMPORTANT:
-   DO NOT AUTO REDIRECT HERE
-   It was interrupting admin creation
+   NO AUTO REDIRECT HERE
 */
 auth.onAuthStateChanged(user=>{
 
     console.log(
-      "Auth State:",
+      "AUTH STATE:",
       user ? user.email : "No user"
     );
 
