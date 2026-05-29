@@ -19,27 +19,21 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .box{
   width:320px;
   background:#fff;
   padding:20px;
   border-radius:12px;
-  box-shadow:0 2px 10px rgba(0,0,0,0.15);
 }
-
 input,button{
   width:100%;
   padding:10px;
   margin:10px 0;
-  border-radius:8px;
-  border:1px solid #ccc;
 }
-
 button{
   background:#007bff;
   color:white;
-  font-weight:bold;
+  border:none;
   cursor:pointer;
 }
 </style>
@@ -75,7 +69,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* TOKEN */
+/* TOKEN GENERATOR */
 function generateToken(){
   return "adm_" + Math.random().toString(36).substring(2) + Date.now();
 }
@@ -98,16 +92,18 @@ async function login(){
 
     if(!adminSnap.exists()){
       await auth.signOut();
-      msg.innerHTML = "❌ Not an admin account";
+      msg.innerHTML = "❌ Not an admin";
       return;
     }
 
-    /* CREATE SESSION */
+    /* CREATE TOKEN */
     const token = generateToken();
 
+    /* STORE SESSION */
     await db.ref("adminSessions/" + user.uid).set({
       token: token,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      email: user.email
     });
 
     msg.innerHTML = "✔ Success... redirecting";
