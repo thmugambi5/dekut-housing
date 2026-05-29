@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Admin Dashboard</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -11,7 +10,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-
 body{ margin:0; font-family:Arial; background:#f4f6f9; }
 
 #lockScreen{
@@ -21,14 +19,13 @@ body{ margin:0; font-family:Arial; background:#f4f6f9; }
   background:#111;
   color:white;
   display:flex;
-  align-items:center;
   justify-content:center;
+  align-items:center;
   flex-direction:column;
   z-index:9999;
 }
 
 .main{ display:none; padding:20px; }
-
 </style>
 </head>
 
@@ -39,9 +36,7 @@ body{ margin:0; font-family:Arial; background:#f4f6f9; }
 </div>
 
 <div class="main">
-
-<h1>Admin Dashboard</h1>
-
+  <h1>Admin Dashboard</h1>
 </div>
 
 <script>
@@ -61,7 +56,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* STEP G FIXED AUTH FLOW */
+/* STEP G SAFE CHECK */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
@@ -72,45 +67,51 @@ auth.onAuthStateChanged(async user => {
   const urlToken = new URLSearchParams(window.location.search).get("token");
 
   if(!urlToken){
-    console.log("NO TOKEN IN URL");
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  const snap = await db.ref("adminSessions/" + user.uid).once("value");
+  /* ADMIN CHECK */
+  const adminSnap = await db.ref("admins/" + user.uid).once("value");
 
-  if(!snap.exists()){
-    console.log("NO SESSION FOUND");
+  if(!adminSnap.exists()){
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  const session = snap.val();
+  /* SESSION CHECK */
+  const sessionSnap = await db.ref("adminSessions/" + user.uid).once("value");
+
+  if(!sessionSnap.exists()){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const session = sessionSnap.val();
 
   if(session.token !== urlToken){
-    console.log("TOKEN MISMATCH");
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
+  /* EXPIRY CHECK (24h) */
   const expired = Date.now() - session.createdAt > 86400000;
 
   if(expired){
-    console.log("SESSION EXPIRED");
     await db.ref("adminSessions/" + user.uid).remove();
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  // SUCCESS
+  /* SUCCESS */
   document.getElementById("lockScreen").style.display = "none";
   document.querySelector(".main").style.display = "block";
 
-  console.log("ADMIN UNLOCKED");
 });
 
 </script>
