@@ -4,64 +4,44 @@
 <meta charset="UTF-8">
 <title>Admin Dashboard</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f4f6f9;
-}
+
+body{ margin:0; font-family:Arial; background:#f4f6f9; }
 
 #lockScreen{
   position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:#111;
-  color:white;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:9999;
-}
-
-.main{
-  display:none;
-  padding:20px;
-}
-
-.sidebar{
-  width:220px;
-  position:fixed;
-  left:0;
-  top:0;
+  width:100%;
   height:100%;
   background:#111;
   color:white;
-  padding:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:9999;
 }
 
-button{
-  padding:10px;
-  margin:5px;
-}
+.main{ display:none; padding:20px; }
+
 </style>
 </head>
 
 <body>
 
 <div id="lockScreen">
-  <h2>🔐 Verifying Admin Access...</h2>
-</div>
-
-<div class="sidebar">
-  <h3>Admin Panel</h3>
+  <h2>Verifying admin access...</h2>
 </div>
 
 <div class="main">
-  <h1>Dashboard</h1>
+
+<h1>Admin Dashboard</h1>
+
 </div>
 
 <script>
@@ -73,7 +53,7 @@ const firebaseConfig = {
   projectId:"dekut-housing",
   storageBucket:"dekut-housing.appspot.com",
   messagingSenderId:"784034754945",
-  appId:"1:784754754945:web:198f5e3cf47777ab97f880"
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -81,8 +61,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* SECURITY CHECK */
-auth.onAuthStateChanged(async user=>{
+/* STEP G FIXED AUTH FLOW */
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
@@ -92,6 +72,7 @@ auth.onAuthStateChanged(async user=>{
   const urlToken = new URLSearchParams(window.location.search).get("token");
 
   if(!urlToken){
+    console.log("NO TOKEN IN URL");
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -100,6 +81,7 @@ auth.onAuthStateChanged(async user=>{
   const snap = await db.ref("adminSessions/" + user.uid).once("value");
 
   if(!snap.exists()){
+    console.log("NO SESSION FOUND");
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -108,22 +90,27 @@ auth.onAuthStateChanged(async user=>{
   const session = snap.val();
 
   if(session.token !== urlToken){
+    console.log("TOKEN MISMATCH");
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(Date.now() - session.createdAt > 86400000){
+  const expired = Date.now() - session.createdAt > 86400000;
+
+  if(expired){
+    console.log("SESSION EXPIRED");
     await db.ref("adminSessions/" + user.uid).remove();
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  /* UNLOCK */
+  // SUCCESS
   document.getElementById("lockScreen").style.display = "none";
   document.querySelector(".main").style.display = "block";
 
+  console.log("ADMIN UNLOCKED");
 });
 
 </script>
