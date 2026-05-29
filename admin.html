@@ -24,8 +24,7 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  flex-direction:column;
-  z-index:999999;
+  z-index:9999;
 }
 
 .main{
@@ -59,7 +58,6 @@ button{
 
 <div class="sidebar">
   <h3>Admin Panel</h3>
-  <button onclick="logout()">Logout</button>
 </div>
 
 <div class="main">
@@ -83,7 +81,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* SECURITY GATE */
+/* SECURITY CHECK */
 auth.onAuthStateChanged(async user=>{
 
   if(!user){
@@ -91,9 +89,9 @@ auth.onAuthStateChanged(async user=>{
     return;
   }
 
-  const token = new URLSearchParams(window.location.search).get("token");
+  const urlToken = new URLSearchParams(window.location.search).get("token");
 
-  if(!token){
+  if(!urlToken){
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -109,7 +107,7 @@ auth.onAuthStateChanged(async user=>{
 
   const session = snap.val();
 
-  if(session.token !== token){
+  if(session.token !== urlToken){
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -127,12 +125,6 @@ auth.onAuthStateChanged(async user=>{
   document.querySelector(".main").style.display = "block";
 
 });
-
-function logout(){
-  auth.signOut().then(()=>{
-    window.location.href="admin-login.html";
-  });
-}
 
 </script>
 
