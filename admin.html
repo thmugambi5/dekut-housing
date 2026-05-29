@@ -17,7 +17,7 @@ body{
   background:#f5f7fb;
 }
 
-/* TOP BAR (MOBILE FRIENDLY) */
+/* TOP BAR */
 .topbar{
   display:flex;
   justify-content:space-between;
@@ -81,11 +81,8 @@ body{
   transition:0.3s;
 }
 
-/* MOBILE MAIN FULL WIDTH */
 @media(max-width:768px){
-  .main{
-    margin-left:0;
-  }
+  .main{ margin-left:0; }
 }
 
 /* CARD */
@@ -170,7 +167,17 @@ const db = firebase.database();
 
 let currentUser = null;
 
-/* AUTH CHECK */
+/* 🔐 DEVICE ID (soft binding) */
+function getDeviceId(){
+  let id = localStorage.getItem("device_id");
+  if(!id){
+    id = "dev_" + crypto.randomUUID();
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+
+/* AUTH CHECK (OPTION B SECURITY UPGRADE) */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
@@ -182,22 +189,45 @@ auth.onAuthStateChanged(async user => {
 
   const token = new URLSearchParams(window.location.search).get("token");
 
+  if(!token){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
   const snap = await db.ref("adminSessions/" + user.uid).once("value");
 
   if(!snap.exists()){
+    await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
   const session = snap.val();
 
+  /* 🔐 TOKEN CHECK */
   if(session.token !== token){
+    await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(Date.now() - session.createdAt > 86400000){
+  /* ⛔ SHORT SESSION (1 HOUR ONLY) */
+  const expired = Date.now() - session.createdAt > 3600000;
+
+  if(expired){
     await db.ref("adminSessions/" + user.uid).remove();
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  /* 🔐 DEVICE LOCK */
+  const device = getDeviceId();
+
+  if(session.device && session.device !== device){
+    await db.ref("adminSessions/" + user.uid).remove();
+    await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
@@ -206,9 +236,10 @@ auth.onAuthStateChanged(async user => {
   document.querySelector(".main").style.display = "block";
 
   loadAll();
+
 });
 
-/* MENU TOGGLE (MOBILE) */
+/* MENU */
 function toggleMenu(){
   document.getElementById("sidebar").classList.toggle("hidden");
 }
@@ -251,10 +282,14 @@ function removeItem(id){
 
 /* LOGOUT */
 async function logout(){
+
   if(currentUser){
     await db.ref("adminSessions/" + currentUser.uid).remove();
     await auth.signOut();
   }
+
+  localStorage.removeItem("device_id");
+
   window.location.href = "admin-login.html";
 }
 
