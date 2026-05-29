@@ -89,7 +89,7 @@ button:disabled{
 
 <body>
 
-<div class="loginBox" id="loginBox">
+<div class="loginBox">
 
 <h2>🔐 Admin Login</h2>
 
@@ -157,7 +157,7 @@ async function login(){
 
     try{
 
-        /* FIREBASE AUTH LOGIN */
+        /* FIREBASE LOGIN */
         const userCredential =
           await auth.signInWithEmailAndPassword(
             email,
@@ -167,18 +167,19 @@ async function login(){
         const user = userCredential.user;
 
         console.log("LOGIN SUCCESS:", user.email);
-        console.log("USER UID:", user.uid);
 
-        /* CHECK ADMINS NODE */
+        /* ADMINS NODE */
         const adminRef = db.ref("admins");
 
-        const snap = await adminRef.once("value");
+        const snap =
+          await adminRef.once("value");
 
-        const admins = snap.val() || {};
+        const admins =
+          snap.val() || {};
 
         console.log("ADMINS:", admins);
 
-        /* CREATE FIRST ADMIN IF NONE EXISTS */
+        /* CREATE FIRST ADMIN */
         if(Object.keys(admins).length === 0){
 
             console.log("CREATING FIRST ADMIN");
@@ -198,16 +199,18 @@ async function login(){
         msg.innerHTML =
           "<div class='success'>✔ Login successful</div>";
 
+        /* REDIRECT ONLY AFTER DATABASE WRITE */
         setTimeout(()=>{
 
-            window.location.href = "admin.html";
+            window.location.href =
+              "admin.html";
 
         },1000);
 
     }
     catch(error){
 
-        console.error("LOGIN ERROR:", error);
+        console.error(error);
 
         msg.innerHTML =
           "<div class='error'>❌ " +
@@ -221,15 +224,16 @@ async function login(){
 
 }
 
-/* SESSION PERSISTENCE */
+/* IMPORTANT:
+   DO NOT AUTO REDIRECT HERE
+   It was interrupting admin creation
+*/
 auth.onAuthStateChanged(user=>{
 
-    if(user){
-
-        console.log("SESSION ACTIVE:", user.email);
-
-        window.location.href = "admin.html";
-    }
+    console.log(
+      "Auth State:",
+      user ? user.email : "No user"
+    );
 
 });
 
