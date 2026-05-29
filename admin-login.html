@@ -38,10 +38,8 @@ button{
   border:none;
   font-weight:bold;
 }
-.testBtn{ background:#111; }
 .error{ color:red; }
 .success{ color:green; }
-.loading{ color:#333; }
 </style>
 </head>
 
@@ -75,9 +73,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* TOKEN GENERATOR */
+/* TOKEN */
 function generateToken(){
-  return "t_" + Math.random().toString(36).substring(2) + Date.now();
+  return "t_" + Math.random().toString(36).slice(2) + "_" + Date.now();
 }
 
 async function login(){
@@ -87,7 +85,7 @@ async function login(){
   const msg = document.getElementById("msg");
   const btn = document.getElementById("loginBtn");
 
-  msg.innerHTML = "<div class='loading'>Logging in...</div>";
+  msg.innerHTML = "Logging in...";
   btn.disabled = true;
 
   try{
@@ -95,34 +93,33 @@ async function login(){
     const res = await auth.signInWithEmailAndPassword(email, password);
     const user = res.user;
 
-    // OPTIONAL: check admin node exists
+    /* CHECK ADMIN */
     const adminSnap = await db.ref("admins/" + user.uid).once("value");
 
     if(!adminSnap.exists()){
-      msg.innerHTML = "<div class='error'>Not registered as admin</div>";
       await auth.signOut();
+      msg.innerHTML = "<div class='error'>Not authorized as admin</div>";
       btn.disabled = false;
       return;
     }
 
-    // CREATE SESSION TOKEN
+    /* CREATE SESSION */
     const token = generateToken();
 
     await db.ref("adminSessions/" + user.uid).set({
       token: token,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      email: user.email
     });
 
-    msg.innerHTML = "<div class='success'>Success</div>";
+    msg.innerHTML = "<div class='success'>Login success</div>";
 
-    // IMPORTANT: redirect WITH TOKEN
     setTimeout(()=>{
       window.location.href = "admin.html?token=" + token;
     },800);
 
-  }
-  catch(err){
-    msg.innerHTML = "<div class='error'>" + err.message + "</div>";
+  } catch(e){
+    msg.innerHTML = "<div class='error'>" + e.message + "</div>";
     btn.disabled = false;
   }
 }
