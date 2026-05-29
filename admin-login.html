@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
+/* (UNCHANGED STYLES) */
 body{
     margin:0;
     font-family:Arial;
@@ -27,46 +28,19 @@ body{
     box-shadow:0 2px 10px rgba(0,0,0,0.15);
 }
 
-h2{
-    text-align:center;
-    margin-bottom:20px;
-}
-
-input{
+input,button{
     width:100%;
     padding:10px;
     margin:10px 0;
     border-radius:8px;
     border:1px solid #ccc;
-    box-sizing:border-box;
 }
 
 button{
-    width:100%;
-    padding:10px;
     background:#007bff;
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
+    color:white;
     font-weight:bold;
-}
-
-button:hover{ background:#0056b3; }
-button:disabled{ background:#999; cursor:not-allowed; }
-
-.error{
-    color:red;
-    font-size:13px;
-    text-align:center;
-    margin-top:10px;
-}
-
-.success{
-    color:green;
-    font-size:13px;
-    text-align:center;
-    margin-top:10px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -88,85 +62,57 @@ button:disabled{ background:#999; cursor:not-allowed; }
 
 <script>
 
-// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain: "dekut-housing.firebaseapp.com",
-  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId: "dekut-housing",
-  storageBucket: "dekut-housing.appspot.com",
-  messagingSenderId: "784034754945",
-  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-
-/* ONLY ADMIN EMAIL */
 const ADMIN_EMAIL = "admin@dekut.com";
 
 /* LOGIN */
 function login(){
 
-    let email = document.getElementById("email").value;
-    let password = document.getElementById("password").value;
-    let msg = document.getElementById("msg");
-    let btn = document.getElementById("loginBtn");
+  let email = document.getElementById("email").value;
+  let password = document.getElementById("password").value;
+  let msg = document.getElementById("msg");
 
-    msg.innerHTML = "";
-    btn.disabled = true;
-    btn.innerText = "Logging in...";
+  auth.signInWithEmailAndPassword(email,password)
+  .then(user=>{
 
-    auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
+    if(user.user.email !== ADMIN_EMAIL){
+      auth.signOut();
+      msg.innerHTML = "❌ Not authorized";
+      return;
+    }
 
-        const user = userCredential.user;
+    msg.innerHTML = "✔ Success";
 
-        // ADMIN CHECK
-        if(user.email !== ADMIN_EMAIL){
+    setTimeout(()=>{
+      window.location.href = "admin.html";
+    },1000);
 
-            auth.signOut();
+  })
+  .catch(e=>{
+    msg.innerHTML = e.message;
+  });
 
-            msg.innerHTML = "<div class='error'>❌ Not authorized as admin</div>";
-
-            btn.disabled = false;
-            btn.innerText = "Login";
-
-            return;
-        }
-
-        msg.innerHTML = "<div class='success'>Login successful ✔ Redirecting...</div>";
-
-        setTimeout(() => {
-            window.location.href = "admin.html";
-        }, 1000);
-
-    })
-    .catch(error => {
-
-        msg.innerHTML = "<div class='error'>" + error.message + "</div>";
-
-        btn.disabled = false;
-        btn.innerText = "Login";
-
-    });
 }
 
-/* AUTO LOGIN (SESSION PERSISTENCE) */
-auth.onAuthStateChanged(user => {
+/* SESSION PERSISTENCE */
+auth.onAuthStateChanged(user=>{
 
-    if(user && user.email === ADMIN_EMAIL){
+  if(user && user.email === ADMIN_EMAIL){
+    window.location.href = "admin.html";
+  }
 
-        // already logged in → skip login page
-        window.location.href = "admin.html";
-
-    } else {
-
-        // force logout if not admin
-        auth.signOut().catch(()=>{});
-
-    }
 });
 
 </script>
