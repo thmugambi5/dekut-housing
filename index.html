@@ -553,7 +553,7 @@ onclick='openPhotos("${safe(p.images || [])}")'
 
 <button
 class="mapbtn"
-onclick="openMap(${p.lat || 0},${p.lng || 0})"
+onclick="closeDetails(); openMap(${p.lat || 0},${p.lng || 0})"
 >
 🗺 View on Map
 </button>
