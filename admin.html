@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard - DeKUT Housing</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -11,20 +10,12 @@
 
 <style>
 
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f4f6f9;
-}
+body{margin:0;font-family:Arial;background:#f4f6f9;}
 
-/* LOCK SCREEN */
 #lockScreen{
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:#0b0b0b;
+  inset:0;
+  background:#111;
   color:white;
   display:flex;
   justify-content:center;
@@ -33,18 +24,10 @@ body{
   z-index:999999;
 }
 
-/* MAIN HIDDEN UNTIL AUTH */
-.main{
-  margin-left:240px;
-  padding:20px;
-  display:none;
-}
+.main{display:none;padding:20px;}
 
-/* SIDEBAR */
 .sidebar{
   position:fixed;
-  left:0;
-  top:0;
   width:220px;
   height:100%;
   background:#111;
@@ -52,65 +35,25 @@ body{
   padding:20px;
 }
 
-.sidebar button{
-  width:100%;
-  margin:5px 0;
-  padding:12px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  background:#222;
-  color:white;
-}
-
-/* CARDS */
-.card{
-  background:white;
-  margin-top:15px;
-  padding:15px;
-  border-radius:12px;
-}
-
-/* BADGES */
-.badge{
-  padding:5px 10px;
-  border-radius:6px;
-  color:white;
-}
-.pending{background:orange;}
-.approved{background:green;}
+button{padding:10px;margin:5px;}
 
 </style>
 </head>
 
 <body>
 
-<!-- LOCK SCREEN -->
 <div id="lockScreen">
-  <h2>🔐 Verifying Admin Access</h2>
-  <p>Please wait...</p>
+  🔐 Verifying Admin Access...
 </div>
 
 <div class="sidebar">
-
-  <h2>Admin Panel</h2>
-
-  <button onclick="showPending()">Pending</button>
-  <button onclick="showApproved()">Approved</button>
-  <button onclick="loadAll()">All</button>
-
-  <button onclick="logout()" style="background:#c62828;">Logout</button>
-
+  <h3>Admin</h3>
+  <button onclick="logout()">Logout</button>
 </div>
 
 <div class="main">
-
   <h1>Dashboard</h1>
-
-  <input id="search" placeholder="Search..." oninput="render()">
-
   <div id="list"></div>
-
 </div>
 
 <script>
@@ -130,136 +73,55 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let pending = {};
-let approved = {};
-let mode = "pending";
-
-/* =========================
-   STEP I SECURITY CORE
-========================= */
-auth.onAuthStateChanged(async user => {
+/* STEP I SECURITY CORE */
+auth.onAuthStateChanged(async user=>{
 
   if(!user){
-    window.location.href = "admin-login.html";
+    window.location.href="admin-login.html";
     return;
   }
 
-  try{
+  const token = new URLSearchParams(window.location.search).get("token");
 
-    /* 1. CHECK ADMIN ROLE (NO EMAIL TRUST) */
-    const adminSnap = await db.ref("admins/" + user.uid).once("value");
-
-    if(!adminSnap.exists()){
-      throw "NOT_ADMIN";
-    }
-
-    const adminData = adminSnap.val();
-
-    if(adminData.role !== "superadmin" && adminData.role !== "admin"){
-      throw "INVALID_ROLE";
-    }
-
-    /* 2. CHECK SESSION TOKEN */
-    const urlToken = new URLSearchParams(window.location.search).get("token");
-
-    if(!urlToken){
-      throw "NO_TOKEN";
-    }
-
-    const sessionSnap = await db.ref("adminSessions/" + user.uid).once("value");
-
-    if(!sessionSnap.exists()){
-      throw "NO_SESSION";
-    }
-
-    const session = sessionSnap.val();
-
-    if(session.token !== urlToken){
-      throw "TOKEN_MISMATCH";
-    }
-
-    /* 3. SESSION EXPIRY CHECK (24h) */
-    const expired = Date.now() - session.createdAt > 86400000;
-
-    if(expired){
-      await db.ref("adminSessions/" + user.uid).remove();
-      throw "SESSION_EXPIRED";
-    }
-
-    /* SUCCESS → UNLOCK DASHBOARD */
-    document.getElementById("lockScreen").style.display = "none";
-    document.querySelector(".main").style.display = "block";
-
-  }
-  catch(err){
-
-    console.log("ACCESS DENIED:", err);
-
+  if(!token){
     await auth.signOut();
-    window.location.href = "admin-login.html";
-
+    window.location.href="admin-login.html";
+    return;
   }
 
+  const snap = await db.ref("adminSessions/"+user.uid).once("value");
+
+  if(!snap.exists()){
+    await auth.signOut();
+    window.location.href="admin-login.html";
+    return;
+  }
+
+  const session = snap.val();
+
+  if(session.token !== token){
+    await auth.signOut();
+    window.location.href="admin-login.html";
+    return;
+  }
+
+  if(Date.now() - session.createdAt > 86400000){
+    await db.ref("adminSessions/"+user.uid).remove();
+    await auth.signOut();
+    window.location.href="admin-login.html";
+    return;
+  }
+
+  document.getElementById("lockScreen").style.display="none";
+  document.querySelector(".main").style.display="block";
 });
 
 /* LOGOUT */
 function logout(){
   auth.signOut().then(()=>{
-    window.location.href = "admin-login.html";
+    window.location.href="admin-login.html";
   });
 }
-
-/* DATA */
-db.ref("pendingProperties").on("value", snap=>{
-  pending = snap.val() || {};
-  render();
-});
-
-db.ref("properties").on("value", snap=>{
-  approved = snap.val() || {};
-  render();
-});
-
-/* RENDER */
-function render(){
-
-  let q = document.getElementById("search").value?.toLowerCase() || "";
-
-  let source =
-    mode==="pending" ? pending :
-    mode==="approved" ? approved :
-    {...pending, ...approved};
-
-  let list = document.getElementById("list");
-  list.innerHTML = "";
-
-  for(let id in source){
-
-    let p = source[id];
-
-    let text = ((p.location||"")+" "+(p.type||"")).toLowerCase();
-
-    if(q && !text.includes(q)) continue;
-
-    let isPending = pending[id];
-
-    list.innerHTML += `
-      <div class="card">
-        <b>${p.type}</b><br>
-        ${p.location}<br>
-
-        <span class="badge ${isPending ? "pending":"approved"}">
-          ${isPending ? "Pending":"Approved"}
-        </span>
-
-      </div>
-    `;
-  }
-}
-
-function showPending(){mode="pending";render();}
-function showApproved(){mode="approved";render();}
-function loadAll(){mode="all";render();}
 
 </script>
 
