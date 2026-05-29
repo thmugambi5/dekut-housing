@@ -13,6 +13,7 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
@@ -45,6 +46,7 @@ padding:8px 12px;
 border-radius:8px;
 border:none;
 cursor:pointer;
+display:none; /* 🔐 HIDDEN BY DEFAULT */
 }
 
 .filters{
@@ -188,7 +190,7 @@ line-height:1.9;
 
 <header>
 🏠 DeKUT Housing
-<button class="adminBtn" onclick="goAdmin()">Admin</button>
+<button class="adminBtn" id="adminBtn" onclick="goAdmin()">Admin</button>
 </header>
 
 <div style="text-align:center;padding:10px;">
@@ -234,33 +236,62 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
+const db = firebase.database();
+const auth = firebase.auth();
+
+/* 🔐 ADMIN BUTTON SECURITY */
+const adminBtn = document.getElementById("adminBtn");
+
+adminBtn.style.display = "none"; // always hidden first
+
+auth.onAuthStateChanged(async user => {
+
+    if(!user){
+        adminBtn.style.display = "none";
+        return;
+    }
+
+    const snap = await db.ref("admins/" + user.uid).once("value");
+
+    if(snap.exists()){
+        adminBtn.style.display = "inline-block";
+    } else {
+        adminBtn.style.display = "none";
+    }
+
+});
+
+/* ADMIN NAV */
 function goAdmin(){
-window.location.href="admin-login.html";
+    auth.onAuthStateChanged(user=>{
+        if(user){
+            window.location.href="admin.html";
+        } else {
+            window.location.href="admin-login.html";
+        }
+    });
 }
 
 /* DATA */
 let data = {};
 let filteredArray = [];
-
-/* INFINITE SCROLL CONTROL */
 let renderIndex = 0;
 const PAGE_SIZE = 6;
 let isLoading = false;
 
-/* REAL-TIME FIREBASE (NO LAG + AUTO UPDATE) */
+/* REAL-TIME FIREBASE */
 db.ref("properties").on("value", snap=>{
 data = snap.val() || {};
-applyFilters();   // re-filter instantly on update
+applyFilters();
 });
 
-/* SAFE */
+/* SAFE ENCODER */
 function safe(obj){
 return encodeURIComponent(JSON.stringify(obj));
 }
 
-/* FILTERS (KEEP APPROVED ONLY) */
+/* FILTERS */
 function applyFilters(){
 
 let search = document.getElementById("searchBox").value.toLowerCase();
@@ -274,7 +305,6 @@ for(let id in data){
 
 let p = data[id];
 
-/* 🔥 ONLY APPROVED APPEAR */
 if(p.approved !== true) continue;
 
 let rent = parseInt(p.rent || 0);
@@ -293,14 +323,13 @@ filteredArray.push({id,...p});
 
 }
 
-/* RESET INFINITE SCROLL */
 renderIndex = 0;
 document.getElementById("list").innerHTML = "";
 renderMore();
 
 }
 
-/* INFINITE SCROLL RENDER */
+/* RENDER */
 function renderMore(){
 
 if(isLoading) return;
@@ -343,13 +372,11 @@ isLoading = false;
 
 }
 
-/* SCROLL LISTENER */
+/* SCROLL */
 window.addEventListener("scroll", ()=>{
-
 if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
 renderMore();
 }
-
 });
 
 /* RESET */
@@ -386,9 +413,10 @@ View Map
 </div>`;
 
 document.getElementById("detailsModal").style.display="block";
+
 }
 
-/* PHOTO */
+/* PHOTOS */
 function openPhotos(encoded){
 
 let imgs = JSON.parse(decodeURIComponent(encoded));
@@ -400,6 +428,7 @@ c.innerHTML += `<div class="photoSlide"><img src="${i}"></div>`;
 });
 
 document.getElementById("photoModal").style.display="block";
+
 }
 
 /* MAP */
@@ -421,6 +450,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.marker([lat,lng]).addTo(map);
 
 },100);
+
 }
 
 function openAllHousesMap(){
