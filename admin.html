@@ -9,12 +9,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
 }
 
+/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -24,26 +26,36 @@ body{
   background:#111;
   color:white;
   padding:20px;
+  overflow:auto;
+}
+
+.sidebar h2{
+  margin-top:0;
 }
 
 .sidebar button{
   width:100%;
   margin:5px 0;
-  padding:10px;
+  padding:12px;
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   cursor:pointer;
   background:#222;
   color:white;
+  font-size:15px;
 }
 
-.sidebar button:hover{background:#333;}
+.sidebar button:hover{
+  background:#333;
+}
 
+/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
 }
 
+/* STATS */
 .stats{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -53,77 +65,195 @@ body{
 .statBox{
   background:white;
   padding:15px;
-  border-radius:10px;
+  border-radius:12px;
   text-align:center;
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-.card{
-  background:white;
-  margin:10px 0;
-  padding:15px;
+/* SEARCH */
+.searchBox{
+  width:100%;
+  padding:12px;
   border-radius:10px;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+  border:1px solid #ccc;
+  margin-top:15px;
+  box-sizing:border-box;
 }
 
+/* CARD */
+.card{
+  background:white;
+  margin-top:15px;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+
+.cardContent{
+  padding:15px;
+  line-height:1.8;
+}
+
+/* BADGES */
 .badge{
-  padding:4px 8px;
+  display:inline-block;
+  padding:5px 10px;
   border-radius:6px;
-  font-size:12px;
   color:white;
+  font-size:12px;
   margin-right:5px;
 }
 
-.available{background:green;}
-.occupied{background:red;}
-.pending{background:orange;}
+.pending{ background:orange; }
+.approved{ background:green; }
+.available{ background:#28a745; }
+.occupied{ background:#d32f2f; }
 
+/* BUTTONS */
 button{
-  padding:8px;
+  padding:10px 12px;
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   cursor:pointer;
   margin:4px;
+  font-weight:bold;
 }
 
-.approve{background:#28a745;color:white;}
-.reject{background:#ff9800;color:white;}
-.delete{background:#e74c3c;color:white;}
+.approve{
+  background:#28a745;
+  color:white;
+}
+
+.reject{
+  background:#ff9800;
+  color:white;
+}
+
+.delete{
+  background:#e74c3c;
+  color:white;
+}
+
+.view{
+  background:#111;
+  color:white;
+}
+
+.mapbtn{
+  background:#007bff;
+  color:white;
+}
+
+/* DETAILS MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:white;
+  z-index:9999;
+  overflow:auto;
+}
+
+.modal img{
+  width:100%;
+  max-height:300px;
+  object-fit:cover;
+}
+
+.modalContent{
+  padding:15px;
+  line-height:1.8;
+}
+
+.backBtn{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:10px 14px;
+  border-radius:8px;
+  z-index:99999;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+  }
+
+  .main{
+    margin-left:0;
+  }
+
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="sidebar">
+
   <h2>🏠 Admin Panel</h2>
 
   <button onclick="showPending()">🟡 Pending</button>
+
   <button onclick="showApproved()">🟢 Approved</button>
-  <button onclick="loadAll()">📦 All</button>
+
+  <button onclick="loadAll()">📦 All Listings</button>
+
 </div>
 
 <div class="main">
 
-<h1>Dashboard</h1>
+  <h1>Dashboard</h1>
 
-<div class="stats">
-  <div class="statBox">
-    <h3 id="totalPending">0</h3>
-    <p>Pending</p>
+  <!-- STATS -->
+  <div class="stats">
+
+    <div class="statBox">
+      <h2 id="totalPending">0</h2>
+      <p>Pending</p>
+    </div>
+
+    <div class="statBox">
+      <h2 id="totalApproved">0</h2>
+      <p>Approved</p>
+    </div>
+
   </div>
 
-  <div class="statBox">
-    <h3 id="totalApproved">0</h3>
-    <p>Approved</p>
-  </div>
+  <!-- SEARCH -->
+  <input
+    id="search"
+    class="searchBox"
+    placeholder="Search by location, type, phone..."
+    oninput="render()"
+  >
+
+  <!-- LIST -->
+  <div id="list"></div>
+
 </div>
 
-<br>
+<!-- DETAILS MODAL -->
+<div class="modal" id="detailsModal">
+  <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
 
-<input id="search" placeholder="Search..." oninput="render()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;">
-
-<div id="list"></div>
-
+  <div id="detailsContent"></div>
 </div>
 
 <script>
@@ -146,7 +276,7 @@ let pending = {};
 let approved = {};
 let mode = "pending";
 
-/* LOAD BOTH DATABASES */
+/* LOAD DATABASES */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
   updateStats();
@@ -161,85 +291,270 @@ db.ref("properties").on("value", snap=>{
 
 /* STATS */
 function updateStats(){
-  document.getElementById("totalPending").innerText = Object.keys(pending).length;
-  document.getElementById("totalApproved").innerText = Object.keys(approved).length;
+
+  document.getElementById("totalPending").innerText =
+    Object.keys(pending).length;
+
+  document.getElementById("totalApproved").innerText =
+    Object.keys(approved).length;
 }
 
-/* MODE */
-function showPending(){ mode="pending"; render(); }
-function showApproved(){ mode="approved"; render(); }
-function loadAll(){ mode="all"; render(); }
+/* MODES */
+function showPending(){
+  mode = "pending";
+  render();
+}
+
+function showApproved(){
+  mode = "approved";
+  render();
+}
+
+function loadAll(){
+  mode = "all";
+  render();
+}
+
+/* SAFE */
+function safe(obj){
+  return encodeURIComponent(JSON.stringify(obj));
+}
 
 /* RENDER */
 function render(){
 
-  let q = document.getElementById("search").value.toLowerCase();
+  let q =
+    document.getElementById("search")
+    .value
+    .toLowerCase();
+
   let list = document.getElementById("list");
+
   list.innerHTML = "";
 
   let source = {};
 
-  if(mode === "pending") source = pending;
-  else if(mode === "approved") source = approved;
-  else source = {...pending, ...approved};
+  if(mode === "pending"){
+    source = pending;
+  }
+  else if(mode === "approved"){
+    source = approved;
+  }
+  else{
+    source = {...pending, ...approved};
+  }
+
+  let found = false;
 
   for(let id in source){
 
     let p = source[id];
 
-    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
+    let text =
+      (
+        (p.location || "") + " " +
+        (p.type || "") + " " +
+        (p.phone || "")
+      ).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
+    found = true;
+
+    let img = p.images?.[0] || "";
+
     let isPending = pending[id] ? true : false;
 
+    let statusClass =
+      (p.availability || "").toLowerCase() === "occupied"
+      ? "occupied"
+      : "available";
+
+    let time = p.createdAt
+      ? new Date(p.createdAt).toLocaleString()
+      : "Unknown";
+
     list.innerHTML += `
+
       <div class="card">
 
-        <b>🏠 ${p.type}</b><br>
-        📍 ${p.location}<br>
-        💰 KSh ${p.rent}<br>
-        📞 ${p.phone || ""}<br>
-
-        <span class="badge ${isPending ? "pending" : "available"}">
-          ${isPending ? "Pending" : "Approved"}
-        </span>
-
-        <br><br>
-
-        ${isPending ? `
-          <button class="approve" onclick="approve('${id}')">✔ Approve</button>
-          <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
+        ${img ? `
+          <img src="${img}">
         ` : ""}
 
-        <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
+        <div class="cardContent">
+
+          <b>🏠 ${p.type || "Property"}</b><br>
+
+          📍 ${p.location || "Unknown"}<br>
+
+          💰 KSh ${p.rent || "N/A"}<br>
+
+          📞 ${p.phone || "N/A"}<br>
+
+          📏 ${p.distance || "?"} KM from DeKUT<br>
+
+          🕒 ${time}<br><br>
+
+          <span class="badge ${isPending ? "pending" : "approved"}">
+            ${isPending ? "Pending" : "Approved"}
+          </span>
+
+          <span class="badge ${statusClass}">
+            ${p.availability || "Available"}
+          </span>
+
+          <br><br>
+
+          <button
+            class="view"
+            onclick='openDetails("${safe(p)}")'
+          >
+            👁 View
+          </button>
+
+          ${isPending ? `
+
+            <button
+              class="approve"
+              onclick="approve('${id}')"
+            >
+              ✔ Approve
+            </button>
+
+            <button
+              class="reject"
+              onclick="rejectItem('${id}')"
+            >
+              ❌ Reject
+            </button>
+
+          ` : ""}
+
+          <button
+            class="delete"
+            onclick="deleteItem('${id}')"
+          >
+            🗑 Delete
+          </button>
+
+        </div>
 
       </div>
+
     `;
+  }
+
+  if(!found){
+    list.innerHTML =
+      "<p style='padding:20px'>No properties found.</p>";
   }
 }
 
-/* APPROVE → MOVE DATA */
+/* OPEN DETAILS */
+function openDetails(encoded){
+
+  let p =
+    JSON.parse(decodeURIComponent(encoded));
+
+  let img = p.images?.[0] || "";
+
+  document.getElementById("detailsContent").innerHTML = `
+
+    ${img ? `
+      <img src="${img}">
+    ` : ""}
+
+    <div class="modalContent">
+
+      <h2>🏠 ${p.type || ""}</h2>
+
+      <b>💰 Rent:</b> KSh ${p.rent || ""}<br>
+
+      <b>💳 Deposit:</b> KSh ${p.deposit || ""}<br>
+
+      <b>📍 Location:</b> ${p.location || ""}<br>
+
+      <b>📏 Distance:</b> ${p.distance || ""} KM<br>
+
+      <b>👥 Occupants:</b> ${p.gender || ""}<br>
+
+      <b>🚪 Rooms Available:</b> ${p.roomsAvailable || ""}<br>
+
+      <b>💡 Utilities:</b> ${p.utilities || ""}<br>
+
+      <b>📞 Contact:</b> ${p.phone || ""}<br>
+
+      <b>🧰 Amenities:</b><br>
+      ${p.amenities || "N/A"}<br><br>
+
+      <b>📝 Description:</b><br>
+      ${p.extra || "N/A"}<br><br>
+
+      <button
+        class="mapbtn"
+        onclick="openMap(${p.lat || 0}, ${p.lng || 0})"
+      >
+        🗺 View Map
+      </button>
+
+    </div>
+  `;
+
+  document.getElementById("detailsModal").style.display =
+    "block";
+}
+
+function closeDetails(){
+  document.getElementById("detailsModal").style.display =
+    "none";
+}
+
+/* APPROVE */
 function approve(id){
 
   let item = pending[id];
 
-  if(!item) return;
+  if(!item){
+    return;
+  }
 
   db.ref("properties/" + id).set(item);
+
   db.ref("pendingProperties/" + id).remove();
+
+  alert("Property approved ✔");
 }
 
 /* REJECT */
 function rejectItem(id){
-  db.ref("pendingProperties/" + id).remove();
+
+  if(confirm("Reject this listing?")){
+
+    db.ref("pendingProperties/" + id).remove();
+
+  }
 }
 
 /* DELETE */
 function deleteItem(id){
 
-  db.ref("pendingProperties/" + id).remove();
-  db.ref("properties/" + id).remove();
+  if(confirm("Delete this property completely?")){
+
+    db.ref("pendingProperties/" + id).remove();
+
+    db.ref("properties/" + id).remove();
+
+  }
+}
+
+/* MAP */
+function openMap(lat,lng){
+
+  window.open(
+    "https://www.google.com/maps?q=" + lat + "," + lng,
+    "_blank"
+  );
 }
 
 </script>
