@@ -1,25 +1,180 @@
-Your security rules are defined as public, so anyone can steal, modify or delete data in your database
-https://dekut-housing-default-rtdb.firebaseio.com/
-adminSessions
-buUhvoYLQ5NmtHeuMwSPgXJsrBm2
-createdAt
-:
-1780070208305
-email
-:
-"admin@dekut.com"
-token
-:
-"t_e0a7832f-113c-4ac3-ad06-9b75c633522a_1780070208305"
-admins
-buUhvoYLQ5NmtHeuMwSPgXJsrBm2
-createdAt
-:
-1780057249194
-email
-:
-"admin@dekut.com"
-role
-:
-"superadmin"
-properties
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f4f6f9;
+}
+
+#lockScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:999999;
+}
+
+.sidebar{
+  position:fixed;
+  left:0;
+  top:0;
+  width:220px;
+  height:100%;
+  background:#111;
+  color:white;
+  padding:20px;
+}
+
+.main{
+  margin-left:240px;
+  padding:20px;
+  display:none;
+}
+
+button{
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.card{
+  background:white;
+  padding:15px;
+  margin-top:10px;
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="lockScreen">
+  <h2>🔐 Verifying Access...</h2>
+</div>
+
+<div class="sidebar">
+  <h2>Admin</h2>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<div class="main">
+  <h1>Dashboard</h1>
+  <div id="list"></div>
+</div>
+
+<script>
+
+const firebaseConfig = {
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+const ADMIN_EMAIL = "admin@dekut.com";
+
+/* HARD SECURITY GATE */
+auth.onAuthStateChanged(async user => {
+
+  const lock = document.getElementById("lockScreen");
+  const main = document.querySelector(".main");
+
+  lock.style.display = "flex";
+  main.style.display = "none";
+
+  if(!user){
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  if(user.email !== ADMIN_EMAIL){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const token =
+    new URLSearchParams(window.location.search).get("token");
+
+  if(!token){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const snap =
+    await db.ref("adminSessions/" + user.uid).once("value");
+
+  if(!snap.exists()){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const session = snap.val();
+
+  if(session.token !== token){
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const expired =
+    Date.now() - session.createdAt > 86400000;
+
+  if(expired){
+    await db.ref("adminSessions/" + user.uid).remove();
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  lock.style.display = "none";
+  main.style.display = "block";
+
+});
+
+/* LOGOUT */
+async function logout(){
+
+  const user = auth.currentUser;
+
+  if(user){
+    await db.ref("adminSessions/" + user.uid).remove();
+  }
+
+  await auth.signOut();
+  window.location.href = "admin-login.html";
+}
+
+</script>
+
+</body>
+</html>
