@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard</title>
+<title>Admin Dashboard - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,6 +10,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
+/* BASE */
 body{
   margin:0;
   font-family:Arial;
@@ -30,37 +32,46 @@ body{
   align-items:center;
   flex-direction:column;
   z-index:9999;
+  text-align:center;
+  padding:20px;
 }
 
-/* SIDEBAR */
+/* SIDEBAR (DESKTOP) */
 .sidebar{
   position:fixed;
   left:0;
   top:0;
-  width:220px;
+  width:240px;
   height:100%;
-  background:#111;
+  background:#0f172a;
   color:white;
   padding:20px;
   overflow:auto;
 }
 
+.sidebar h2{
+  margin-top:0;
+}
+
 .sidebar button{
   width:100%;
-  margin:5px 0;
-  padding:10px;
+  margin:6px 0;
+  padding:12px;
   border:none;
-  border-radius:8px;
-  background:#222;
+  border-radius:10px;
+  background:#1e293b;
   color:white;
+  font-size:14px;
   cursor:pointer;
 }
 
-.sidebar button:hover{ background:#333; }
+.sidebar button:hover{
+  background:#334155;
+}
 
 /* MAIN */
 .main{
-  margin-left:240px;
+  margin-left:260px;
   padding:20px;
   display:none;
 }
@@ -68,69 +79,76 @@ body{
 /* STATS */
 .stats{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
 }
 
 .statBox{
   background:white;
-  padding:15px;
-  border-radius:12px;
+  padding:16px;
+  border-radius:14px;
   text-align:center;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+  box-shadow:0 3px 10px rgba(0,0,0,0.08);
 }
 
 /* SEARCH */
 .searchBox{
   width:100%;
-  padding:12px;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #ddd;
   margin-top:15px;
+  font-size:15px;
 }
 
 /* CARD */
 .card{
   background:white;
   margin-top:15px;
-  border-radius:12px;
+  border-radius:16px;
   overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
 }
 
 .card img{
   width:100%;
-  height:220px;
+  height:200px;
   object-fit:cover;
 }
 
 .cardContent{
-  padding:15px;
-  line-height:1.8;
+  padding:14px;
+  line-height:1.6;
 }
 
-/* BADGES */
+/* BADGE */
 .badge{
-  padding:5px 10px;
-  border-radius:6px;
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:20px;
   color:white;
   font-size:12px;
+  margin-top:8px;
 }
 
-.pending{ background:orange; }
-.approved{ background:green; }
+.pending{ background:#f59e0b; }
+.approved{ background:#22c55e; }
 
 /* BUTTONS */
 button{
-  padding:10px;
+  padding:10px 12px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   cursor:pointer;
-  margin:4px;
+  margin:5px 4px;
+  font-weight:bold;
+  font-size:13px;
 }
 
-.approve{ background:#28a745; color:white; }
-.reject{ background:#ff9800; color:white; }
-.delete{ background:#e74c3c; color:white; }
-.view{ background:#111; color:white; }
+.approve{ background:#16a34a; color:white; }
+.reject{ background:#f97316; color:white; }
+.delete{ background:#ef4444; color:white; }
+.view{ background:#111827; color:white; }
 
 /* MODAL */
 .modal{
@@ -150,12 +168,56 @@ button{
   left:10px;
   background:black;
   color:white;
-  padding:10px;
+  padding:10px 14px;
+  border-radius:10px;
+  border:none;
 }
 
-.modalContent{
-  padding:20px;
+/* 📱 MOBILE RESPONSIVE */
+@media(max-width:768px){
+
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:12px;
+  }
+
+  .sidebar h2{
+    width:100%;
+    font-size:18px;
+    margin-bottom:10px;
+  }
+
+  .sidebar button{
+    flex:1;
+    min-width:45%;
+    font-size:13px;
+    padding:10px;
+  }
+
+  .main{
+    margin-left:0;
+    padding:12px;
+  }
+
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .card img{
+    height:160px;
+  }
+
+  button{
+    width:100%;
+    margin:6px 0;
+  }
 }
+
 </style>
 </head>
 
@@ -163,21 +225,23 @@ button{
 
 <!-- LOCK SCREEN -->
 <div id="lockScreen">
-  <h2>Verifying admin access...</h2>
+  <h2>🔐 Verifying Admin Access...</h2>
+  <p>Please wait...</p>
 </div>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
 
   <h2>🏠 Admin Panel</h2>
 
-  <button onclick="showPending()">Pending</button>
-  <button onclick="showApproved()">Approved</button>
-  <button onclick="loadAll()">All Listings</button>
-
-  <button onclick="logout()" style="background:#c62828;">Logout</button>
+  <button onclick="showPending()">🟡 Pending</button>
+  <button onclick="showApproved()">🟢 Approved</button>
+  <button onclick="loadAll()">📦 All Listings</button>
+  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
 
 </div>
 
+<!-- MAIN -->
 <div class="main">
 
   <h1>Dashboard</h1>
@@ -200,8 +264,9 @@ button{
 
 </div>
 
+<!-- MODAL -->
 <div class="modal" id="detailsModal">
-  <button class="backBtn" onclick="closeDetails()">Back</button>
+  <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
   <div id="detailsContent"></div>
 </div>
 
@@ -226,7 +291,7 @@ let pending = {};
 let approved = {};
 let mode = "pending";
 
-/* STEP G SECURITY */
+/* 🔐 STEP G SECURITY */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
@@ -287,8 +352,11 @@ db.ref("properties").on("value", snap=>{
 });
 
 function updateStats(){
-  document.getElementById("totalPending").innerText = Object.keys(pending).length;
-  document.getElementById("totalApproved").innerText = Object.keys(approved).length;
+  document.getElementById("totalPending").innerText =
+    Object.keys(pending).length;
+
+  document.getElementById("totalApproved").innerText =
+    Object.keys(approved).length;
 }
 
 function showPending(){ mode="pending"; render(); }
@@ -318,12 +386,14 @@ function render(){
 
     list.innerHTML += `
       <div class="card">
+
         ${img ? `<img src="${img}">` : ""}
+
         <div class="cardContent">
 
-          <b>${p.type}</b><br>
-          ${p.location}<br>
-          KSh ${p.rent}<br>
+          <b>🏠 ${p.type || ""}</b><br>
+          📍 ${p.location || ""}<br>
+          💰 KSh ${p.rent || ""}<br>
 
           <span class="badge ${isPending ? "pending" : "approved"}">
             ${isPending ? "Pending" : "Approved"}
@@ -334,13 +404,14 @@ function render(){
           <button class="view" onclick='openDetails("${encodeURIComponent(JSON.stringify(p))}")'>View</button>
 
           ${isPending ? `
-            <button class="approve" onclick="approve('${id}')">Approve</button>
-            <button class="reject" onclick="rejectItem('${id}')">Reject</button>
+            <button class="approve" onclick="approve('${id}')">✔ Approve</button>
+            <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
           ` : ""}
 
-          <button class="delete" onclick="deleteItem('${id}')">Delete</button>
+          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
 
         </div>
+
       </div>
     `;
   }
@@ -363,13 +434,15 @@ function deleteItem(id){
 
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
+
   document.getElementById("detailsContent").innerHTML = `
-    <div class="modalContent">
+    <div style="padding:20px">
       <h2>${p.type}</h2>
       <p>${p.location}</p>
       <p>KSh ${p.rent}</p>
     </div>
   `;
+
   document.getElementById("detailsModal").style.display="block";
 }
 
