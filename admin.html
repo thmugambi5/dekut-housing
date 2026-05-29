@@ -17,21 +17,26 @@ body{
   background:#f4f6f9;
 }
 
-/* HARD LOCK SCREEN */
+/* LOCK SCREEN */
 #lockScreen{
   position:fixed;
-  inset:0;
-  background:#111;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#0b0b0b;
   color:white;
   display:flex;
-  align-items:center;
   justify-content:center;
+  align-items:center;
   flex-direction:column;
   z-index:999999;
 }
 
-/* HIDE EVERYTHING UNTIL VERIFIED */
-#app{
+/* MAIN HIDDEN UNTIL AUTH */
+.main{
+  margin-left:240px;
+  padding:20px;
   display:none;
 }
 
@@ -47,51 +52,64 @@ body{
   padding:20px;
 }
 
-/* MAIN */
-.main{
-  margin-left:240px;
-  padding:20px;
+.sidebar button{
+  width:100%;
+  margin:5px 0;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#222;
+  color:white;
 }
 
-/* CARD */
+/* CARDS */
 .card{
   background:white;
   margin-top:15px;
   padding:15px;
-  border-radius:10px;
+  border-radius:12px;
 }
 
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
+/* BADGES */
+.badge{
+  padding:5px 10px;
+  border-radius:6px;
+  color:white;
 }
+.pending{background:orange;}
+.approved{background:green;}
 
 </style>
 </head>
 
 <body>
 
-<!-- LOCK SCREEN (DEFAULT) -->
+<!-- LOCK SCREEN -->
 <div id="lockScreen">
-  <h2>🔐 Verifying Secure Access...</h2>
-  <p>Please wait</p>
+  <h2>🔐 Verifying Admin Access</h2>
+  <p>Please wait...</p>
 </div>
 
-<!-- APP (HIDDEN UNTIL VERIFIED) -->
-<div id="app">
+<div class="sidebar">
 
-  <div class="sidebar">
-    <h2>Admin Panel</h2>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <h2>Admin Panel</h2>
 
-  <div class="main">
-    <h1>Dashboard</h1>
-    <div id="list"></div>
-  </div>
+  <button onclick="showPending()">Pending</button>
+  <button onclick="showApproved()">Approved</button>
+  <button onclick="loadAll()">All</button>
+
+  <button onclick="logout()" style="background:#c62828;">Logout</button>
+
+</div>
+
+<div class="main">
+
+  <h1>Dashboard</h1>
+
+  <input id="search" placeholder="Search..." oninput="render()">
+
+  <div id="list"></div>
 
 </div>
 
@@ -112,127 +130,136 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let SESSION_OK = false;
+let pending = {};
+let approved = {};
+let mode = "pending";
 
 /* =========================
-   STEP H SECURITY CORE
+   STEP I SECURITY CORE
 ========================= */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
-    forceLogout();
+    window.location.href = "admin-login.html";
     return;
   }
 
-  const token =
-    new URLSearchParams(window.location.search).get("token");
+  try{
 
-  if(!token){
-    forceLogout();
-    return;
+    /* 1. CHECK ADMIN ROLE (NO EMAIL TRUST) */
+    const adminSnap = await db.ref("admins/" + user.uid).once("value");
+
+    if(!adminSnap.exists()){
+      throw "NOT_ADMIN";
+    }
+
+    const adminData = adminSnap.val();
+
+    if(adminData.role !== "superadmin" && adminData.role !== "admin"){
+      throw "INVALID_ROLE";
+    }
+
+    /* 2. CHECK SESSION TOKEN */
+    const urlToken = new URLSearchParams(window.location.search).get("token");
+
+    if(!urlToken){
+      throw "NO_TOKEN";
+    }
+
+    const sessionSnap = await db.ref("adminSessions/" + user.uid).once("value");
+
+    if(!sessionSnap.exists()){
+      throw "NO_SESSION";
+    }
+
+    const session = sessionSnap.val();
+
+    if(session.token !== urlToken){
+      throw "TOKEN_MISMATCH";
+    }
+
+    /* 3. SESSION EXPIRY CHECK (24h) */
+    const expired = Date.now() - session.createdAt > 86400000;
+
+    if(expired){
+      await db.ref("adminSessions/" + user.uid).remove();
+      throw "SESSION_EXPIRED";
+    }
+
+    /* SUCCESS → UNLOCK DASHBOARD */
+    document.getElementById("lockScreen").style.display = "none";
+    document.querySelector(".main").style.display = "block";
+
+  }
+  catch(err){
+
+    console.log("ACCESS DENIED:", err);
+
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+
   }
 
-  const snap =
-    await db.ref("adminSessions/" + user.uid).once("value");
-
-  if(!snap.exists()){
-    forceLogout();
-    return;
-  }
-
-  const session = snap.val();
-
-  if(session.token !== token){
-    forceLogout();
-    return;
-  }
-
-  if(Date.now() - session.createdAt > 86400000){
-    await db.ref("adminSessions/" + user.uid).remove();
-    forceLogout();
-    return;
-  }
-
-  /* ✅ VERIFIED */
-  SESSION_OK = true;
-
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("app").style.display = "block";
-
-  startSessionMonitor(user.uid, token);
 });
 
-/* =========================
-   🔥 LIVE SESSION MONITOR
-   (STEP H UPGRADE)
-========================= */
-function startSessionMonitor(uid, token){
-
-  setInterval(async ()=>{
-
-    const snap =
-      await db.ref("adminSessions/" + uid).once("value");
-
-    if(!snap.exists()){
-      forceLogout();
-      return;
-    }
-
-    const session = snap.val();
-
-    if(session.token !== token){
-      forceLogout();
-      return;
-    }
-
-  }, 5000); // every 5 seconds
-}
-
-/* =========================
-   FORCE LOGOUT
-========================= */
-function forceLogout(){
-
-  SESSION_OK = false;
-
+/* LOGOUT */
+function logout(){
   auth.signOut().then(()=>{
-
     window.location.href = "admin-login.html";
-
-  }).catch(()=>{
-
-    window.location.href = "admin-login.html";
-
   });
 }
 
-/* =========================
-   LOGOUT BUTTON
-========================= */
-function logout(){
+/* DATA */
+db.ref("pendingProperties").on("value", snap=>{
+  pending = snap.val() || {};
+  render();
+});
 
-  const user = auth.currentUser;
+db.ref("properties").on("value", snap=>{
+  approved = snap.val() || {};
+  render();
+});
 
-  if(user){
-    db.ref("adminSessions/" + user.uid).remove();
+/* RENDER */
+function render(){
+
+  let q = document.getElementById("search").value?.toLowerCase() || "";
+
+  let source =
+    mode==="pending" ? pending :
+    mode==="approved" ? approved :
+    {...pending, ...approved};
+
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  for(let id in source){
+
+    let p = source[id];
+
+    let text = ((p.location||"")+" "+(p.type||"")).toLowerCase();
+
+    if(q && !text.includes(q)) continue;
+
+    let isPending = pending[id];
+
+    list.innerHTML += `
+      <div class="card">
+        <b>${p.type}</b><br>
+        ${p.location}<br>
+
+        <span class="badge ${isPending ? "pending":"approved"}">
+          ${isPending ? "Pending":"Approved"}
+        </span>
+
+      </div>
+    `;
   }
-
-  forceLogout();
 }
 
-/* =========================
-   OPTIONAL SAFE DATA LOAD
-========================= */
-db.ref("pendingProperties").on("value", snap=>{
-
-  if(!SESSION_OK) return;
-
-  const data = snap.val() || {};
-
-  document.getElementById("list").innerHTML =
-    "<pre>"+JSON.stringify(data,null,2)+"</pre>";
-
-});
+function showPending(){mode="pending";render();}
+function showApproved(){mode="approved";render();}
+function loadAll(){mode="all";render();}
 
 </script>
 
