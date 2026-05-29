@@ -64,10 +64,16 @@ color:white;
 border:none;
 cursor:pointer;
 font-weight:bold;
+transition:0.2s;
 }
 
 button:hover{
 opacity:0.95;
+}
+
+button:disabled{
+opacity:0.6;
+cursor:not-allowed;
 }
 
 .locationBtn{
@@ -144,6 +150,32 @@ border-radius:10px;
 margin-bottom:15px;
 font-size:14px;
 line-height:1.6;
+}
+
+/* PROGRESS BAR */
+.progressWrapper{
+display:none;
+margin-top:18px;
+}
+
+.progressText{
+font-weight:bold;
+margin-bottom:8px;
+}
+
+.progressBar{
+width:100%;
+height:18px;
+background:#e0e0e0;
+border-radius:30px;
+overflow:hidden;
+}
+
+.progressFill{
+height:100%;
+width:0%;
+background:#28a745;
+transition:width 0.3s ease;
 }
 
 </style>
@@ -316,7 +348,7 @@ Upload multiple clear photos of the property
 
 <div class="preview" id="preview"></div>
 
-<!-- LOCATION MOVED TO LAST -->
+<!-- LOCATION -->
 <label>📍 Property Location</label>
 
 <input
@@ -336,10 +368,23 @@ placeholder="e.g. Bomas, Nyeri View, Embassy"
 No location selected
 </div>
 
-<!-- UPLOAD -->
-<button onclick="upload()">
+<!-- UPLOAD BUTTON -->
+<button id="uploadBtn" onclick="upload()">
 Upload Property
 </button>
+
+<!-- PROGRESS -->
+<div class="progressWrapper" id="progressWrapper">
+
+<div class="progressText" id="progressText">
+Preparing upload...
+</div>
+
+<div class="progressBar">
+<div class="progressFill" id="progressFill"></div>
+</div>
+
+</div>
 
 <div id="msg"></div>
 
@@ -391,6 +436,19 @@ const c =
 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
 return (R * c).toFixed(1);
+
+}
+
+/* PROGRESS FUNCTION */
+function updateProgress(percent, text){
+
+document.getElementById("progressWrapper").style.display = "block";
+
+document.getElementById("progressFill").style.width =
+percent + "%";
+
+document.getElementById("progressText").innerText =
+text;
 
 }
 
@@ -471,6 +529,11 @@ preview.appendChild(img);
 /* UPLOAD */
 async function upload(){
 
+const uploadBtn =
+document.getElementById("uploadBtn");
+
+uploadBtn.disabled = true;
+
 const typeVal =
 document.getElementById("type").value.trim();
 
@@ -514,6 +577,8 @@ if(
 
 alert("Please fill all required fields");
 
+uploadBtn.disabled = false;
+
 return;
 
 }
@@ -522,9 +587,15 @@ if(!lat || !lng){
 
 alert("Please capture GPS location first");
 
+uploadBtn.disabled = false;
+
 return;
 
 }
+
+try{
+
+updateProgress(10,"Preparing images...");
 
 /* IMAGES */
 let files =
@@ -532,13 +603,25 @@ document.getElementById("images").files;
 
 let images = [];
 
-for(let file of files){
+for(let i = 0; i < files.length; i++){
+
+let file = files[i];
 
 images.push(await toBase64(file));
+
+let percent =
+10 + Math.floor(((i + 1) / files.length) * 50);
+
+updateProgress(
+percent,
+`Uploading photos ${i+1} of ${files.length}`
+);
 
 }
 
 /* AMENITIES */
+updateProgress(70,"Preparing property details...");
+
 let selected = [];
 
 document
@@ -573,8 +656,10 @@ DEKUT_LAT,
 DEKUT_LNG
 );
 
-/* SAVE TO PENDING PROPERTIES */
-db.ref("pendingProperties").push({
+updateProgress(85,"Saving property to database...");
+
+/* SAVE */
+await db.ref("pendingProperties").push({
 
 type: typeVal,
 rent: rentVal,
@@ -601,9 +686,11 @@ status: availabilityVal,
 
 createdAt: Date.now()
 
-})
-.then(() => {
+});
 
+updateProgress(100,"Upload completed successfully");
+
+/* SUCCESS MESSAGE */
 msg.innerHTML = `
 <div class="success">
 ✅ Property uploaded successfully.<br>
@@ -620,6 +707,7 @@ document.getElementById("phone").value = "";
 document.getElementById("extra").value = "";
 document.getElementById("location").value = "";
 document.getElementById("extraAmenities").value = "";
+document.getElementById("images").value = "";
 
 document
 .querySelectorAll(".amenity")
@@ -633,12 +721,24 @@ document.getElementById("locStatus").innerHTML =
 lat = "";
 lng = "";
 
-})
-.catch(err => {
+setTimeout(() => {
+
+document.getElementById("progressWrapper").style.display = "none";
+
+document.getElementById("progressFill").style.width = "0%";
+
+},2000);
+
+}
+catch(err){
 
 alert("Upload failed: " + err.message);
 
-});
+updateProgress(0,"Upload failed");
+
+}
+
+uploadBtn.disabled = false;
 
 }
 
