@@ -52,14 +52,8 @@ button{
     font-weight:bold;
 }
 
-button:hover{
-    background:#0056b3;
-}
-
-button:disabled{
-    background:#999;
-    cursor:not-allowed;
-}
+button:hover{ background:#0056b3; }
+button:disabled{ background:#999; cursor:not-allowed; }
 
 .error{
     color:red;
@@ -79,7 +73,7 @@ button:disabled{
 
 <body>
 
-<div class="loginBox">
+<div class="loginBox" id="loginBox">
 
 <h2>🔐 Admin Login</h2>
 
@@ -94,7 +88,7 @@ button:disabled{
 
 <script>
 
-// 🔥 Firebase config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
   authDomain: "dekut-housing.firebaseapp.com",
@@ -109,7 +103,7 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 
-/* ONLY ALLOWED ADMIN EMAIL */
+/* ONLY ADMIN EMAIL */
 const ADMIN_EMAIL = "admin@dekut.com";
 
 /* LOGIN */
@@ -129,7 +123,7 @@ function login(){
 
         const user = userCredential.user;
 
-        // 🔒 ADMIN RESTRICTION CHECK
+        // ADMIN CHECK
         if(user.email !== ADMIN_EMAIL){
 
             auth.signOut();
@@ -159,15 +153,19 @@ function login(){
     });
 }
 
-/* AUTO REDIRECT IF ALREADY LOGGED IN */
+/* AUTO LOGIN (SESSION PERSISTENCE) */
 auth.onAuthStateChanged(user => {
-    if(user){
 
-        if(user.email === ADMIN_EMAIL){
-            window.location.href = "admin.html";
-        } else {
-            auth.signOut();
-        }
+    if(user && user.email === ADMIN_EMAIL){
+
+        // already logged in → skip login page
+        window.location.href = "admin.html";
+
+    } else {
+
+        // force logout if not admin
+        auth.signOut().catch(()=>{});
+
     }
 });
 
