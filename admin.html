@@ -6,37 +6,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f6f9;}
 
-/* LOADING SCREEN */
-#loadingScreen{
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f4f6f9;
+}
+
+/* 🔐 LOCK SCREEN (IMPORTANT) */
+#lockScreen{
   position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
   background:#111;
   color:white;
   display:flex;
   justify-content:center;
   align-items:center;
   flex-direction:column;
-  z-index:99999;
+  z-index:999999;
 }
-
-#app{display:none;}
 
 /* SIDEBAR */
 .sidebar{
   position:fixed;
-  left:0;top:0;
-  width:220px;height:100%;
+  left:0;
+  top:0;
+  width:220px;
+  height:100%;
   background:#111;
   color:white;
   padding:20px;
+  overflow:auto;
 }
+
+.sidebar h2{ margin-top:0; }
 
 .sidebar button{
   width:100%;
@@ -47,58 +57,173 @@ body{margin:0;font-family:Arial;background:#f4f6f9;}
   cursor:pointer;
   background:#222;
   color:white;
+  font-size:15px;
 }
 
-/* MAIN */
-.main{margin-left:240px;padding:20px;}
+.sidebar button:hover{ background:#333; }
 
+/* MAIN */
+.main{
+  margin-left:240px;
+  padding:20px;
+  display:none; /* hidden until auth verified */
+}
+
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+
+.statBox{
+  background:white;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* SEARCH */
+.searchBox{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  margin-top:15px;
+  box-sizing:border-box;
+}
+
+/* CARD */
 .card{
   background:white;
   margin-top:15px;
   border-radius:12px;
-  padding:15px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+
+.cardContent{
+  padding:15px;
+  line-height:1.8;
+}
+
+/* BADGES */
+.badge{
+  display:inline-block;
+  padding:5px 10px;
+  border-radius:6px;
+  color:white;
+  font-size:12px;
+  margin-right:5px;
+}
+
+.pending{ background:orange; }
+.approved{ background:green; }
+
+/* BUTTONS */
 button{
-  padding:10px;
+  padding:10px 12px;
   border:none;
   border-radius:8px;
   cursor:pointer;
+  margin:4px;
+  font-weight:bold;
 }
 
-.approve{background:green;color:white;}
-.reject{background:orange;color:white;}
-.delete{background:red;color:white;}
-.view{background:#111;color:white;}
+.approve{ background:#28a745; color:white; }
+.reject{ background:#ff9800; color:white; }
+.delete{ background:#e74c3c; color:white; }
+.view{ background:#111; color:white; }
+.mapbtn{ background:#007bff; color:white; }
 
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:9999;}
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:white;
+  z-index:9999;
+  overflow:auto;
+}
 
-.backBtn{position:fixed;top:10px;left:10px;background:black;color:white;padding:10px;}
+.backBtn{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:10px 14px;
+  border-radius:8px;
+  z-index:99999;
+}
+
+.modalContent{
+  padding:15px;
+}
+
+@media(max-width:768px){
+  .sidebar{ position:relative; width:100%; height:auto; }
+  .main{ margin-left:0; }
+}
 
 </style>
 </head>
 
 <body>
 
-<!-- LOADER -->
-<div id="loadingScreen">
-  <h2>🔐 Checking Admin Access...</h2>
+<!-- 🔐 LOCK SCREEN -->
+<div id="lockScreen">
+  <h2>🔐 Verifying Admin Access...</h2>
+  <p>Please wait</p>
 </div>
 
-<!-- APP -->
-<div id="app">
-
 <div class="sidebar">
-  <h2>Admin Panel</h2>
-  <button onclick="logout()">Logout</button>
+
+  <h2>🏠 Admin Panel</h2>
+
+  <button onclick="showPending()">🟡 Pending</button>
+  <button onclick="showApproved()">🟢 Approved</button>
+  <button onclick="loadAll()">📦 All Listings</button>
+
+  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
+
 </div>
 
 <div class="main">
+
   <h1>Dashboard</h1>
-  <input id="search" oninput="render()" placeholder="Search...">
+
+  <div class="stats">
+    <div class="statBox">
+      <h2 id="totalPending">0</h2>
+      <p>Pending</p>
+    </div>
+
+    <div class="statBox">
+      <h2 id="totalApproved">0</h2>
+      <p>Approved</p>
+    </div>
+  </div>
+
+  <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
+
   <div id="list"></div>
+
 </div>
 
+<div class="modal" id="detailsModal">
+  <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
+  <div id="detailsContent"></div>
 </div>
 
 <script>
@@ -118,19 +243,11 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* ADMIN CHECK FROM DATABASE (NO HARDCODE) */
-function checkAdmin(uid){
-
-  return db.ref("admins/" + uid).get().then(snap=>{
-    return snap.exists(); // true = admin
-  });
-
-}
-
 let pending = {};
 let approved = {};
+let mode = "pending";
 
-/* AUTH GUARD */
+/* 🔐 STEP F SECURITY CORE */
 auth.onAuthStateChanged(async user => {
 
   if(!user){
@@ -138,97 +255,140 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
-  const isAdmin = await checkAdmin(user.uid);
+  // CHECK REAL ADMIN LIST FROM DATABASE (NO HARD CODE)
+  const snap = await db.ref("admins/" + user.uid).once("value");
 
-  if(!isAdmin){
-    auth.signOut();
+  if(!snap.exists() || snap.val() !== true){
+    await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  document.getElementById("loadingScreen").style.display = "none";
-  document.getElementById("app").style.display = "block";
-
-  startRealtime();
+  // AUTH SUCCESS → UNLOCK UI
+  document.getElementById("lockScreen").style.display = "none";
+  document.querySelector(".main").style.display = "block";
 
 });
 
-/* REALTIME */
-function startRealtime(){
-
-  db.ref("pendingProperties").on("value", snap=>{
-    pending = snap.val() || {};
-    render();
+/* LOGOUT */
+function logout(){
+  auth.signOut().then(()=>{
+    window.location.href = "admin-login.html";
   });
-
-  db.ref("properties").on("value", snap=>{
-    approved = snap.val() || {};
-    render();
-  });
-
 }
 
-/* RENDER */
+/* REALTIME DATA */
+db.ref("pendingProperties").on("value", snap=>{
+  pending = snap.val() || {};
+  updateStats();
+  render();
+});
+
+db.ref("properties").on("value", snap=>{
+  approved = snap.val() || {};
+  updateStats();
+  render();
+});
+
+function updateStats(){
+  document.getElementById("totalPending").innerText = Object.keys(pending).length;
+  document.getElementById("totalApproved").innerText = Object.keys(approved).length;
+}
+
+function showPending(){ mode="pending"; render(); }
+function showApproved(){ mode="approved"; render(); }
+function loadAll(){ mode="all"; render(); }
+
 function render(){
 
-  let q = document.getElementById("search").value?.toLowerCase() || "";
+  let q = document.getElementById("search").value.toLowerCase();
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  let all = {...pending, ...approved};
+  let source =
+    mode==="pending" ? pending :
+    mode==="approved" ? approved :
+    {...pending, ...approved};
 
-  for(let id in all){
+  for(let id in source){
 
-    let p = all[id];
+    let p = source[id];
 
-    let text = ((p.location||"")+" "+(p.type||"")).toLowerCase();
+    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
-    let isPending = pending[id];
+    let img = p.images?.[0] || "";
+    let isPending = pending[id] ? true : false;
 
     list.innerHTML += `
       <div class="card">
-        <b>${p.type}</b><br>
-        ${p.location}<br>
-        KSh ${p.rent}<br>
 
-        <span>${isPending ? "PENDING" : "APPROVED"}</span><br><br>
+        ${img ? `<img src="${img}">` : ""}
 
-        ${isPending ? `
-          <button class="approve" onclick="approve('${id}')">Approve</button>
-        ` : ""}
+        <div class="cardContent">
 
-        <button class="delete" onclick="del('${id}')">Delete</button>
+          <b>🏠 ${p.type || ""}</b><br>
+          📍 ${p.location || ""}<br>
+          💰 KSh ${p.rent || ""}<br>
+
+          <span class="badge ${isPending ? "pending" : "approved"}">
+            ${isPending ? "Pending" : "Approved"}
+          </span>
+
+          <br><br>
+
+          <button class="view" onclick='openDetails("${encodeURIComponent(JSON.stringify(p))}")'>View</button>
+
+          ${isPending ? `
+            <button class="approve" onclick="approve('${id}')">✔ Approve</button>
+            <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
+          ` : ""}
+
+          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
+
+        </div>
 
       </div>
     `;
   }
-
 }
 
-/* ACTIONS */
 function approve(id){
-
   let item = pending[id];
   if(!item) return;
 
   item.approved = true;
 
-  db.ref("properties/"+id).set(item);
-  db.ref("pendingProperties/"+id).remove();
-
+  db.ref("properties/" + id).set(item);
+  db.ref("pendingProperties/" + id).remove();
 }
 
-function del(id){
-  db.ref("pendingProperties/"+id).remove();
-  db.ref("properties/"+id).remove();
+function rejectItem(id){
+  db.ref("pendingProperties/" + id).remove();
 }
 
-function logout(){
-  auth.signOut().then(()=>{
-    window.location.href="admin-login.html";
-  });
+function deleteItem(id){
+  db.ref("pendingProperties/" + id).remove();
+  db.ref("properties/" + id).remove();
+}
+
+function openDetails(encoded){
+  let p = JSON.parse(decodeURIComponent(encoded));
+
+  document.getElementById("detailsContent").innerHTML = `
+    <div class="modalContent">
+      <h2>${p.type}</h2>
+      <p>${p.location}</p>
+      <p>${p.rent}</p>
+    </div>
+  `;
+
+  document.getElementById("detailsModal").style.display="block";
+}
+
+function closeDetails(){
+  document.getElementById("detailsModal").style.display="none";
 }
 
 </script>
