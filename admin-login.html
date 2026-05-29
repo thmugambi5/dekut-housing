@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Login</title>
+<title>Admin Login - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -19,6 +19,7 @@ body{
   align-items:center;
   height:100vh;
 }
+
 .loginBox{
   width:320px;
   background:#fff;
@@ -26,34 +27,46 @@ body{
   border-radius:12px;
   box-shadow:0 2px 10px rgba(0,0,0,0.15);
 }
+
 input,button{
   width:100%;
   padding:10px;
   margin:10px 0;
   border-radius:8px;
+  border:1px solid #ccc;
 }
+
 button{
   background:#007bff;
   color:white;
-  border:none;
   font-weight:bold;
+  cursor:pointer;
 }
-.error{ color:red; }
-.success{ color:green; }
+
+button:hover{
+  background:#0056b3;
+}
+
+#msg{
+  font-size:13px;
+  text-align:center;
+}
 </style>
 </head>
 
 <body>
 
 <div class="loginBox">
+
 <h2>🔐 Admin Login</h2>
 
-<input type="email" id="email" placeholder="Email">
+<input type="email" id="email" placeholder="Admin Email">
 <input type="password" id="password" placeholder="Password">
 
-<button onclick="login()" id="loginBtn">Login</button>
+<button onclick="login()">Login</button>
 
 <div id="msg"></div>
+
 </div>
 
 <script>
@@ -73,57 +86,51 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* TOKEN GENERATOR */
-function generateToken(){
-  return "t_" + crypto.randomUUID() + "_" + Date.now();
-}
+const ADMIN_EMAIL = "admin@dekut.com";
 
+/* LOGIN */
 async function login(){
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  let email = document.getElementById("email").value.trim();
+  let password = document.getElementById("password").value;
+  let msg = document.getElementById("msg");
 
-  const msg = document.getElementById("msg");
-  const btn = document.getElementById("loginBtn");
+  try{
 
-  msg.innerHTML = "Logging in...";
-  btn.disabled = true;
+    const userCredential =
+      await auth.signInWithEmailAndPassword(email, password);
 
-  try {
+    const user = userCredential.user;
 
-    const res = await auth.signInWithEmailAndPassword(email, password);
-    const user = res.user;
-
-    /* CHECK ADMIN */
-    const adminSnap = await db.ref("admins/" + user.uid).once("value");
-
-    if(!adminSnap.exists()){
+    if(user.email !== ADMIN_EMAIL){
       await auth.signOut();
-      msg.innerHTML = "<div class='error'>Not an admin</div>";
-      btn.disabled = false;
+      msg.innerText = "Not authorized";
       return;
     }
 
-    /* CREATE SESSION */
-    const token = generateToken();
-
+    // REGISTER SESSION (NO TOKEN IN URL ANYMORE)
     await db.ref("adminSessions/" + user.uid).set({
-      token: token,
-      createdAt: Date.now(),
-      email: user.email
+      active:true,
+      createdAt:Date.now()
     });
 
-    msg.innerHTML = "<div class='success'>Login success</div>";
+    msg.innerText = "Login success...";
 
     setTimeout(()=>{
-      window.location.href = "admin.html?token=" + token;
+      window.location.href = "admin.html";
     },800);
 
-  } catch (e) {
-    msg.innerHTML = "<div class='error'>" + e.message + "</div>";
-    btn.disabled = false;
+  }catch(err){
+    msg.innerText = err.message;
   }
 }
+
+/* AUTO LOGIN GUARD */
+auth.onAuthStateChanged(user=>{
+  if(user && user.email === ADMIN_EMAIL){
+    window.location.href = "admin.html";
+  }
+});
 
 </script>
 
