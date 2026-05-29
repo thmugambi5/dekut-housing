@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Login - DeKUT Housing</title>
+<title>Admin Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -20,7 +20,7 @@ body{
   height:100vh;
 }
 
-.loginBox{
+.box{
   width:320px;
   background:#fff;
   padding:20px;
@@ -42,26 +42,20 @@ button{
   font-weight:bold;
   cursor:pointer;
 }
-
-button:disabled{
-  background:#999;
-}
 </style>
 </head>
 
 <body>
 
-<div class="loginBox">
+<div class="box">
+<h2>Admin Login</h2>
 
-<h2>🔐 Admin Login</h2>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-
-<button id="loginBtn" onclick="login()">Login</button>
+<button onclick="login()">Login</button>
 
 <div id="msg"></div>
-
 </div>
 
 <script>
@@ -81,38 +75,34 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* GENERATE SESSION TOKEN */
+/* TOKEN */
 function generateToken(){
   return "adm_" + Math.random().toString(36).substring(2) + Date.now();
 }
 
-/* LOGIN */
 async function login(){
 
-  let email = document.getElementById("email").value;
-  let password = document.getElementById("password").value;
-
-  let msg = document.getElementById("msg");
-  let btn = document.getElementById("loginBtn");
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const msg = document.getElementById("msg");
 
   msg.innerHTML = "Logging in...";
-  btn.disabled = true;
 
   try{
 
     const res = await auth.signInWithEmailAndPassword(email,password);
     const user = res.user;
 
-    /* CHECK ADMIN IN DB (NO HARD CODE) */
+    /* CHECK ADMIN EXISTS */
     const adminSnap = await db.ref("admins/" + user.uid).once("value");
 
     if(!adminSnap.exists()){
       await auth.signOut();
-      msg.innerHTML = "❌ Not authorized admin";
-      btn.disabled = false;
+      msg.innerHTML = "❌ Not an admin account";
       return;
     }
 
+    /* CREATE SESSION */
     const token = generateToken();
 
     await db.ref("adminSessions/" + user.uid).set({
@@ -120,19 +110,18 @@ async function login(){
       createdAt: Date.now()
     });
 
-    msg.innerHTML = "✔ Success";
+    msg.innerHTML = "✔ Success... redirecting";
 
     setTimeout(()=>{
       window.location.href = "admin.html?token=" + token;
     },800);
 
-  }catch(err){
-    msg.innerHTML = err.message;
-    btn.disabled = false;
+  } catch(e){
+    msg.innerHTML = e.message;
   }
 }
 
-/* AUTO LOGIN GUARD */
+/* AUTO REDIRECT */
 auth.onAuthStateChanged(async user=>{
   if(user){
     const snap = await db.ref("admins/" + user.uid).once("value");
