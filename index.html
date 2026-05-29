@@ -16,10 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-
-*{
-box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 body{
 margin:0;
@@ -27,7 +24,6 @@ font-family:Arial;
 background:#f6f6f6;
 }
 
-/* HEADER */
 header{
 padding:14px;
 background:#fff;
@@ -50,7 +46,6 @@ border:none;
 cursor:pointer;
 }
 
-/* FILTERS */
 .filters{
 background:#fff;
 padding:10px;
@@ -68,7 +63,6 @@ border-radius:8px;
 width:160px;
 }
 
-/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -76,7 +70,6 @@ gap:14px;
 padding:14px;
 }
 
-/* CARD */
 .card{
 background:#fff;
 border-radius:14px;
@@ -96,7 +89,6 @@ padding:12px;
 line-height:1.7;
 }
 
-/* BUTTONS */
 button{
 margin:4px;
 padding:10px 12px;
@@ -106,34 +98,12 @@ cursor:pointer;
 font-weight:bold;
 }
 
-.whatsapp{
-background:#25D366;
-color:white;
-}
+.whatsapp{background:#25D366;color:white;}
+.call{background:#ff9800;color:white;}
+.mapbtn{background:#007bff;color:white;}
+.detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
+.photosbtn{background:#333;color:white;}
 
-.call{
-background:#ff9800;
-color:white;
-}
-
-.mapbtn{
-background:#007bff;
-color:white;
-}
-
-.detailsbtn{
-background:#111;
-color:white;
-width:100%;
-margin-top:10px;
-}
-
-.photosbtn{
-background:#333;
-color:white;
-}
-
-/* BADGES */
 .badge{
 display:inline-block;
 padding:4px 8px;
@@ -143,18 +113,10 @@ color:white;
 margin-top:6px;
 }
 
-.available{
-background:green;
-}
+.available{background:green;}
+.occupied{background:red;}
 
-.occupied{
-background:red;
-}
-
-/* MODALS */
-.modal,
-.photoModal,
-.detailsModal{
+.modal,.photoModal,.detailsModal{
 display:none;
 position:fixed;
 top:0;
@@ -177,14 +139,12 @@ font-weight:bold;
 cursor:pointer;
 }
 
-/* PHOTO VIEWER */
 .photoContainer{
 width:100%;
 height:100%;
 overflow-x:auto;
 white-space:nowrap;
 scroll-snap-type:x mandatory;
--webkit-overflow-scrolling:touch;
 }
 
 .photoSlide{
@@ -200,7 +160,6 @@ height:100%;
 object-fit:contain;
 }
 
-/* DETAILS */
 .detailsContent{
 background:white;
 width:100%;
@@ -219,21 +178,7 @@ padding:15px;
 line-height:1.9;
 }
 
-/* MAP */
-#map{
-width:100%;
-height:100%;
-}
-
-@media(max-width:600px){
-
-.filters input,
-.filters select{
-width:100%;
-}
-
-}
-
+#map{width:100%;height:100%;}
 </style>
 </head>
 
@@ -241,71 +186,37 @@ width:100%;
 
 <header>
 🏠 DeKUT Housing
-
-<button class="adminBtn" onclick="goAdmin()">
-Admin
-</button>
-
+<button class="adminBtn" onclick="goAdmin()">Admin</button>
 </header>
 
 <div style="text-align:center;padding:10px;">
-<button class="mapbtn" onclick="openAllHousesMap()">
-🗺 View All Houses on Map
-</button>
+<button class="mapbtn" onclick="openAllHousesMap()">🗺 View All Houses on Map</button>
 </div>
 
-<!-- FILTERS -->
 <div class="filters">
-
-<input
-id="searchBox"
-placeholder="Search wifi, bedsitter, Bomas..."
-oninput="applyFilters()"
->
-
+<input id="searchBox" placeholder="Search wifi, bedsitter, Bomas..." oninput="applyFilters()">
 <input id="minRent" type="number" placeholder="Min Rent">
-
 <input id="maxRent" type="number" placeholder="Max Rent">
-
 <input id="maxDist" type="number" placeholder="Max Distance (km)">
-
-<button onclick="applyFilters()">
-Filter
-</button>
-
-<button onclick="resetFilters()">
-Reset
-</button>
-
+<button onclick="applyFilters()">Filter</button>
+<button onclick="resetFilters()">Reset</button>
 </div>
 
-<!-- LIST -->
 <div class="grid" id="list"></div>
 
-<!-- MAP MODAL -->
 <div class="modal" id="mapModal"></div>
 
-<!-- PHOTO MODAL -->
 <div class="photoModal" id="photoModal">
-
-<div class="backBtn" onclick="closePhotos()">
-⬅ Back
-</div>
-
+<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
 <div class="photoContainer" id="photoContainer"></div>
-
 </div>
 
-<!-- DETAILS MODAL -->
 <div class="detailsModal" id="detailsModal">
-
 <div class="detailsContent" id="detailsContent"></div>
-
 </div>
 
 <script>
 
-/* FIREBASE */
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -317,488 +228,199 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
-/* ADMIN */
 function goAdmin(){
-window.location.href = "admin-login.html";
+window.location.href="admin-login.html";
 }
 
-/* DATA */
-let data = {};
-let filteredArray = [];
+let data={}, filteredArray=[];
 
-/* LOAD ONLY APPROVED PROPERTIES */
-db.ref("properties").on("value", snap => {
-
+/* 🔥 REAL-TIME INSTANT SYNC (NO LAG) */
+db.ref("properties").on("value", snap=>{
 data = snap.val() || {};
-
 applyFilters();
-
 });
 
-/* SAFE JSON */
-function safe(obj){
-return encodeURIComponent(JSON.stringify(obj));
-}
-
-/* FILTERS */
+/* ONLY APPROVED PROPERTIES */
 function applyFilters(){
 
-let search =
-document.getElementById("searchBox")
-.value
-.toLowerCase();
+let search=document.getElementById("searchBox").value.toLowerCase();
+let min=parseInt(document.getElementById("minRent").value)||0;
+let max=parseInt(document.getElementById("maxRent").value)||999999;
+let dist=parseFloat(document.getElementById("maxDist").value)||999;
 
-let min =
-parseInt(document.getElementById("minRent").value) || 0;
-
-let max =
-parseInt(document.getElementById("maxRent").value) || 999999;
-
-let dist =
-parseFloat(document.getElementById("maxDist").value) || 999;
-
-filteredArray = [];
+filteredArray=[];
 
 for(let id in data){
 
-let p = data[id];
+let p=data[id];
 
-/* ONLY SHOW APPROVED */
-if(p.approved !== true) continue;
+if(!p.approved) continue;   // 🔥 CRITICAL: only approved
 
-let rent = parseInt(p.rent || 0);
+let rent=parseInt(p.rent||0);
+let distance=parseFloat(p.distance||999);
 
-let distance =
-parseFloat(p.distance || 999);
+let text=((p.type||"")+" "+(p.location||"")+" "+(p.amenities||"")).toLowerCase();
 
-let text =
-(
-(p.type || "") + " " +
-(p.location || "") + " " +
-(p.amenities || "")
-)
-.toLowerCase();
-
-let matches =
-search === "" || text.includes(search);
-
-if(
-rent >= min &&
-rent <= max &&
-distance <= dist &&
-matches
-){
-
-filteredArray.push({
-id,
-...p
-});
-
+if(rent>=min && rent<=max && distance<=dist && (search===""||text.includes(search))){
+filteredArray.push({id,...p});
 }
 
 }
 
 render();
-
 }
 
-/* RESET */
 function resetFilters(){
-
-document.getElementById("searchBox").value = "";
-document.getElementById("minRent").value = "";
-document.getElementById("maxRent").value = "";
-document.getElementById("maxDist").value = "";
-
+document.getElementById("searchBox").value="";
+document.getElementById("minRent").value="";
+document.getElementById("maxRent").value="";
+document.getElementById("maxDist").value="";
 applyFilters();
-
 }
 
-/* RENDER */
 function render(){
 
-let list = document.getElementById("list");
+let list=document.getElementById("list");
+list.innerHTML="";
 
-list.innerHTML = "";
-
-if(filteredArray.length === 0){
-
-list.innerHTML =
-"<p style='padding:20px'>No houses found.</p>";
-
+if(filteredArray.length===0){
+list.innerHTML="<p style='padding:20px'>No houses found.</p>";
 return;
-
 }
 
-filteredArray.forEach(p => {
+filteredArray.forEach(p=>{
 
-let img = p.images?.[0] || "";
+let img=p.images?.[0]||"";
+let statusClass=(p.status||"").toLowerCase()==="available"?"available":"occupied";
 
-let statusClass =
-(p.status || "").toLowerCase() === "available"
-? "available"
-: "occupied";
-
-list.innerHTML += `
-
+list.innerHTML+=`
 <div class="card">
 
-${img ? `
-<img
-src="${img}"
-onclick='openPhotos("${safe(p.images || [])}")'
->
-` : ""}
+${img?`<img src="${img}" onclick='openPhotos("${encodeURIComponent(JSON.stringify(p.images||[]))}")'>`:``}
 
 <div class="cardContent">
 
-<b>🏠 ${p.type || ""}</b><br>
+<b>🏠 ${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+🧰 ${p.amenities||""}<br>
+📏 ${p.distance||""} KM<br>
+💰 KSh ${p.rent||""}<br>
 
-📍 ${p.location || ""}<br>
+<div class="badge ${statusClass}">${p.status||""}</div>
 
-🧰 ${p.amenities || "No amenities listed"}<br>
-
-📏 ${p.distance || "N/A"} KM from DeKUT<br>
-
-💰 KSh ${p.rent || ""}<br>
-
-<div class="badge ${statusClass}">
-${p.status || "Unknown"}
-</div>
-
-<button
-class="detailsbtn"
-onclick='openDetails("${safe(p)}")'
->
-View Details
-</button>
+<button class="detailsbtn" onclick='openDetails("${encodeURIComponent(JSON.stringify(p))}")'>View Details</button>
 
 </div>
-
-</div>
-
-`;
-
+</div>`;
 });
-
 }
 
 /* DETAILS */
 function openDetails(encoded){
 
-let p =
-JSON.parse(decodeURIComponent(encoded));
+let p=JSON.parse(decodeURIComponent(encoded));
 
-let img = p.images?.[0] || "";
+document.getElementById("detailsContent").innerHTML=`
+<div class="backBtn" onclick="closeDetails()">⬅ Back</div>
 
-let content =
-document.getElementById("detailsContent");
-
-content.innerHTML = `
-
-<div class="backBtn" onclick="closeDetails()">
-⬅ Back
-</div>
-
-${img ? `
-<img
-class="detailsImage"
-src="${img}"
-onclick='openPhotos("${safe(p.images || [])}")'
->
-` : ""}
+${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
 
 <div class="detailsBody">
+<h2>${p.type||""}</h2>
+<b>Rent:</b> ${p.rent}<br>
+<b>Location:</b> ${p.location}<br>
+<b>Contact:</b> ${p.phone}<br>
 
-<h2>🏠 ${p.type || ""}</h2>
-
-<b>💰 Rent:</b>
-KSh ${p.rent || ""}<br>
-
-<b>📍 Location:</b>
-${p.location || ""}<br>
-
-<b>📏 Distance:</b>
-${p.distance || ""} KM from DeKUT<br>
-
-<b>🧰 Amenities:</b><br>
-${p.amenities || "N/A"}<br><br>
-
-<b>📞 Contact:</b>
-${p.phone || "N/A"}<br><br>
-
-<button
-class="call"
-onclick="call('${p.phone || ""}')"
->
-📞 Call
+<button class="mapbtn" onclick="closeDetails(); openMap(${p.lat},${p.lng})">
+View Map
 </button>
 
-<button
-class="whatsapp"
-onclick="wa('${p.phone || ""}')"
->
-WhatsApp
-</button>
+</div>`;
 
-<button
-class="photosbtn"
-onclick='openPhotos("${safe(p.images || [])}")'
->
-📸 Photos
-</button>
-
-<button
-class="mapbtn"
-onclick="closeDetails(); openMap(${p.lat || 0},${p.lng || 0})"
->
-🗺 View on Map
-</button>
-
-</div>
-
-`;
-
-document.getElementById("detailsModal").style.display = "block";
-
-/* PHONE BACK SUPPORT */
-pushHistory("details");
-
+document.getElementById("detailsModal").style.display="block";
+history.pushState({page:"details"},"");
 }
 
-/* CLOSE DETAILS */
-function closeDetails(){
-
-document.getElementById("detailsModal").style.display = "none";
-
-}
-
-/* PHOTO GALLERY */
+/* PHOTO */
 function openPhotos(encoded){
 
-let images =
-JSON.parse(decodeURIComponent(encoded));
+let imgs=JSON.parse(decodeURIComponent(encoded));
+let c=document.getElementById("photoContainer");
+c.innerHTML="";
 
-if(!images.length) return;
-
-let container =
-document.getElementById("photoContainer");
-
-container.innerHTML = "";
-
-images.forEach(img => {
-
-container.innerHTML += `
-
-<div class="photoSlide">
-<img src="${img}">
-</div>
-
-`;
-
+imgs.forEach(i=>{
+c.innerHTML+=`<div class="photoSlide"><img src="${i}"></div>`;
 });
 
-document.getElementById("photoModal").style.display = "block";
-
-/* PHONE BACK SUPPORT */
-pushHistory("photos");
-
-}
-
-function closePhotos(){
-
-document.getElementById("photoModal").style.display = "none";
-
+document.getElementById("photoModal").style.display="block";
+history.pushState({page:"photos"},"");
 }
 
 /* MAP */
 function openMap(lat,lng){
 
-if(!lat || !lng){
-alert("Map location unavailable");
-return;
-}
+document.getElementById("mapModal").style.display="block";
 
-let modal =
-document.getElementById("mapModal");
-
-modal.style.display = "block";
-
-/* PHONE BACK SUPPORT */
-pushHistory("map");
-
-modal.innerHTML = `
-
+document.getElementById("mapModal").innerHTML=`
 <div id="map"></div>
-
-<div class="backBtn" onclick="closeMap()">
-⬅ Back
-</div>
-
+<div class="backBtn" onclick="closeMap()">⬅ Back</div>
 `;
 
-setTimeout(() => {
+setTimeout(()=>{
 
-let map =
-L.map("map").setView([lat,lng],15);
+let map=L.map("map").setView([lat,lng],15);
 
-L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-attribution:"© OpenStreetMap"
-}
-).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 L.marker([lat,lng]).addTo(map);
 
 },100);
 
+history.pushState({page:"map"},"");
 }
 
-/* ALL HOUSES MAP */
 function openAllHousesMap(){
 
-let modal =
-document.getElementById("mapModal");
+document.getElementById("mapModal").style.display="block";
+document.getElementById("mapModal").innerHTML=`<div id="map"></div>`;
 
-modal.style.display = "block";
+setTimeout(()=>{
 
-/* PHONE BACK SUPPORT */
-pushHistory("map");
+let map=L.map("map").setView([-0.3977,36.9608],14);
 
-modal.innerHTML = `
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-<div id="map"></div>
-
-<div class="backBtn" onclick="closeMap()">
-⬅ Back
-</div>
-
-`;
-
-setTimeout(() => {
-
-let map =
-L.map("map").setView([-0.3977,36.9608],14);
-
-L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-attribution:"© OpenStreetMap"
-}
-).addTo(map);
-
-let markers =
-L.markerClusterGroup();
+let markers=L.markerClusterGroup();
 
 for(let id in data){
-
-let p = data[id];
-
-if(
-p.approved === true &&
-p.lat &&
-p.lng
-){
-
-let marker =
-L.marker([p.lat,p.lng]);
-
-marker.bindPopup(`
-<b>${p.type || ""}</b><br>
-${p.location || ""}
-`);
-
-markers.addLayer(marker);
-
+let p=data[id];
+if(p.approved && p.lat && p.lng){
+markers.addLayer(L.marker([p.lat,p.lng]));
 }
-
 }
 
 map.addLayer(markers);
 
 },100);
 
+history.pushState({page:"map"},"");
 }
 
-function closeMap(){
+/* CLOSE */
+function closeDetails(){document.getElementById("detailsModal").style.display="none";}
+function closePhotos(){document.getElementById("photoModal").style.display="none";}
+function closeMap(){document.getElementById("mapModal").style.display="none";}
 
-document.getElementById("mapModal").style.display = "none";
-
-}
-
-/* =========================
-PHONE BACK BUTTON SUPPORT
-========================= */
-
-function pushHistory(type){
-
-history.pushState(
-{ modal:type },
-""
-);
-
-}
-
+/* BACK BUTTON SUPPORT */
 window.addEventListener("popstate", function(){
 
-if(
-document.getElementById("photoModal").style.display === "block"
-){
-
-closePhotos();
-return;
-
-}
-
-if(
-document.getElementById("detailsModal").style.display === "block"
-){
-
-closeDetails();
-return;
-
-}
-
-if(
-document.getElementById("mapModal").style.display === "block"
-){
-
-closeMap();
-return;
-
-}
+if(document.getElementById("mapModal").style.display==="block"){closeMap();return;}
+if(document.getElementById("photoModal").style.display==="block"){closePhotos();return;}
+if(document.getElementById("detailsModal").style.display==="block"){closeDetails();return;}
 
 });
-
-/* CONTACT */
-function wa(number){
-
-if(!number){
-alert("Phone number unavailable");
-return;
-}
-
-window.open(
-"https://wa.me/" + number,
-"_blank"
-);
-
-}
-
-function call(number){
-
-if(!number){
-alert("Phone number unavailable");
-return;
-}
-
-window.location.href = "tel:" + number;
-
-}
 
 </script>
 
