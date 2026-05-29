@@ -7,6 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
 
@@ -164,12 +165,7 @@ button{
 
 /* MOBILE */
 @media(max-width:768px){
-  .sidebar{
-    position:relative;
-    width:100%;
-    height:auto;
-  }
-
+  .sidebar{ position:relative; width:100%; height:auto; }
   .main{ margin-left:0; }
 }
 
@@ -185,6 +181,11 @@ button{
   <button onclick="showPending()">🟡 Pending</button>
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="loadAll()">📦 All Listings</button>
+
+  <!-- NEW: LOGOUT -->
+  <button onclick="logout()" style="background:#c62828;">
+    🚪 Logout
+  </button>
 
 </div>
 
@@ -219,6 +220,7 @@ button{
 
 <script>
 
+/* FIREBASE */
 const firebaseConfig = {
   apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
   authDomain:"dekut-housing.firebaseapp.com",
@@ -230,13 +232,41 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
+const db = firebase.database();
+const auth = firebase.auth();
+
+/* ADMIN EMAIL ONLY */
+const ADMIN_EMAIL = "admin@dekut.com";
+
+/* 🔐 PROTECT PAGE (VERY IMPORTANT) */
+auth.onAuthStateChanged(user => {
+
+  if(!user){
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  if(user.email !== ADMIN_EMAIL){
+    auth.signOut();
+    window.location.href = "admin-login.html";
+  }
+
+});
+
+/* LOGOUT */
+function logout(){
+  auth.signOut().then(()=>{
+    window.location.href = "admin-login.html";
+  });
+}
+
+/* DATA */
 let pending = {};
 let approved = {};
 let mode = "pending";
 
-/* REAL-TIME SYNC (NO REFRESH DELAY) */
+/* REALTIME */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
   updateStats();
@@ -265,6 +295,7 @@ function safe(obj){
   return encodeURIComponent(JSON.stringify(obj));
 }
 
+/* RENDER */
 function render(){
 
   let q = document.getElementById("search").value.toLowerCase();
@@ -322,6 +353,7 @@ function render(){
   }
 }
 
+/* DETAILS */
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
 
@@ -344,24 +376,25 @@ function closeDetails(){
   document.getElementById("detailsModal").style.display="none";
 }
 
-/* 🔥 FINAL APPROVAL LOGIC (INDEX DEPENDS ON THIS) */
+/* APPROVE */
 function approve(id){
 
   let item = pending[id];
   if(!item) return;
 
-  item.approved = true;   // CRITICAL FOR INDEX FILTER
+  item.approved = true;
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
 
-  alert("Property approved ✔");
 }
 
+/* REJECT */
 function rejectItem(id){
   db.ref("pendingProperties/" + id).remove();
 }
 
+/* DELETE */
 function deleteItem(id){
   db.ref("pendingProperties/" + id).remove();
   db.ref("properties/" + id).remove();
