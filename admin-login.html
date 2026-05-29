@@ -78,6 +78,7 @@ button:disabled{
 </div>
 
 <script>
+
 const firebaseConfig = {
   apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
   authDomain:"dekut-housing.firebaseapp.com",
@@ -95,10 +96,24 @@ const db = firebase.database();
 
 const ADMIN_EMAIL = "admin@dekut.com";
 
+/* 🔐 TOKEN GENERATOR (OPTION B ENHANCED) */
 function generateToken(){
-    return "adm_" + Math.random().toString(36).substring(2) + Date.now();
+    return "t_" + crypto.randomUUID() + "_" + Date.now();
 }
 
+/* 🔐 DEVICE ID (OPTION B SUPPORT) */
+function getDeviceId(){
+    let id = localStorage.getItem("device_id");
+
+    if(!id){
+        id = "dev_" + crypto.randomUUID();
+        localStorage.setItem("device_id", id);
+    }
+
+    return id;
+}
+
+/* LOGIN */
 async function login(){
 
     const email = document.getElementById("email").value.trim();
@@ -114,7 +129,7 @@ async function login(){
         const res = await auth.signInWithEmailAndPassword(email, password);
         const user = res.user;
 
-        // ❌ BLOCK NON ADMIN EMAILS
+        /* ❌ BLOCK NON-ADMIN EMAILS */
         if(user.email !== ADMIN_EMAIL){
             await auth.signOut();
             msg.innerText = "Not authorized";
@@ -123,11 +138,13 @@ async function login(){
         }
 
         const token = generateToken();
+        const device = getDeviceId();
 
-        // store session
+        /* 🔐 CREATE SECURE SESSION (OPTION B STRUCTURE) */
         await db.ref("adminSessions/" + user.uid).set({
             token: token,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            device: device
         });
 
         msg.innerText = "Login successful";
@@ -141,6 +158,7 @@ async function login(){
         btn.disabled = false;
     }
 }
+
 </script>
 
 </body>
