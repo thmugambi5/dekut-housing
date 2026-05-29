@@ -10,27 +10,30 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
 }
 
-#lockScreen{
+/* LOADING SCREEN */
+#loading{
   position:fixed;
   top:0;
   left:0;
   width:100%;
   height:100%;
-  background:#111;
+  background:#0f172a;
   color:white;
   display:flex;
   justify-content:center;
   align-items:center;
   flex-direction:column;
-  z-index:999999;
+  z-index:9999;
 }
 
+/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -42,42 +45,68 @@ body{
   padding:20px;
 }
 
+.sidebar button{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+}
+
+.sidebar button:hover{
+  background:#333;
+}
+
+/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
   display:none;
 }
 
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-}
-
+/* CARD */
 .card{
   background:white;
   padding:15px;
-  margin-top:10px;
+  margin:10px 0;
   border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
+
+/* BUTTONS */
+button.action{
+  padding:8px 10px;
+  border:none;
+  border-radius:6px;
+  margin:3px;
+  cursor:pointer;
+}
+
+.approve{ background:green; color:white; }
+.reject{ background:orange; color:white; }
+.delete{ background:red; color:white; }
+
 </style>
 </head>
 
 <body>
 
-<div id="lockScreen">
+<div id="loading">
   <h2>🔐 Verifying Access...</h2>
+  <p>Please wait...</p>
 </div>
 
 <div class="sidebar">
-  <h2>Admin</h2>
+  <h2>Admin Panel</h2>
+  <button onclick="loadAll()">All</button>
   <button onclick="logout()">Logout</button>
 </div>
 
 <div class="main">
-  <h1>Dashboard</h1>
+  <h2>Dashboard</h2>
   <div id="list"></div>
 </div>
 
@@ -98,39 +127,30 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const ADMIN_EMAIL = "admin@dekut.com";
+let sessionToken = null;
+let currentUser = null;
 
-/* HARD SECURITY GATE */
+/* SAFE AUTH GATE */
 auth.onAuthStateChanged(async user => {
-
-  const lock = document.getElementById("lockScreen");
-  const main = document.querySelector(".main");
-
-  lock.style.display = "flex";
-  main.style.display = "none";
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(user.email !== ADMIN_EMAIL){
+  currentUser = user;
+
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+
+  if(!urlToken){
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  const token =
-    new URLSearchParams(window.location.search).get("token");
+  sessionToken = urlToken;
 
-  if(!token){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
-
-  const snap =
-    await db.ref("adminSessions/" + user.uid).once("value");
+  const snap = await db.ref("adminSessions/" + user.uid).once("value");
 
   if(!snap.exists()){
     await auth.signOut();
@@ -140,14 +160,15 @@ auth.onAuthStateChanged(async user => {
 
   const session = snap.val();
 
-  if(session.token !== token){
+  // token mismatch
+  if(session.token !== urlToken){
     await auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  const expired =
-    Date.now() - session.createdAt > 86400000;
+  // expiry check (24h)
+  const expired = Date.now() - session.createdAt > 86400000;
 
   if(expired){
     await db.ref("adminSessions/" + user.uid).remove();
@@ -156,21 +177,59 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
-  lock.style.display = "none";
-  main.style.display = "block";
+  // SUCCESS → unlock UI
+  document.getElementById("loading").style.display = "none";
+  document.querySelector(".main").style.display = "block";
+
+  loadAll();
 
 });
 
+/* LOAD DATA */
+function loadAll(){
+
+  db.ref("properties").on("value", snap => {
+
+    const data = snap.val() || {};
+    const list = document.getElementById("list");
+
+    list.innerHTML = "";
+
+    for(let id in data){
+
+      const p = data[id];
+
+      list.innerHTML += `
+        <div class="card">
+          <b>${p.type || ""}</b><br>
+          ${p.location || ""}<br>
+          KSh ${p.rent || ""}<br>
+
+          <button class="action approve" onclick="approve('${id}')">Approve</button>
+          <button class="action delete" onclick="removeItem('${id}')">Delete</button>
+        </div>
+      `;
+    }
+
+  });
+
+}
+
+/* ACTIONS */
+function approve(id){
+  db.ref("properties/" + id).update({ approved: true });
+}
+
+function removeItem(id){
+  db.ref("properties/" + id).remove();
+}
+
 /* LOGOUT */
 async function logout(){
-
-  const user = auth.currentUser;
-
-  if(user){
-    await db.ref("adminSessions/" + user.uid).remove();
+  if(currentUser){
+    await db.ref("adminSessions/" + currentUser.uid).remove();
+    await auth.signOut();
   }
-
-  await auth.signOut();
   window.location.href = "admin-login.html";
 }
 
