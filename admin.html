@@ -1,173 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Admin Dashboard - DeKUT Housing</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-<style>
-
-/* (same UI you already approved - shortened here for clarity) */
-
-body{margin:0;font-family:Arial;background:#f4f6f9;}
-
-#lockScreen{
-  position:fixed;top:0;left:0;width:100%;height:100%;
-  background:#111;color:white;display:flex;
-  justify-content:center;align-items:center;flex-direction:column;
-}
-
-.sidebar{
-  position:fixed;left:0;top:0;width:240px;height:100%;
-  background:#0f172a;color:white;padding:20px;
-}
-
-.sidebar button{
-  width:100%;margin:6px 0;padding:12px;
-  border:none;border-radius:10px;
-  background:#1e293b;color:white;
-}
-
-.main{
-  margin-left:260px;padding:20px;display:none;
-}
-
-/* mobile */
-@media(max-width:768px){
-  .sidebar{position:relative;width:100%;}
-  .main{margin-left:0;}
-}
-
-.card{background:white;margin-top:15px;padding:10px;border-radius:10px;}
-
-</style>
-</head>
-
-<body>
-
-<div id="lockScreen">
-  <h2>🔐 Verifying Admin Access...</h2>
-</div>
-
-<div class="sidebar">
-  <h2>Admin Panel</h2>
-  <button onclick="showPending()">Pending</button>
-  <button onclick="showApproved()">Approved</button>
-  <button onclick="logout()">Logout</button>
-</div>
-
-<div class="main">
-
-<h1>Dashboard</h1>
-
-<div id="list"></div>
-
-</div>
-
-<script>
-
-const firebaseConfig = {
-  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain:"dekut-housing.firebaseapp.com",
-  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId:"dekut-housing",
-  storageBucket:"dekut-housing.appspot.com",
-  messagingSenderId:"784034754945",
-  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.database();
-
-let userGlobal = null;
-
-/* 🔐 LEVEL H SECURITY CORE */
-auth.onAuthStateChanged(async user=>{
-
-  if(!user){
-    window.location.href="admin-login.html";
-    return;
-  }
-
-  userGlobal = user;
-
-  const adminSnap =
-    await db.ref("admins/" + user.uid).once("value");
-
-  if(!adminSnap.exists()){
-    await auth.signOut();
-    return;
-  }
-
-  const sessionSnap =
-    await db.ref("adminSessions/" + user.uid).once("value");
-
-  if(!sessionSnap.exists()){
-    await auth.signOut();
-    return;
-  }
-
-  const session = sessionSnap.val();
-
-  if(!session.active){
-    await auth.signOut();
-    return;
-  }
-
-  document.getElementById("lockScreen").style.display="none";
-  document.querySelector(".main").style.display="block";
-});
-
-/* LOGOUT */
-function logout(){
-  auth.signOut().then(()=>{
-    window.location.href="admin-login.html";
-  });
-}
-
-/* DATA */
-db.ref("pendingProperties").on("value",snap=>{
-  render(snap.val()||{});
-});
-
-function render(data){
-
-  let list = document.getElementById("list");
-  list.innerHTML="";
-
-  for(let id in data){
-
-    let p = data[id];
-
-    list.innerHTML += `
-      <div class="card">
-        <b>${p.type}</b><br>
-        ${p.location}<br>
-        KSh ${p.rent}
-      </div>
-    `;
-  }
-}
-
-function showPending(){
-  db.ref("pendingProperties").once("value",snap=>{
-    render(snap.val()||{});
-  });
-}
-
-function showApproved(){
-  db.ref("properties").once("value",snap=>{
-    render(snap.val()||{});
-  });
-}
-
-</script>
-
-</body>
-</html>
+Your security rules are defined as public, so anyone can steal, modify or delete data in your database
+https://dekut-housing-default-rtdb.firebaseio.com/
+adminSessions
+buUhvoYLQ5NmtHeuMwSPgXJsrBm2
+createdAt
+:
+1780070208305
+email
+:
+"admin@dekut.com"
+token
+:
+"t_e0a7832f-113c-4ac3-ad06-9b75c633522a_1780070208305"
+admins
+buUhvoYLQ5NmtHeuMwSPgXJsrBm2
+createdAt
+:
+1780057249194
+email
+:
+"admin@dekut.com"
+role
+:
+"superadmin"
+properties
