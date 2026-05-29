@@ -11,14 +11,34 @@
 
 <style>
 
-/* (ALL YOUR ORIGINAL CSS KEPT EXACTLY THE SAME) */
-
 body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
 }
 
+/* LOADING SCREEN */
+#loadingScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:18px;
+  z-index:99999;
+}
+
+/* HIDE MAIN UNTIL AUTH VERIFIED */
+#app{
+  display:none;
+}
+
+/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -47,11 +67,13 @@ body{
 
 .sidebar button:hover{ background:#333; }
 
+/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
 }
 
+/* STATS */
 .stats{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -66,6 +88,7 @@ body{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* SEARCH */
 .searchBox{
   width:100%;
   padding:12px;
@@ -75,6 +98,7 @@ body{
   box-sizing:border-box;
 }
 
+/* CARD */
 .card{
   background:white;
   margin-top:15px;
@@ -94,6 +118,7 @@ body{
   line-height:1.8;
 }
 
+/* BADGES */
 .badge{
   display:inline-block;
   padding:5px 10px;
@@ -106,6 +131,7 @@ body{
 .pending{ background:orange; }
 .approved{ background:green; }
 
+/* BUTTONS */
 button{
   padding:10px 12px;
   border:none;
@@ -121,6 +147,7 @@ button{
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
 
+/* MODAL */
 .modal{
   display:none;
   position:fixed;
@@ -131,6 +158,10 @@ button{
   background:white;
   z-index:9999;
   overflow:auto;
+}
+
+.modalContent{
+  padding:15px;
 }
 
 .backBtn{
@@ -154,6 +185,12 @@ button{
 
 <body>
 
+<!-- LOADING -->
+<div id="loadingScreen">🔐 Verifying admin access...</div>
+
+<!-- APP (HIDDEN UNTIL VERIFIED) -->
+<div id="app">
+
 <div class="sidebar">
 
   <h2>🏠 Admin Panel</h2>
@@ -171,6 +208,7 @@ button{
   <h1>Dashboard</h1>
 
   <div class="stats">
+
     <div class="statBox">
       <h2 id="totalPending">0</h2>
       <p>Pending</p>
@@ -180,6 +218,7 @@ button{
       <h2 id="totalApproved">0</h2>
       <p>Approved</p>
     </div>
+
   </div>
 
   <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
@@ -191,6 +230,8 @@ button{
 <div class="modal" id="detailsModal">
   <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
   <div id="detailsContent"></div>
+</div>
+
 </div>
 
 <script>
@@ -210,35 +251,40 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-const ADMIN_EMAIL = "admin@dekut.com";
+let pending = {};
+let approved = {};
+let mode = "pending";
 
-/* 🔐 LEVEL 3 SECURITY GATE */
-auth.onAuthStateChanged(user => {
+/* 🔐 SECURITY CHECK (STEP C CORE) */
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(user.email !== ADMIN_EMAIL){
+  const snap = await db.ref("admins/" + user.uid).once("value");
+
+  if(!snap.exists()){
     auth.signOut();
     window.location.href = "admin-login.html";
+    return;
   }
+
+  // AUTH SUCCESS
+  document.getElementById("loadingScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
 
 });
 
+/* LOGOUT */
 function logout(){
   auth.signOut().then(()=>{
     window.location.href = "admin-login.html";
   });
 }
 
-/* DATA */
-let pending = {};
-let approved = {};
-let mode = "pending";
-
-/* REALTIME (NO REFRESH LAG) */
+/* REALTIME */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
   updateStats();
@@ -262,10 +308,6 @@ function updateStats(){
 function showPending(){ mode="pending"; render(); }
 function showApproved(){ mode="approved"; render(); }
 function loadAll(){ mode="all"; render(); }
-
-function safe(obj){
-  return encodeURIComponent(JSON.stringify(obj));
-}
 
 function render(){
 
@@ -308,7 +350,7 @@ function render(){
 
           <br><br>
 
-          <button class="view" onclick='openDetails("${safe(p)}")'>View</button>
+          <button class="view" onclick='openDetails(${JSON.stringify(p)})'>View</button>
 
           ${isPending ? `
             <button class="approve" onclick="approve('${id}')">✔ Approve</button>
@@ -324,18 +366,19 @@ function render(){
   }
 }
 
-function openDetails(encoded){
-  let p = JSON.parse(decodeURIComponent(encoded));
+function openDetails(p){
 
   document.getElementById("detailsContent").innerHTML = `
     <div class="modalContent">
+
       <h2>${p.type}</h2>
       <p>${p.location}</p>
-      <p>${p.rent}</p>
+      <p>KSh ${p.rent}</p>
 
       <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">
         View Map
       </button>
+
     </div>
   `;
 
@@ -346,10 +389,9 @@ function closeDetails(){
   document.getElementById("detailsModal").style.display="none";
 }
 
+/* ACTIONS */
 function approve(id){
   let item = pending[id];
-  if(!item) return;
-
   item.approved = true;
 
   db.ref("properties/" + id).set(item);
