@@ -1,46 +1,48 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const express = require("express");
 
 admin.initializeApp();
 
+const app = express();
+app.use(express.json());
+
 /**
- * 🔐 LEVEL K SECURITY FUNCTION
- * This manually grants admin role to your UID
+ * 🔐 LEVEL K ADMIN ROLE SETTER
  */
-exports.setAdminRole = functions.https.onRequest(async (req, res) => {
-  
+app.post("/setAdminRole", async (req, res) => {
   try {
     
-    // 🔴 SECURITY: Only allow POST requests
-    if (req.method !== "POST") {
-      return res.status(403).send("Forbidden");
-    }
-
     const { uid } = req.body;
 
     if (!uid) {
-      return res.status(400).send("UID required");
+      return res.status(400).json({
+        success: false,
+        message: "UID required"
+      });
     }
 
-    // 🔐 SET CUSTOM CLAIM (REAL ADMIN PRIVILEGE)
+    // 🔐 Set admin custom claim
     await admin.auth().setCustomUserClaims(uid, {
       admin: true,
       role: "superadmin"
     });
 
-    // Optional: force token refresh later
+    // Force token refresh
     await admin.auth().revokeRefreshTokens(uid);
 
-    return res.status(200).send({
+    return res.status(200).json({
       success: true,
       message: "Admin role assigned",
-      uid: uid
+      uid
     });
 
   } catch (error) {
-    return res.status(500).send({
+    return res.status(500).json({
       success: false,
       error: error.message
     });
   }
 });
+
+exports.api = functions.https.onRequest(app);
