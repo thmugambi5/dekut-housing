@@ -16,6 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
+
 *{box-sizing:border-box;}
 
 body{
@@ -179,6 +180,7 @@ line-height:1.9;
 }
 
 #map{width:100%;height:100%;}
+
 </style>
 </head>
 
@@ -194,12 +196,15 @@ line-height:1.9;
 </div>
 
 <div class="filters">
+
 <input id="searchBox" placeholder="Search wifi, bedsitter, Bomas..." oninput="applyFilters()">
 <input id="minRent" type="number" placeholder="Min Rent">
 <input id="maxRent" type="number" placeholder="Max Rent">
 <input id="maxDist" type="number" placeholder="Max Distance (km)">
+
 <button onclick="applyFilters()">Filter</button>
 <button onclick="resetFilters()">Reset</button>
+
 </div>
 
 <div class="grid" id="list"></div>
@@ -217,6 +222,7 @@ line-height:1.9;
 
 <script>
 
+/* FIREBASE */
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -234,71 +240,85 @@ function goAdmin(){
 window.location.href="admin-login.html";
 }
 
-let data={}, filteredArray=[];
+/* DATA */
+let data = {};
+let filteredArray = [];
 
-/* 🔥 REAL-TIME INSTANT SYNC (NO LAG) */
+/* INFINITE SCROLL CONTROL */
+let renderIndex = 0;
+const PAGE_SIZE = 6;
+let isLoading = false;
+
+/* REAL-TIME FIREBASE (NO LAG + AUTO UPDATE) */
 db.ref("properties").on("value", snap=>{
 data = snap.val() || {};
-applyFilters();
+applyFilters();   // re-filter instantly on update
 });
 
-/* ONLY APPROVED PROPERTIES */
+/* SAFE */
+function safe(obj){
+return encodeURIComponent(JSON.stringify(obj));
+}
+
+/* FILTERS (KEEP APPROVED ONLY) */
 function applyFilters(){
 
-let search=document.getElementById("searchBox").value.toLowerCase();
-let min=parseInt(document.getElementById("minRent").value)||0;
-let max=parseInt(document.getElementById("maxRent").value)||999999;
-let dist=parseFloat(document.getElementById("maxDist").value)||999;
+let search = document.getElementById("searchBox").value.toLowerCase();
+let min = parseInt(document.getElementById("minRent").value) || 0;
+let max = parseInt(document.getElementById("maxRent").value) || 999999;
+let dist = parseFloat(document.getElementById("maxDist").value) || 999;
 
-filteredArray=[];
+filteredArray = [];
 
 for(let id in data){
 
-let p=data[id];
+let p = data[id];
 
-if(!p.approved) continue;   // 🔥 CRITICAL: only approved
+/* 🔥 ONLY APPROVED APPEAR */
+if(p.approved !== true) continue;
 
-let rent=parseInt(p.rent||0);
-let distance=parseFloat(p.distance||999);
+let rent = parseInt(p.rent || 0);
+let distance = parseFloat(p.distance || 999);
 
-let text=((p.type||"")+" "+(p.location||"")+" "+(p.amenities||"")).toLowerCase();
+let text = ((p.type||"")+" "+(p.location||"")+" "+(p.amenities||"")).toLowerCase();
 
-if(rent>=min && rent<=max && distance<=dist && (search===""||text.includes(search))){
+if(
+rent>=min &&
+rent<=max &&
+distance<=dist &&
+(search==="" || text.includes(search))
+){
 filteredArray.push({id,...p});
 }
 
 }
 
-render();
+/* RESET INFINITE SCROLL */
+renderIndex = 0;
+document.getElementById("list").innerHTML = "";
+renderMore();
+
 }
 
-function resetFilters(){
-document.getElementById("searchBox").value="";
-document.getElementById("minRent").value="";
-document.getElementById("maxRent").value="";
-document.getElementById("maxDist").value="";
-applyFilters();
-}
+/* INFINITE SCROLL RENDER */
+function renderMore(){
 
-function render(){
+if(isLoading) return;
+isLoading = true;
 
-let list=document.getElementById("list");
-list.innerHTML="";
+let list = document.getElementById("list");
 
-if(filteredArray.length===0){
-list.innerHTML="<p style='padding:20px'>No houses found.</p>";
-return;
-}
+let nextItems = filteredArray.slice(renderIndex, renderIndex + PAGE_SIZE);
 
-filteredArray.forEach(p=>{
+nextItems.forEach(p=>{
 
-let img=p.images?.[0]||"";
-let statusClass=(p.status||"").toLowerCase()==="available"?"available":"occupied";
+let img = p.images?.[0] || "";
+let statusClass = (p.status||"").toLowerCase()==="available" ? "available":"occupied";
 
-list.innerHTML+=`
+list.innerHTML += `
 <div class="card">
 
-${img?`<img src="${img}" onclick='openPhotos("${encodeURIComponent(JSON.stringify(p.images||[]))}")'>`:``}
+${img?`<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
 
 <div class="cardContent">
 
@@ -310,17 +330,41 @@ ${img?`<img src="${img}" onclick='openPhotos("${encodeURIComponent(JSON.stringif
 
 <div class="badge ${statusClass}">${p.status||""}</div>
 
-<button class="detailsbtn" onclick='openDetails("${encodeURIComponent(JSON.stringify(p))}")'>View Details</button>
+<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>
+View Details
+</button>
 
 </div>
 </div>`;
 });
+
+renderIndex += PAGE_SIZE;
+isLoading = false;
+
+}
+
+/* SCROLL LISTENER */
+window.addEventListener("scroll", ()=>{
+
+if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
+renderMore();
+}
+
+});
+
+/* RESET */
+function resetFilters(){
+document.getElementById("searchBox").value="";
+document.getElementById("minRent").value="";
+document.getElementById("maxRent").value="";
+document.getElementById("maxDist").value="";
+applyFilters();
 }
 
 /* DETAILS */
 function openDetails(encoded){
 
-let p=JSON.parse(decodeURIComponent(encoded));
+let p = JSON.parse(decodeURIComponent(encoded));
 
 document.getElementById("detailsContent").innerHTML=`
 <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
@@ -328,7 +372,9 @@ document.getElementById("detailsContent").innerHTML=`
 ${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
 
 <div class="detailsBody">
+
 <h2>${p.type||""}</h2>
+
 <b>Rent:</b> ${p.rent}<br>
 <b>Location:</b> ${p.location}<br>
 <b>Contact:</b> ${p.phone}<br>
@@ -340,22 +386,20 @@ View Map
 </div>`;
 
 document.getElementById("detailsModal").style.display="block";
-history.pushState({page:"details"},"");
 }
 
 /* PHOTO */
 function openPhotos(encoded){
 
-let imgs=JSON.parse(decodeURIComponent(encoded));
-let c=document.getElementById("photoContainer");
+let imgs = JSON.parse(decodeURIComponent(encoded));
+let c = document.getElementById("photoContainer");
 c.innerHTML="";
 
 imgs.forEach(i=>{
-c.innerHTML+=`<div class="photoSlide"><img src="${i}"></div>`;
+c.innerHTML += `<div class="photoSlide"><img src="${i}"></div>`;
 });
 
 document.getElementById("photoModal").style.display="block";
-history.pushState({page:"photos"},"");
 }
 
 /* MAP */
@@ -377,12 +421,9 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.marker([lat,lng]).addTo(map);
 
 },100);
-
-history.pushState({page:"map"},"");
 }
 
 function openAllHousesMap(){
-
 document.getElementById("mapModal").style.display="block";
 document.getElementById("mapModal").innerHTML=`<div id="map"></div>`;
 
@@ -396,6 +437,7 @@ let markers=L.markerClusterGroup();
 
 for(let id in data){
 let p=data[id];
+
 if(p.approved && p.lat && p.lng){
 markers.addLayer(L.marker([p.lat,p.lng]));
 }
@@ -404,23 +446,12 @@ markers.addLayer(L.marker([p.lat,p.lng]));
 map.addLayer(markers);
 
 },100);
-
-history.pushState({page:"map"},"");
 }
 
 /* CLOSE */
 function closeDetails(){document.getElementById("detailsModal").style.display="none";}
 function closePhotos(){document.getElementById("photoModal").style.display="none";}
 function closeMap(){document.getElementById("mapModal").style.display="none";}
-
-/* BACK BUTTON SUPPORT */
-window.addEventListener("popstate", function(){
-
-if(document.getElementById("mapModal").style.display==="block"){closeMap();return;}
-if(document.getElementById("photoModal").style.display==="block"){closePhotos();return;}
-if(document.getElementById("detailsModal").style.display==="block"){closeDetails();return;}
-
-});
 
 </script>
 
