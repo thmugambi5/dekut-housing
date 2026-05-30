@@ -1,3 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f5f5f5;margin:0;padding:15px;}
+.card{background:white;padding:15px;border-radius:12px;max-width:700px;margin:auto;}
+input,select,textarea,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;}
+button{background:#ff385c;color:white;border:none;font-weight:bold;}
+.listing{background:#fff;margin-top:10px;padding:10px;border-radius:10px;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>🏠 Dashboard</h2>
+
+<select id="type">
+<option>Bedsitter</option>
+<option>Single Room</option>
+<option>One Bedroom</option>
+</select>
+
+<input id="rent" placeholder="Rent">
+<input id="deposit" placeholder="Deposit">
+<input id="phone" placeholder="Phone">
+<input id="location" placeholder="Location">
+<textarea id="extra" placeholder="Description"></textarea>
+
+<input type="file" id="images" multiple>
+
+<button onclick="upload()">Upload Property</button>
+
+<h3>My Listings</h3>
+<div id="list"></div>
+</div>
+
 <script>
 
 const firebaseConfig = {
@@ -11,88 +56,17 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
+let user = null;
 
-/* 🔐 AUTH GATE (CRITICAL) */
-auth.onAuthStateChanged(user=>{
-if(!user){
+/* AUTH GUARD */
+auth.onAuthStateChanged(u=>{
+if(!u){
 window.location.href="landlord-login.html";
 return;
 }
-
-currentUser = user;
+user=u;
 loadMyListings();
 });
-
-/* UPLOAD PROPERTY */
-async function upload(){
-
-if(!currentUser){
-alert("Login required");
-return;
-}
-
-let images = [];
-let files = document.getElementById("images").files;
-
-for(let f of files){
-images.push(await toBase64(f));
-}
-
-await db.ref("pendingProperties").push({
-
-ownerUid: currentUser.uid,
-
-type:document.getElementById("type").value,
-rent:document.getElementById("rent").value,
-deposit:document.getElementById("deposit").value,
-phone:document.getElementById("phone").value,
-location:document.getElementById("location").value,
-extra:document.getElementById("extra").value,
-
-images,
-approved:false,
-createdAt:Date.now()
-
-});
-
-alert("Uploaded successfully");
-}
-
-/* MY LISTINGS */
-function loadMyListings(){
-
-db.ref("pendingProperties").on("value",snap=>{
-
-const data = snap.val() || {};
-const list = document.getElementById("list");
-
-list.innerHTML = "";
-
-for(let id in data){
-
-const p = data[id];
-
-if(p.ownerUid !== currentUser.uid) continue;
-
-list.innerHTML += `
-<div class="card">
-<b>${p.type}</b><br>
-${p.location}<br>
-KSh ${p.rent || ""}<br>
-
-<button onclick="del('${id}')">Delete</button>
-</div>
-`;
-}
-
-});
-
-}
-
-function del(id){
-db.ref("pendingProperties/"+id).remove();
-}
 
 /* BASE64 */
 function toBase64(file){
@@ -103,4 +77,69 @@ r.readAsDataURL(file);
 });
 }
 
+/* UPLOAD */
+async function upload(){
+
+let images=[];
+let files=document.getElementById("images").files;
+
+for(let f of files){
+images.push(await toBase64(f));
+}
+
+await db.ref("pendingProperties").push({
+
+ownerUid:user.uid,
+type:document.getElementById("type").value,
+rent:document.getElementById("rent").value,
+deposit:document.getElementById("deposit").value,
+phone:document.getElementById("phone").value,
+location:document.getElementById("location").value,
+extra:document.getElementById("extra").value,
+images,
+approved:false,
+createdAt:Date.now()
+
+});
+
+alert("Uploaded");
+}
+
+/* MY LISTINGS */
+function loadMyListings(){
+
+db.ref("pendingProperties").on("value",snap=>{
+
+const data=snap.val()||{};
+const list=document.getElementById("list");
+
+list.innerHTML="";
+
+for(let id in data){
+
+let p=data[id];
+
+if(p.ownerUid!==user.uid) continue;
+
+list.innerHTML+=`
+<div class="listing">
+<b>${p.type}</b><br>
+${p.location}<br>
+KSh ${p.rent}<br>
+
+<button onclick="del('${id}')">Delete</button>
+</div>
+`;
+}
+
+});
+}
+
+function del(id){
+db.ref("pendingProperties/"+id).remove();
+}
+
 </script>
+
+</body>
+</html>
