@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Listings</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f5f7fb;margin:0;padding:15px;}
+.card{background:white;padding:15px;margin:10px;border-radius:10px;}
+button{padding:8px;margin:5px;}
+.edit{background:blue;color:white;}
+.delete{background:red;color:white;}
+</style>
+</head>
+
+<body>
+
+<h2>My Listings</h2>
+<div id="list"></div>
+
+<script>
+
+const firebaseConfig = {
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+let uid = null;
+
+/* AUTH */
+auth.onAuthStateChanged(user=>{
+
+if(!user){
+window.location.href="landlord-login.html";
+return;
+}
+
+uid = user.uid;
+loadMyListings();
+
+});
+
+/* LOAD ONLY OWN LISTINGS */
+function loadMyListings(){
+
+db.ref("pendingProperties").on("value",snap=>{
+
+const data = snap.val() || {};
+const list = document.getElementById("list");
+
+list.innerHTML="";
+
+for(let id in data){
+
+const p = data[id];
+
+if(p.ownerUid !== uid) continue;
+
+list.innerHTML += `
+<div class="card">
+
+<h3>${p.type}</h3>
+<p>${p.location}</p>
+<p>KSh ${p.rent}</p>
+
+<button class="edit" onclick="editItem('${id}')">Edit</button>
+<button class="delete" onclick="deleteItem('${id}')">Delete</button>
+
+</div>
+`;
+
+}
+
+});
+
+}
+
+/* DELETE */
+function deleteItem(id){
+db.ref("pendingProperties/"+id).remove();
+}
+
+/* EDIT (basic version) */
+function editItem(id){
+const newRent = prompt("Enter new rent:");
+if(!newRent) return;
+
+db.ref("pendingProperties/"+id).update({
+rent:newRent
+});
+}
+
+</script>
+
+</body>
+</html>
