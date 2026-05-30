@@ -12,115 +12,162 @@
 <style>
 
 body{
-  margin:0;
-  font-family:Arial;
-  background:#f5f7fb;
+margin:0;
+font-family:Arial;
+background:#f5f7fb;
 }
 
-/* TOP BAR */
 .topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  background:#111;
-  color:white;
-  padding:12px 15px;
-  position:sticky;
-  top:0;
-  z-index:1000;
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#111;
+color:white;
+padding:12px 15px;
+position:sticky;
+top:0;
+z-index:1000;
 }
 
 .menuBtn{
-  background:#222;
-  border:none;
-  color:white;
-  padding:8px 12px;
-  border-radius:6px;
-  cursor:pointer;
+background:#222;
+border:none;
+color:white;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
 }
 
-/* SIDEBAR */
 .sidebar{
-  position:fixed;
-  left:0;
-  top:0;
-  width:240px;
-  height:100%;
-  background:#111;
-  color:white;
-  padding:20px;
-  transform:translateX(0);
-  transition:0.3s;
-  z-index:999;
+position:fixed;
+left:0;
+top:0;
+width:240px;
+height:100%;
+background:#111;
+color:white;
+padding:20px;
+transform:translateX(-100%);
+transition:.3s;
+z-index:999;
 }
 
-.sidebar.hidden{
-  transform:translateX(-100%);
+.sidebar.show{
+transform:translateX(0);
 }
 
 .sidebar button{
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  background:#222;
-  color:white;
-  font-size:14px;
+width:100%;
+padding:12px;
+margin:6px 0;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:#222;
+color:white;
 }
 
-.sidebar button:hover{
-  background:#333;
-}
-
-/* MAIN */
 .main{
-  margin-left:260px;
-  padding:15px;
-  transition:0.3s;
+padding:15px;
 }
 
-@media(max-width:768px){
-  .main{ margin-left:0; }
-}
-
-/* CARD */
 .card{
-  background:white;
-  padding:15px;
-  margin:10px 0;
-  border-radius:12px;
-  box-shadow:0 2px 10px rgba(0,0,0,0.08);
+background:white;
+padding:15px;
+margin:12px 0;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,.08);
 }
 
-/* BUTTONS */
-button.action{
-  padding:8px 10px;
-  border:none;
-  border-radius:6px;
-  margin:4px 3px;
-  cursor:pointer;
-  font-size:13px;
+.badge{
+display:inline-block;
+padding:5px 10px;
+border-radius:8px;
+color:white;
+font-size:12px;
+margin-bottom:8px;
 }
 
-.approve{ background:green; color:white; }
-.delete{ background:red; color:white; }
+.pending{
+background:#ff9800;
+}
 
-/* LOADING */
+.approved{
+background:green;
+}
+
+.action{
+padding:8px 12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+margin:4px;
+}
+
+.approve{
+background:green;
+color:white;
+}
+
+.delete{
+background:red;
+color:white;
+}
+
+.view{
+background:#2563eb;
+color:white;
+}
+
 #loading{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:#0f172a;
-  color:white;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  z-index:9999;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#0f172a;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
+
+.detailsModal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.8);
+overflow:auto;
+z-index:99999;
+}
+
+.detailsContent{
+background:white;
+max-width:700px;
+margin:20px auto;
+padding:20px;
+border-radius:12px;
+}
+
+.detailsContent img{
+width:100%;
+max-height:300px;
+object-fit:cover;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.closeBtn{
+background:red;
+color:white;
+padding:10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
 }
 
 </style>
@@ -129,35 +176,47 @@ button.action{
 <body>
 
 <div id="loading">
-  <h2>🔐 Verifying Access...</h2>
+<h2>🔐 Verifying Access...</h2>
 </div>
 
 <div class="topbar">
-  <button class="menuBtn" onclick="toggleMenu()">☰ Menu</button>
-  <div>Admin Dashboard</div>
-  <button class="menuBtn" onclick="logout()">Logout</button>
+<button class="menuBtn" onclick="toggleMenu()">☰ Menu</button>
+<div>Admin Dashboard</div>
+<button class="menuBtn" onclick="logout()">Logout</button>
 </div>
 
-<div class="sidebar hidden" id="sidebar">
-  <h3>Panel</h3>
-  <button onclick="loadAll()">🏠 All Listings</button>
+<div class="sidebar" id="sidebar">
+<h3>Admin Panel</h3>
+
+<button onclick="loadPending()">
+🕒 Pending Properties
+</button>
+
+<button onclick="loadApproved()">
+🏠 Approved Properties
+</button>
+
 </div>
 
 <div class="main">
-  <h2>Listings</h2>
-  <div id="list"></div>
+<h2 id="pageTitle">Pending Properties</h2>
+<div id="list"></div>
+</div>
+
+<div class="detailsModal" id="detailsModal">
+<div class="detailsContent" id="detailsContent"></div>
 </div>
 
 <script>
 
 const firebaseConfig = {
-  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain:"dekut-housing.firebaseapp.com",
-  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId:"dekut-housing",
-  storageBucket:"dekut-housing.appspot.com",
-  messagingSenderId:"784034754945",
-  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -165,132 +224,275 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
+let currentUser=null;
 
-/* 🔐 DEVICE ID (soft binding) */
 function getDeviceId(){
-  let id = localStorage.getItem("device_id");
-  if(!id){
-    id = "dev_" + crypto.randomUUID();
-    localStorage.setItem("device_id", id);
-  }
-  return id;
+let id=localStorage.getItem("device_id");
+
+if(!id){
+id="dev_"+crypto.randomUUID();
+localStorage.setItem("device_id",id);
 }
 
-/* AUTH CHECK (OPTION B SECURITY UPGRADE) */
-auth.onAuthStateChanged(async user => {
+return id;
+}
 
-  if(!user){
-    window.location.href = "admin-login.html";
-    return;
-  }
+auth.onAuthStateChanged(async user=>{
 
-  currentUser = user;
+if(!user){
+location.href="admin-login.html";
+return;
+}
 
-  const token = new URLSearchParams(window.location.search).get("token");
+currentUser=user;
 
-  if(!token){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
+const token=
+new URLSearchParams(location.search).get("token");
 
-  const snap = await db.ref("adminSessions/" + user.uid).once("value");
+const snap=
+await db.ref("adminSessions/"+user.uid).once("value");
 
-  if(!snap.exists()){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
+if(!snap.exists()){
+location.href="admin-login.html";
+return;
+}
 
-  const session = snap.val();
+const session=snap.val();
 
-  /* 🔐 TOKEN CHECK */
-  if(session.token !== token){
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
+if(session.token!==token){
+location.href="admin-login.html";
+return;
+}
 
-  /* ⛔ SHORT SESSION (1 HOUR ONLY) */
-  const expired = Date.now() - session.createdAt > 3600000;
+if(Date.now()-session.createdAt>3600000){
+await db.ref("adminSessions/"+user.uid).remove();
+await auth.signOut();
+location.href="admin-login.html";
+return;
+}
 
-  if(expired){
-    await db.ref("adminSessions/" + user.uid).remove();
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
+if(session.device && session.device!==getDeviceId()){
+await auth.signOut();
+location.href="admin-login.html";
+return;
+}
 
-  /* 🔐 DEVICE LOCK */
-  const device = getDeviceId();
+document.getElementById("loading").style.display="none";
 
-  if(session.device && session.device !== device){
-    await db.ref("adminSessions/" + user.uid).remove();
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
-
-  document.getElementById("loading").style.display = "none";
-  document.querySelector(".main").style.display = "block";
-
-  loadAll();
+loadPending();
 
 });
 
-/* MENU */
 function toggleMenu(){
-  document.getElementById("sidebar").classList.toggle("hidden");
+document.getElementById("sidebar")
+.classList.toggle("show");
 }
 
-/* LOAD DATA */
-function loadAll(){
-  db.ref("properties").on("value", snap => {
+/* PENDING */
 
-    const data = snap.val() || {};
-    const list = document.getElementById("list");
+function loadPending(){
 
-    list.innerHTML = "";
+document.getElementById("pageTitle").innerText=
+"Pending Properties";
 
-    for(let id in data){
-      const p = data[id];
+db.ref("pendingProperties").on("value",snap=>{
 
-      list.innerHTML += `
-        <div class="card">
-          <b>${p.type || ""}</b><br>
-          📍 ${p.location || ""}<br>
-          💰 KSh ${p.rent || ""}<br>
+const data=snap.val()||{};
+const list=document.getElementById("list");
 
-          <button class="action approve" onclick="approve('${id}')">Approve</button>
-          <button class="action delete" onclick="removeItem('${id}')">Delete</button>
-        </div>
-      `;
-    }
+list.innerHTML="";
 
-  });
+for(let id in data){
+
+const p=data[id];
+
+list.innerHTML+=`
+<div class="card">
+
+<div class="badge pending">
+Pending Approval
+</div>
+
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+💰 KSh ${p.rent||""}<br>
+
+<button class="action view"
+onclick="viewDetails('${id}','pending')">
+View Details
+</button>
+
+<button class="action approve"
+onclick="approvePending('${id}')">
+Approve
+</button>
+
+<button class="action delete"
+onclick="rejectPending('${id}')">
+Reject
+</button>
+
+</div>
+`;
+
 }
 
-/* ACTIONS */
-function approve(id){
-  db.ref("properties/" + id).update({ approved:true });
+});
+
 }
 
-function removeItem(id){
-  db.ref("properties/" + id).remove();
+/* APPROVED */
+
+function loadApproved(){
+
+document.getElementById("pageTitle").innerText=
+"Approved Properties";
+
+db.ref("properties").on("value",snap=>{
+
+const data=snap.val()||{};
+const list=document.getElementById("list");
+
+list.innerHTML="";
+
+for(let id in data){
+
+const p=data[id];
+
+list.innerHTML+=`
+<div class="card">
+
+<div class="badge approved">
+Approved
+</div>
+
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+💰 KSh ${p.rent||""}<br>
+
+<button class="action view"
+onclick="viewDetails('${id}','approved')">
+View Details
+</button>
+
+<button class="action delete"
+onclick="deleteApproved('${id}')">
+Delete
+</button>
+
+</div>
+`;
+
 }
 
-/* LOGOUT */
+});
+
+}
+
+/* APPROVE */
+
+async function approvePending(id){
+
+const snap=
+await db.ref("pendingProperties/"+id).once("value");
+
+if(!snap.exists()) return;
+
+const property=snap.val();
+
+property.approved=true;
+
+await db.ref("properties/"+id).set(property);
+
+await db.ref("pendingProperties/"+id).remove();
+
+alert("Property approved");
+
+}
+
+/* REJECT */
+
+async function rejectPending(id){
+
+if(!confirm("Reject property?")) return;
+
+await db.ref("pendingProperties/"+id).remove();
+
+}
+
+/* DELETE APPROVED */
+
+async function deleteApproved(id){
+
+if(!confirm("Delete property?")) return;
+
+await db.ref("properties/"+id).remove();
+
+}
+
+/* DETAILS */
+
+async function viewDetails(id,type){
+
+const path=
+type==="pending"
+? "pendingProperties/"+id
+: "properties/"+id;
+
+const snap=
+await db.ref(path).once("value");
+
+const p=snap.val();
+
+document.getElementById("detailsContent").innerHTML=`
+
+<button class="closeBtn"
+onclick="closeDetails()">
+Close
+</button>
+
+<h2>${p.type||""}</h2>
+
+${p.images?.[0]
+? `<img src="${p.images[0]}">`
+: ""}
+
+<p><b>Rent:</b> ${p.rent||""}</p>
+<p><b>Deposit:</b> ${p.deposit||""}</p>
+<p><b>Location:</b> ${p.location||""}</p>
+<p><b>Distance:</b> ${p.distance||""} KM</p>
+<p><b>Phone:</b> ${p.phone||""}</p>
+<p><b>Amenities:</b> ${p.amenities||""}</p>
+<p><b>Description:</b> ${p.extra||""}</p>
+
+`;
+
+document.getElementById("detailsModal")
+.style.display="block";
+
+}
+
+function closeDetails(){
+document.getElementById("detailsModal")
+.style.display="none";
+}
+
 async function logout(){
 
-  if(currentUser){
-    await db.ref("adminSessions/" + currentUser.uid).remove();
-    await auth.signOut();
-  }
+if(currentUser){
 
-  localStorage.removeItem("device_id");
+await db.ref(
+"adminSessions/"+currentUser.uid
+).remove();
 
-  window.location.href = "admin-login.html";
+await auth.signOut();
+
+}
+
+localStorage.removeItem("device_id");
+
+location.href="admin-login.html";
+
 }
 
 </script>
