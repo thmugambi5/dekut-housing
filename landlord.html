@@ -49,6 +49,15 @@ button:hover { background:#1a5dc9; }
     padding:10px;
     margin-top:10px;
 }
+.badge{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:12px;
+    color:white;
+}
+.pending{background:orange;}
+.approved{background:green;}
 </style>
 </head>
 
@@ -79,22 +88,16 @@ button:hover { background:#1a5dc9; }
         <button onclick="logout()" style="background:red;">Logout</button>
     </div>
 
-    <!-- PROPERTY FORM -->
     <div class="card">
-        <h3>Add Property (Pending Approval)</h3>
+        <h3>Add / Edit Property</h3>
 
-        <input type="hidden" id="editId">
+        <input type="hidden" id="editIndex">
 
         <input type="text" id="title" placeholder="Property Title">
         <input type="text" id="location" placeholder="Location">
-        <input type="number" id="rent" placeholder="Rent (KSh)">
-        <input type="text" id="phone" placeholder="Phone Number">
         <textarea id="description" placeholder="Description"></textarea>
 
-        <button onclick="getLocation()">📍 Share My Location</button>
-        <p id="gps"></p>
-
-        <button onclick="saveProperty()">Submit Property</button>
+        <button onclick="saveProperty()">Save Property</button>
     </div>
 
     <div class="card">
@@ -109,196 +112,193 @@ button:hover { background:#1a5dc9; }
 <script>
 
 /* FIREBASE */
-const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0zOzz4NjJE9S0Q",
+firebase.initializeApp({
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing",
-storageBucket:"dekut-housing.appspot.com",
-messagingSenderId:"784034754945",
-appId:"1:784034754945:web:198f5e3cf47777ab97f880"
-};
+projectId:"dekut-housing"
+});
 
-firebase.initializeApp(firebaseConfig);
-
+const auth = firebase.auth();
 const db = firebase.database();
 
-/* MODE */
+/* STATE */
 let mode = "signup";
 
-/* GPS */
-let lat = null;
-let lng = null;
-
-/* TOGGLE AUTH */
+/* TOGGLE */
 function toggleMode(){
-
-if(mode === "signup"){
-mode = "login";
-document.getElementById("authTitle").innerText = "Login";
-document.querySelector(".switch").innerText = "Don't have an account? Create one";
-} else {
-mode = "signup";
-document.getElementById("authTitle").innerText = "Create Account";
-document.querySelector(".switch").innerText = "Already have an account? Login instead";
+    if(mode === "signup"){
+        mode = "login";
+        document.getElementById("authTitle").innerText = "Login";
+        document.querySelector(".switch").innerText = "Don't have an account? Create one";
+    } else {
+        mode = "signup";
+        document.getElementById("authTitle").innerText = "Create Account";
+        document.querySelector(".switch").innerText = "Already have an account? Login instead";
+    }
 }
-}
 
-/* AUTH (LOCAL ONLY USERS STILL OK) */
+/* USERS LOCAL (simple version) */
 function getUsers(){
-return JSON.parse(localStorage.getItem("users") || "[]");
+    return JSON.parse(localStorage.getItem("users") || "[]");
 }
-
 function saveUsers(u){
-localStorage.setItem("users", JSON.stringify(u));
+    localStorage.setItem("users", JSON.stringify(u));
 }
 
-/* AUTH HANDLER */
+function getProperties(){
+    return JSON.parse(localStorage.getItem("properties") || "[]");
+}
+function saveProperties(p){
+    localStorage.setItem("properties", JSON.stringify(p));
+}
+
+/* AUTH */
 function handleAuth(){
 
-let name = document.getElementById("name").value;
-let email = document.getElementById("email").value;
-let password = document.getElementById("password").value;
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
 
-let users = getUsers();
+    let users = getUsers();
 
-if(mode === "signup"){
+    if(mode === "signup"){
 
-if(users.find(u => u.email === email)){
-alert("Account exists");
-return;
-}
+        if(users.find(u => u.email === email)){
+            alert("Account already exists");
+            return;
+        }
 
-let newUser = {name,email,password};
-users.push(newUser);
-saveUsers(users);
+        let newUser = {name,email,password};
+        users.push(newUser);
+        saveUsers(users);
 
-localStorage.setItem("currentUser", JSON.stringify(newUser));
-showDashboard();
-return;
-}
+        localStorage.setItem("currentUser", JSON.stringify(newUser));
+        showDashboard();
+        return;
+    }
 
-let user = users.find(u => u.email === email && u.password === password);
+    let user = users.find(u => u.email === email && u.password === password);
 
-if(!user){
-alert("Invalid login");
-return;
-}
+    if(!user){
+        alert("Invalid login");
+        return;
+    }
 
-localStorage.setItem("currentUser", JSON.stringify(user));
-showDashboard();
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    showDashboard();
 }
 
 /* DASHBOARD */
 function showDashboard(){
+    document.getElementById("authBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
 
-document.getElementById("authBox").classList.add("hidden");
-document.getElementById("dashboard").classList.remove("hidden");
+    let user = JSON.parse(localStorage.getItem("currentUser"));
+    document.getElementById("userName").innerText = user.name;
 
-let user = JSON.parse(localStorage.getItem("currentUser"));
-document.getElementById("userName").innerText = user.name;
-
-loadMyProperties(user.email);
+    render();
 }
 
-/* GPS */
-function getLocation(){
-
-navigator.geolocation.getCurrentPosition(pos=>{
-
-lat = pos.coords.latitude;
-lng = pos.coords.longitude;
-
-document.getElementById("gps").innerText =
-`📍 Saved: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-
-});
-
+/* LOGOUT */
+function logout(){
+    localStorage.removeItem("currentUser");
+    location.reload();
 }
 
-/* SAVE TO FIREBASE (🔥 FIXED CONNECTION) */
+/* SAVE PROPERTY (IMPORTANT FIX) */
 function saveProperty(){
 
-let user = JSON.parse(localStorage.getItem("currentUser"));
+    let user = JSON.parse(localStorage.getItem("currentUser"));
 
-let data = {
-owner: user.email,
-title: document.getElementById("title").value,
-location: document.getElementById("location").value,
-rent: document.getElementById("rent").value,
-phone: document.getElementById("phone").value,
-description: document.getElementById("description").value,
-lat,
-lng,
-status: "pending",
-approved: false,
-createdAt: Date.now()
-};
+    let title = document.getElementById("title").value;
+    let location = document.getElementById("location").value;
+    let description = document.getElementById("description").value;
+    let editIndex = document.getElementById("editIndex").value;
 
-/* 🔥 PUSH TO FIREBASE */
-db.ref("pendingProperties").push(data);
+    let props = getProperties();
 
-clearForm();
-alert("Submitted for admin approval!");
-loadMyProperties(user.email);
+    let data = {
+        owner: user.email,
+        title,
+        location,
+        description,
+        status: "pending"   // IMPORTANT: admin updates this only
+    };
+
+    if(editIndex === ""){
+        props.push(data);
+    } else {
+        props[editIndex] = data;
+        document.getElementById("editIndex").value = "";
+    }
+
+    saveProperties(props);
+    clearForm();
+    render();
 }
 
-/* LOAD USER PROPERTIES */
-function loadMyProperties(email){
+/* DISPLAY */
+function render(){
 
-db.ref("pendingProperties").on("value",snap=>{
+    let user = JSON.parse(localStorage.getItem("currentUser"));
+    let props = getProperties();
 
-let data = snap.val() || {};
-let html = "";
+    let html = "";
 
-for(let id in data){
+    props.forEach((p, i) => {
 
-let p = data[id];
+        if(p.owner === user.email){
 
-if(p.owner === email){
+            html += `
+                <div class="property">
+                    <b>${p.title}</b>
+                    <span class="badge ${p.status}">${p.status}</span><br>
 
-html += `
-<div class="property">
+                    ${p.location}<br>
+                    <small>${p.description}</small><br><br>
 
-<b>${p.title}</b><br>
-📍 ${p.location}<br>
-💰 KSh ${p.rent}<br>
-<small>Status: ${p.status}</small>
+                    <button onclick="edit(${i})">Edit</button>
+                    <button onclick="del(${i})" style="background:red;">Delete</button>
+                </div>
+            `;
+        }
+    });
 
-</div>
-`;
+    document.getElementById("list").innerHTML = html;
 }
 
+/* EDIT */
+function edit(i){
+    let props = getProperties();
+    let p = props[i];
+
+    document.getElementById("title").value = p.title;
+    document.getElementById("location").value = p.location;
+    document.getElementById("description").value = p.description;
+    document.getElementById("editIndex").value = i;
 }
 
-document.getElementById("list").innerHTML = html;
-
-});
-
+/* DELETE */
+function del(i){
+    let props = getProperties();
+    props.splice(i,1);
+    saveProperties(props);
+    render();
 }
 
 /* CLEAR */
 function clearForm(){
-document.getElementById("title").value="";
-document.getElementById("location").value="";
-document.getElementById("rent").value="";
-document.getElementById("phone").value="";
-document.getElementById("description").value="";
-lat=null;
-lng=null;
-}
-
-/* EDIT SAFE RESET (optional later) */
-function logout(){
-localStorage.removeItem("currentUser");
-location.reload();
+    document.getElementById("title").value = "";
+    document.getElementById("location").value = "";
+    document.getElementById("description").value = "";
 }
 
 /* AUTO LOGIN */
 window.onload = function(){
-if(localStorage.getItem("currentUser")){
-showDashboard();
-}
+    if(localStorage.getItem("currentUser")){
+        showDashboard();
+    }
 }
 
 </script>
