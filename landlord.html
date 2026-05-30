@@ -5,6 +5,10 @@
 <title>Landlord System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <style>
 body { font-family: Arial; background:#f4f4f4; margin:0; }
 .container { max-width:900px; margin:auto; padding:20px; }
@@ -45,13 +49,6 @@ button:hover { background:#1a5dc9; }
     padding:10px;
     margin-top:10px;
 }
-
-.smallBtn{
-    width:auto;
-    padding:8px 12px;
-    margin-top:5px;
-    background:#444;
-}
 </style>
 </head>
 
@@ -84,26 +81,20 @@ button:hover { background:#1a5dc9; }
 
     <!-- PROPERTY FORM -->
     <div class="card">
-        <h3>Add Property</h3>
+        <h3>Add Property (Pending Approval)</h3>
 
-        <input type="hidden" id="editIndex">
+        <input type="hidden" id="editId">
 
         <input type="text" id="title" placeholder="Property Title">
         <input type="text" id="location" placeholder="Location">
         <input type="number" id="rent" placeholder="Rent (KSh)">
         <input type="text" id="phone" placeholder="Phone Number">
-        <input type="text" id="amenities" placeholder="Amenities (wifi, parking...)">
-
         <textarea id="description" placeholder="Description"></textarea>
 
-        <!-- GPS -->
-        <button class="smallBtn" onclick="getLocation()">📍 Share My Location</button>
-        <div id="gpsText"></div>
+        <button onclick="getLocation()">📍 Share My Location</button>
+        <p id="gps"></p>
 
-        <!-- IMAGES -->
-        <input type="file" id="images" multiple accept="image/*">
-
-        <button onclick="saveProperty()">Save Property</button>
+        <button onclick="saveProperty()">Submit Property</button>
     </div>
 
     <div class="card">
@@ -117,226 +108,197 @@ button:hover { background:#1a5dc9; }
 
 <script>
 
+/* FIREBASE */
+const firebaseConfig = {
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0zOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+/* MODE */
 let mode = "signup";
 
+/* GPS */
 let lat = null;
 let lng = null;
-let imageData = [];
 
-// ===== AUTH MODE =====
+/* TOGGLE AUTH */
 function toggleMode(){
 
-    if(mode === "signup"){
-        mode = "login";
-        document.getElementById("authTitle").innerText = "Login";
-        document.querySelector(".switch").innerText = "Don't have an account? Create one";
-    } else {
-        mode = "signup";
-        document.getElementById("authTitle").innerText = "Create Account";
-        document.querySelector(".switch").innerText = "Already have an account? Login instead";
-    }
+if(mode === "signup"){
+mode = "login";
+document.getElementById("authTitle").innerText = "Login";
+document.querySelector(".switch").innerText = "Don't have an account? Create one";
+} else {
+mode = "signup";
+document.getElementById("authTitle").innerText = "Create Account";
+document.querySelector(".switch").innerText = "Already have an account? Login instead";
+}
 }
 
-// ===== STORAGE =====
+/* AUTH (LOCAL ONLY USERS STILL OK) */
 function getUsers(){
-    return JSON.parse(localStorage.getItem("users") || "[]");
+return JSON.parse(localStorage.getItem("users") || "[]");
 }
+
 function saveUsers(u){
-    localStorage.setItem("users", JSON.stringify(u));
+localStorage.setItem("users", JSON.stringify(u));
 }
 
-function getProperties(){
-    return JSON.parse(localStorage.getItem("properties") || "[]");
-}
-function saveProperties(p){
-    localStorage.setItem("properties", JSON.stringify(p));
-}
-
-// ===== AUTH =====
+/* AUTH HANDLER */
 function handleAuth(){
 
-    let name = document.getElementById("name").value;
-    let email = document.getElementById("email").value;
-    let password = document.getElementById("password").value;
+let name = document.getElementById("name").value;
+let email = document.getElementById("email").value;
+let password = document.getElementById("password").value;
 
-    let users = getUsers();
+let users = getUsers();
 
-    if(mode === "signup"){
+if(mode === "signup"){
 
-        if(users.find(u => u.email === email)){
-            alert("Account already exists");
-            return;
-        }
-
-        let newUser = {name, email, password};
-        users.push(newUser);
-        saveUsers(users);
-
-        localStorage.setItem("currentUser", JSON.stringify(newUser));
-        showDashboard();
-        return;
-    }
-
-    let user = users.find(u => u.email === email && u.password === password);
-
-    if(!user){
-        alert("Invalid login");
-        return;
-    }
-
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    showDashboard();
+if(users.find(u => u.email === email)){
+alert("Account exists");
+return;
 }
 
-// ===== DASHBOARD =====
+let newUser = {name,email,password};
+users.push(newUser);
+saveUsers(users);
+
+localStorage.setItem("currentUser", JSON.stringify(newUser));
+showDashboard();
+return;
+}
+
+let user = users.find(u => u.email === email && u.password === password);
+
+if(!user){
+alert("Invalid login");
+return;
+}
+
+localStorage.setItem("currentUser", JSON.stringify(user));
+showDashboard();
+}
+
+/* DASHBOARD */
 function showDashboard(){
 
-    document.getElementById("authBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("authBox").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
 
-    let user = JSON.parse(localStorage.getItem("currentUser"));
-    document.getElementById("userName").innerText = user.name;
+let user = JSON.parse(localStorage.getItem("currentUser"));
+document.getElementById("userName").innerText = user.name;
 
-    render();
+loadMyProperties(user.email);
 }
 
-// ===== GPS =====
+/* GPS */
 function getLocation(){
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(pos=>{
-            lat = pos.coords.latitude;
-            lng = pos.coords.longitude;
-            document.getElementById("gpsText").innerText =
-            `📍 Location saved: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        });
-    } else {
-        alert("GPS not supported");
-    }
-}
 
-// ===== IMAGES =====
-document.getElementById("images").addEventListener("change", function(e){
+navigator.geolocation.getCurrentPosition(pos=>{
 
-    imageData = [];
+lat = pos.coords.latitude;
+lng = pos.coords.longitude;
 
-    for(let file of e.target.files){
-
-        let reader = new FileReader();
-
-        reader.onload = function(evt){
-            imageData.push(evt.target.result);
-        }
-
-        reader.readAsDataURL(file);
-    }
+document.getElementById("gps").innerText =
+`📍 Saved: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
 });
 
-// ===== SAVE PROPERTY =====
+}
+
+/* SAVE TO FIREBASE (🔥 FIXED CONNECTION) */
 function saveProperty(){
 
-    let user = JSON.parse(localStorage.getItem("currentUser"));
+let user = JSON.parse(localStorage.getItem("currentUser"));
 
-    let props = getProperties();
+let data = {
+owner: user.email,
+title: document.getElementById("title").value,
+location: document.getElementById("location").value,
+rent: document.getElementById("rent").value,
+phone: document.getElementById("phone").value,
+description: document.getElementById("description").value,
+lat,
+lng,
+status: "pending",
+approved: false,
+createdAt: Date.now()
+};
 
-    let data = {
-        owner: user.email,
-        title: document.getElementById("title").value,
-        location: document.getElementById("location").value,
-        rent: document.getElementById("rent").value,
-        phone: document.getElementById("phone").value,
-        amenities: document.getElementById("amenities").value,
-        description: document.getElementById("description").value,
-        images: imageData,
-        lat,
-        lng,
-        status: "pending"   // 🔥 MUST go to admin approval
-    };
+/* 🔥 PUSH TO FIREBASE */
+db.ref("pendingProperties").push(data);
 
-    props.push(data);
-
-    saveProperties(props);
-
-    clearForm();
-    render();
+clearForm();
+alert("Submitted for admin approval!");
+loadMyProperties(user.email);
 }
 
-// ===== DISPLAY =====
-function render(){
+/* LOAD USER PROPERTIES */
+function loadMyProperties(email){
 
-    let user = JSON.parse(localStorage.getItem("currentUser"));
-    let props = getProperties();
+db.ref("pendingProperties").on("value",snap=>{
 
-    let html = "";
+let data = snap.val() || {};
+let html = "";
 
-    props.forEach((p,i)=>{
+for(let id in data){
 
-        if(p.owner === user.email){
+let p = data[id];
 
-            html += `
-            <div class="property">
+if(p.owner === email){
 
-                <b>${p.title}</b>
-                <small>(${p.status})</small><br>
+html += `
+<div class="property">
 
-                📍 ${p.location}<br>
-                💰 KSh ${p.rent}<br>
-                📞 ${p.phone}<br>
+<b>${p.title}</b><br>
+📍 ${p.location}<br>
+💰 KSh ${p.rent}<br>
+<small>Status: ${p.status}</small>
 
-                <small>${p.amenities}</small><br>
-
-                <button onclick="edit(${i})">Edit</button>
-                <button onclick="del(${i})" style="background:red;">Delete</button>
-
-            </div>
-            `;
-        }
-
-    });
-
-    document.getElementById("list").innerHTML = html;
+</div>
+`;
 }
 
-// ===== EDIT =====
-function edit(i){
-    let props = getProperties();
-    let p = props[i];
-
-    document.getElementById("title").value = p.title;
-    document.getElementById("location").value = p.location;
-    document.getElementById("rent").value = p.rent;
-    document.getElementById("phone").value = p.phone;
-    document.getElementById("amenities").value = p.amenities;
-    document.getElementById("description").value = p.description;
 }
 
-// ===== DELETE =====
-function del(i){
-    let props = getProperties();
-    props.splice(i,1);
-    saveProperties(props);
-    render();
+document.getElementById("list").innerHTML = html;
+
+});
+
 }
 
-// ===== CLEAR =====
+/* CLEAR */
 function clearForm(){
-    document.getElementById("title").value="";
-    document.getElementById("location").value="";
-    document.getElementById("rent").value="";
-    document.getElementById("phone").value="";
-    document.getElementById("amenities").value="";
-    document.getElementById("description").value="";
-    document.getElementById("images").value="";
-    lat=null;
-    lng=null;
-    imageData=[];
+document.getElementById("title").value="";
+document.getElementById("location").value="";
+document.getElementById("rent").value="";
+document.getElementById("phone").value="";
+document.getElementById("description").value="";
+lat=null;
+lng=null;
 }
 
-// ===== AUTO LOGIN =====
+/* EDIT SAFE RESET (optional later) */
+function logout(){
+localStorage.removeItem("currentUser");
+location.reload();
+}
+
+/* AUTO LOGIN */
 window.onload = function(){
-    if(localStorage.getItem("currentUser")){
-        showDashboard();
-    }
+if(localStorage.getItem("currentUser")){
+showDashboard();
+}
 }
 
 </script>
