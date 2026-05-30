@@ -10,37 +10,65 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f7fb;}
-
-.topbar{
-display:flex;justify-content:space-between;
-background:#111;color:white;padding:12px;
+body{
+margin:0;
+font-family:Arial;
+background:#f5f7fb;
+display:flex;
 }
 
-.loginBox{
-display:flex;justify-content:center;align-items:center;
-height:100vh;background:#0f172a;
+/* SIDEBAR */
+.sidebar{
+width:250px;
+background:#111;
+color:white;
+height:100vh;
+padding:10px;
+position:fixed;
+left:0;
+top:0;
+transition:0.3s;
 }
 
-.box{
-background:#fff;padding:20px;border-radius:10px;width:320px;
+.sidebar h2{color:white;}
+
+.menuBtn{
+display:block;
+padding:12px;
+margin:8px 0;
+background:#222;
+border:none;
+color:white;
+width:100%;
+text-align:left;
+border-radius:6px;
+cursor:pointer;
 }
 
-input,textarea{
-width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;
+.menuBtn:hover{background:#333;}
+
+.active{background:#2563eb !important;}
+
+/* CONTENT */
+.content{
+margin-left:260px;
+padding:20px;
+width:100%;
 }
 
-button{
-padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer;
-margin-top:5px;
-}
-
+/* CARDS */
 .card{
-background:#fff;margin:10px;padding:10px;border-radius:10px;
+background:white;
+padding:10px;
+margin:10px 0;
+border-radius:10px;
 }
 
 .badge{
-padding:4px 8px;border-radius:6px;color:white;font-size:12px;
+padding:4px 8px;
+border-radius:6px;
+color:white;
+font-size:12px;
 }
 
 .pending{background:orange;}
@@ -48,55 +76,81 @@ padding:4px 8px;border-radius:6px;color:white;font-size:12px;
 .rejected{background:red;}
 
 img{
-width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;
-}
-
-.sectionTitle{
-margin:10px;
-font-weight:bold;
-}
-
-textarea.rejectBox{
+width:70px;
 height:60px;
+object-fit:cover;
+margin:3px;
+border-radius:5px;
+}
+
+textarea{
+width:100%;
+margin-top:5px;
+padding:6px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+.sidebar{
+transform:translateX(-100%);
+position:fixed;
+z-index:1000;
+}
+
+.sidebar.open{
+transform:translateX(0);
+}
+
+.content{
+margin-left:0;
+}
+
+.hamburger{
+display:block;
+background:#111;
+color:white;
+padding:10px;
+border:none;
+width:100%;
+text-align:left;
+}
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div id="loginView" class="loginBox">
-<div class="box">
-<h2>Admin Login</h2>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p id="msg"></p>
-</div>
-</div>
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
 
-<!-- DASHBOARD -->
-<div id="dashboard" style="display:none;">
+<h2>Admin</h2>
 
-<div class="topbar">
-<div>Admin Dashboard</div>
-<button onclick="logout()">Logout</button>
+<button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
+<button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
+<button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
+<button class="menuBtn" onclick="loadView('all')">⚫ All Properties</button>
+
+<button class="menuBtn" onclick="logout()" style="margin-top:20px;background:red;">
+Logout
+</button>
+
 </div>
 
-<div class="sectionTitle">🟡 Pending Properties</div>
-<div id="pendingList"></div>
+<!-- CONTENT -->
+<div class="content">
 
-<div class="sectionTitle">🟢 Approved Properties</div>
-<div id="approvedList"></div>
+<button class="hamburger" onclick="toggleMenu()">☰ Menu</button>
 
-<div class="sectionTitle">🔴 Rejected Properties</div>
-<div id="rejectedList"></div>
+<h2 id="title">Pending Properties</h2>
+<div id="list"></div>
 
 </div>
 
 <script>
 
-/* ================= FIREBASE ================= */
+/* FIREBASE */
 const firebaseConfig = {
 apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -112,176 +166,169 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const ADMIN_EMAIL = "admin@dekut.com";
+let currentView = "pending";
 
-/* ================= LOGIN ================= */
-function login(){
-let email = document.getElementById("email").value;
-let pass = document.getElementById("password").value;
-
-auth.signInWithEmailAndPassword(email, pass)
-.then(res=>{
-if(res.user.email !== ADMIN_EMAIL){
-alert("Not authorized");
-auth.signOut();
-return;
+/* SIDEBAR TOGGLE (MOBILE) */
+function toggleMenu(){
+document.getElementById("sidebar").classList.toggle("open");
 }
 
-document.getElementById("loginView").style.display="none";
-document.getElementById("dashboard").style.display="block";
+/* LOAD VIEW */
+function loadView(view){
+currentView = view;
 
-loadAll();
-})
-.catch(e=>{
-document.getElementById("msg").innerText = e.message;
-});
+let titleMap = {
+pending:"Pending Properties",
+approved:"Approved Properties",
+rejected:"Rejected Properties",
+all:"All Properties"
+};
+
+document.getElementById("title").innerText = titleMap[view];
+
+if(view === "pending") loadPending();
+if(view === "approved") loadApproved();
+if(view === "rejected") loadRejected();
+if(view === "all") loadAll();
 }
 
-/* ================= LOAD ALL ================= */
-function loadAll(){
-loadPending();
-loadApproved();
-loadRejected();
-}
+/* ================= LOAD FUNCTIONS ================= */
 
-/* ================= PENDING ================= */
 function loadPending(){
 db.ref("pendingProperties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
-
-for(let id in data){
-let p = data[id];
-
-html += `
-<div class="card">
-<span class="badge pending">Pending</span><br>
-
-<b>${p.type || ""}</b><br>
-📍 ${p.location || ""}<br>
-💰 ${p.rent || ""}<br>
-📞 ${p.phone || ""}<br>
-
-<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
-
-<textarea class="rejectBox" id="r_${id}" placeholder="Rejection reason..."></textarea>
-
-<button onclick="approve('${id}')">Approve</button>
-<button onclick="reject('${id}')">Reject</button>
-<button onclick="deletePending('${id}')">Delete</button>
-</div>
-`;
-}
-
-document.getElementById("pendingList").innerHTML = html;
+renderCards(snap.val()||{}, "pending");
 });
 }
 
-/* ================= APPROVED ================= */
 function loadApproved(){
 db.ref("approvedProperties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
-
-for(let id in data){
-let p = data[id];
-
-html += `
-<div class="card">
-<span class="badge approved">Approved</span><br>
-
-<b>${p.type || ""}</b><br>
-📍 ${p.location || ""}<br>
-💰 ${p.rent || ""}<br>
-
-<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
-
-<button onclick="deleteApproved('${id}')">Delete</button>
-</div>
-`;
-}
-
-document.getElementById("approvedList").innerHTML = html;
+renderCards(snap.val()||{}, "approved");
 });
 }
 
-/* ================= REJECTED ================= */
 function loadRejected(){
 db.ref("rejectedProperties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
+renderRejected(snap.val()||{});
+});
+}
+
+function loadAll(){
+db.ref("allProperties").on("value",snap=>{
+renderCards(snap.val()||{}, "all", true);
+});
+}
+
+/* ================= RENDER ================= */
+
+function renderCards(data,type,isReadOnly=false){
+let html="";
 
 for(let id in data){
-let p = data[id];
+let p=data[id];
 
 html += `
 <div class="card">
-<span class="badge rejected">Rejected</span><br>
 
-<b>${p.type || ""}</b><br>
-📍 ${p.location || ""}<br>
-💰 ${p.rent || ""}<br>
+<span class="badge ${type}">${type}</span><br>
 
-<p><b>Reason:</b> ${p.rejectionReason || "No reason"}</p>
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+💰 ${p.rent||""}<br>
+📞 ${p.phone||""}<br>
 
-<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
+<div>${(p.images||[]).map(i=>`<img src="${i}">`).join("")}</div>
+`;
 
-<button onclick="deleteRejected('${id}')">Delete</button>
+if(type==="pending"){
+html += `
+<textarea id="r_${id}" placeholder="Rejection reason..."></textarea>
+<button onclick="approve('${id}')">Approve</button>
+<button onclick="reject('${id}')">Reject</button>
+<button onclick="remove('${id}','pending')">Delete</button>
+`;
+}
+
+if(type==="approved"){
+html += `<button onclick="remove('${id}','approved')">Delete</button>`;
+}
+
+if(type==="all"){
+html += `<small>Master record</small>`;
+}
+
+html += `</div>`;
+}
+
+document.getElementById("list").innerHTML = html;
+}
+
+/* REJECT RENDER */
+function renderRejected(data){
+let html="";
+
+for(let id in data){
+let p=data[id];
+
+html += `
+<div class="card">
+
+<span class="badge rejected">rejected</span><br>
+
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+
+<p><b>Reason:</b> ${p.rejectionReason||""}</p>
+
+<div>${(p.images||[]).map(i=>`<img src="${i}">`).join("")}</div>
+
+<button onclick="remove('${id}','rejected')">Delete</button>
+
 </div>
 `;
 }
 
-document.getElementById("rejectedList").innerHTML = html;
-});
+document.getElementById("list").innerHTML = html;
 }
 
-/* ================= APPROVE ================= */
-function approve(id){
-db.ref("pendingProperties/"+id).once("value").then(snap=>{
-if(!snap.exists()) return;
+/* ================= ACTIONS ================= */
 
-let data = snap.val();
-data.status = "approved";
+function approve(id){
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+data.status="approved";
 
 db.ref("approvedProperties/"+id).set(data);
 db.ref("pendingProperties/"+id).remove();
+db.ref("allProperties/"+id).set(data);
 });
 }
 
-/* ================= REJECT ================= */
 function reject(id){
-let reason = document.getElementById("r_"+id).value || "";
+let reason=document.getElementById("r_"+id).value||"";
 
-db.ref("pendingProperties/"+id).once("value").then(snap=>{
-if(!snap.exists()) return;
-
-let data = snap.val();
-data.status = "rejected";
-data.rejectionReason = reason;
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+data.status="rejected";
+data.rejectionReason=reason;
 
 db.ref("rejectedProperties/"+id).set(data);
 db.ref("pendingProperties/"+id).remove();
+db.ref("allProperties/"+id).set(data);
 });
 }
 
-/* ================= DELETE ================= */
-function deletePending(id){
-db.ref("pendingProperties/"+id).remove();
+function remove(id,node){
+db.ref(node+"/"+id).remove();
 }
 
-function deleteApproved(id){
-db.ref("approvedProperties/"+id).remove();
-}
-
-function deleteRejected(id){
-db.ref("rejectedProperties/"+id).remove();
-}
-
-/* ================= LOGOUT ================= */
+/* AUTH SIMPLE LOGOUT */
 function logout(){
-auth.signOut();
+firebase.auth().signOut();
 location.reload();
 }
+
+/* DEFAULT */
+loadView("pending");
 
 </script>
 
