@@ -10,55 +10,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f4f6fb;}
+body{font-family:Arial;margin:0;background:#f4f4f4;}
 .container{max-width:900px;margin:auto;padding:20px;}
-
-.card{
-background:white;
-padding:15px;
-margin-top:15px;
-border-radius:12px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-
-input,textarea,button{
-width:100%;
-padding:10px;
-margin-top:10px;
-border-radius:8px;
-border:1px solid #ddd;
-}
-
-button{
-background:#2563eb;
-color:white;
-border:none;
-cursor:pointer;
-}
-
-button:hover{background:#1d4ed8;}
-
-.badge{
-display:inline-block;
-padding:4px 8px;
-border-radius:6px;
-color:white;
-font-size:12px;
-}
-
+.card{background:#fff;padding:15px;margin-top:15px;border-radius:10px;}
+input,textarea,button{width:100%;padding:10px;margin-top:10px;}
+button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.hidden{display:none;}
+.property{padding:10px;border:1px solid #ddd;margin-top:10px;border-radius:8px;}
+.badge{padding:4px 8px;border-radius:6px;color:#fff;font-size:12px;}
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
-
-.hidden{display:none;}
-
-img.preview{
-width:100px;
-height:80px;
-object-fit:cover;
-margin:5px;
-border-radius:6px;
-}
+img{width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
 </style>
 </head>
 
@@ -68,43 +31,36 @@ border-radius:6px;
 
 <!-- AUTH -->
 <div id="authBox" class="card">
-<h2 id="authTitle">Landlord Login</h2>
+<h2>Landlord Login / Signup</h2>
 
-<input id="email" type="email" placeholder="Email">
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 
-<button onclick="login()">Login</button>
-<button onclick="signup()" style="background:green;">Signup</button>
+<button onclick="authAction()">Continue</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="card">
-<h2>Welcome, <span id="user"></span></h2>
+<h3>Welcome <span id="userName"></span></h3>
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
-<!-- PROPERTY FORM -->
 <div class="card">
-<h3>Upload Property</h3>
+<h3>Add Property</h3>
 
-<input id="type" placeholder="Type (Bedsitter, 1BR...)">
-<input id="locationText" placeholder="Area Name (Bomas, Chania...)">
-<input id="rent" type="number" placeholder="Rent">
-<input id="phone" placeholder="Phone">
-<textarea id="desc" placeholder="Description"></textarea>
+<input id="title" placeholder="Title">
+<input id="location" placeholder="Location (e.g Bomas, Embakasi)">
 
-<button onclick="getLocation()">📍 Share My Location</button>
+<textarea id="description" placeholder="Description"></textarea>
 
-<input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
+<input type="file" id="images" multiple accept="image/*">
 
-<div id="preview"></div>
-
-<button onclick="submitProperty()">Submit Property</button>
+<button onclick="saveProperty()">Submit Property</button>
 </div>
 
-<!-- LIST -->
 <div class="card">
 <h3>Your Properties</h3>
 <div id="list"></div>
@@ -115,144 +71,113 @@ border-radius:6px;
 </div>
 
 <script>
-
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
-let currentUser = null;
-let imagesBase64 = [];
-let lat = null;
-let lng = null;
+let mode="signup";
+let currentUser=null;
 
 /* AUTH */
-function signup(){
-let email = email.value;
-let password = password.value;
+function authAction(){
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
+let name=document.getElementById("name").value;
 
-auth.createUserWithEmailAndPassword(email, password)
+if(mode==="signup"){
+auth.createUserWithEmailAndPassword(email,pass)
 .then(u=>{
-currentUser = u.user;
-show();
-})
-.catch(e=>alert(e.message));
+u.user.updateProfile({displayName:name});
+show(u.user);
+});
+}else{
+auth.signInWithEmailAndPassword(email,pass)
+.then(u=>show(u.user));
+}
 }
 
-function login(){
-let email = document.getElementById("email").value;
-let password = document.getElementById("password").value;
-
-auth.signInWithEmailAndPassword(email,password)
-.then(u=>{
-currentUser = u.user;
-show();
-})
-.catch(e=>alert(e.message));
-}
-
-/* SHOW DASHBOARD */
-function show(){
+/* SHOW */
+function show(user){
+currentUser=user;
 document.getElementById("authBox").classList.add("hidden");
 document.getElementById("dashboard").classList.remove("hidden");
-document.getElementById("user").innerText = currentUser.email;
+document.getElementById("userName").innerText=user.displayName||user.email;
 load();
 }
 
-/* GPS */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat = pos.coords.latitude;
-lng = pos.coords.longitude;
-alert("Location captured!");
+/* CONVERT IMAGES TO BASE64 */
+function toBase64(file){
+return new Promise((res,rej)=>{
+const reader=new FileReader();
+reader.onload=()=>res(reader.result);
+reader.readAsDataURL(file);
 });
 }
 
-/* BASE64 IMAGES */
-function convertImages(){
-let files = document.getElementById("images").files;
-imagesBase64 = [];
-document.getElementById("preview").innerHTML = "";
+/* SAVE PROPERTY */
+async function saveProperty(){
 
-for(let file of files){
-let reader = new FileReader();
+let files=document.getElementById("images").files;
+let images=[];
 
-reader.onload = function(e){
-imagesBase64.push(e.target.result);
-
-document.getElementById("preview").innerHTML +=
-`<img class="preview" src="${e.target.result}">`;
-};
-
-reader.readAsDataURL(file);
-}
+for(let f of files){
+images.push(await toBase64(f));
 }
 
-/* SUBMIT */
-function submitProperty(){
-
-let data = {
-ownerUid: currentUser.uid,
-ownerEmail: currentUser.email,
-type: document.getElementById("type").value,
-location: document.getElementById("locationText").value,
-rent: document.getElementById("rent").value,
-phone: document.getElementById("phone").value,
-description: document.getElementById("desc").value,
-images: imagesBase64,
-lat: lat,
-lng: lng,
-status: "pending",
-approved: false,
-createdAt: Date.now()
+let data={
+owner:auth.currentUser.uid,
+ownerEmail:auth.currentUser.email,
+title:document.getElementById("title").value,
+location:document.getElementById("location").value,
+description:document.getElementById("description").value,
+images:images,
+status:"pending",
+updatedAt:Date.now()
 };
 
 db.ref("pendingProperties").push(data);
 
-alert("Sent for approval");
-clearForm();
+alert("Submitted for approval");
 load();
 }
 
 /* LOAD */
 function load(){
 db.ref("pendingProperties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
+let d=snap.val()||{};
+let html="";
 
-for(let id in data){
-let p = data[id];
+for(let id in d){
+if(d[id].owner!==auth.currentUser.uid) continue;
 
-if(p.ownerUid !== currentUser.uid) continue;
+let p=d[id];
 
-html += `
-<div class="card">
-
-<b>${p.type}</b>
+html+=`
+<div class="property">
+<b>${p.title}</b>
 <span class="badge ${p.status}">${p.status}</span><br>
+${p.location}<br>
 
-📍 ${p.location}<br>
-💰 ${p.rent}<br>
-
-<button onclick="del('${id}')">Delete</button>
-
-</div>`;
+<div>
+${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+</div>
+</div>
+`;
 }
 
-document.getElementById("list").innerHTML = html;
+document.getElementById("list").innerHTML=html;
 });
-}
-
-/* DELETE */
-function del(id){
-db.ref("pendingProperties/"+id).remove();
 }
 
 /* LOGOUT */
@@ -262,26 +187,9 @@ location.reload();
 }
 
 /* AUTO LOGIN */
-auth.onAuthStateChanged(user=>{
-if(user){
-currentUser = user;
-show();
-}
+auth.onAuthStateChanged(u=>{
+if(u) show(u);
 });
-
-function clearForm(){
-document.getElementById("type").value="";
-document.getElementById("locationText").value="";
-document.getElementById("rent").value="";
-document.getElementById("phone").value="";
-document.getElementById("desc").value="";
-document.getElementById("images").value="";
-imagesBase64=[];
-lat=null;
-lng=null;
-document.getElementById("preview").innerHTML="";
-}
-
 </script>
 
 </body>
