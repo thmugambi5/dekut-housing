@@ -32,33 +32,32 @@ width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;
 
 button{
 padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer;
+margin-top:5px;
 }
 
 .card{
 background:#fff;margin:10px;padding:10px;border-radius:10px;
 }
 
-.badge{padding:4px 8px;color:white;border-radius:6px;font-size:12px;}
+.badge{
+padding:4px 8px;border-radius:6px;color:white;font-size:12px;
+}
+
 .pending{background:orange;}
 .approved{background:green;}
+.rejected{background:red;}
 
 img{
 width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;
 }
 
-.actionBtn{
-margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;cursor:pointer;
+.sectionTitle{
+margin:10px;
+font-weight:bold;
 }
 
-.approve{background:green;}
-.reject{background:red;}
-.edit{background:#f59e0b;}
-.view{background:#2563eb;}
-
-#editModal{
-display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-background:white;padding:20px;overflow:auto;
-z-index:9999;
+textarea.rejectBox{
+height:60px;
 }
 </style>
 </head>
@@ -69,10 +68,8 @@ z-index:9999;
 <div id="loginView" class="loginBox">
 <div class="box">
 <h2>Admin Login</h2>
-
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
-
 <button onclick="login()">Login</button>
 <p id="msg"></p>
 </div>
@@ -86,34 +83,22 @@ z-index:9999;
 <button onclick="logout()">Logout</button>
 </div>
 
-<div class="card">
-<h3>Pending Properties</h3>
-<div id="list"></div>
-</div>
+<div class="sectionTitle">🟡 Pending Properties</div>
+<div id="pendingList"></div>
 
-<div class="card">
-<h3>Approved Properties</h3>
+<div class="sectionTitle">🟢 Approved Properties</div>
 <div id="approvedList"></div>
-</div>
 
-</div>
+<div class="sectionTitle">🔴 Rejected Properties</div>
+<div id="rejectedList"></div>
 
-<!-- EDIT MODAL -->
-<div id="editModal">
-<h2>Edit Property</h2>
-
-<input id="editTitle">
-<input id="editLocation">
-<textarea id="editDesc"></textarea>
-
-<button onclick="saveEdit()">Save Changes</button>
-<button onclick="closeEdit()">Close</button>
 </div>
 
 <script>
 
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing",
@@ -124,23 +109,19 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 
 firebase.initializeApp(firebaseConfig);
 
-const auth=firebase.auth();
-const db=firebase.database();
+const auth = firebase.auth();
+const db = firebase.database();
 
-const ADMIN_EMAIL="admin@dekut.com";
+const ADMIN_EMAIL = "admin@dekut.com";
 
-let currentEditId=null;
+/* ================= LOGIN ================= */
+function login(){
+let email = document.getElementById("email").value;
+let pass = document.getElementById("password").value;
 
-/* LOGIN */
-async function login(){
-
-let email=document.getElementById("email").value;
-let pass=document.getElementById("password").value;
-
-try{
-let res=await auth.signInWithEmailAndPassword(email,pass);
-
-if(res.user.email!==ADMIN_EMAIL){
+auth.signInWithEmailAndPassword(email, pass)
+.then(res=>{
+if(res.user.email !== ADMIN_EMAIL){
 alert("Not authorized");
 auth.signOut();
 return;
@@ -149,140 +130,154 @@ return;
 document.getElementById("loginView").style.display="none";
 document.getElementById("dashboard").style.display="block";
 
+loadAll();
+})
+.catch(e=>{
+document.getElementById("msg").innerText = e.message;
+});
+}
+
+/* ================= LOAD ALL ================= */
+function loadAll(){
 loadPending();
 loadApproved();
-
-}catch(e){
-document.getElementById("msg").innerText=e.message;
-}
+loadRejected();
 }
 
-/* PENDING */
+/* ================= PENDING ================= */
 function loadPending(){
 db.ref("pendingProperties").on("value",snap=>{
-let data=snap.val()||{};
-let html="";
+let data = snap.val() || {};
+let html = "";
 
 for(let id in data){
-let p=data[id];
+let p = data[id];
 
-html+=`
+html += `
 <div class="card">
+<span class="badge pending">Pending</span><br>
 
-<div class="badge pending">Pending</div><br>
+<b>${p.type || ""}</b><br>
+📍 ${p.location || ""}<br>
+💰 ${p.rent || ""}<br>
+📞 ${p.phone || ""}<br>
 
-<b>${p.title||""}</b><br>
-📍 ${p.location||""}<br>
+<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
 
-<div>
-${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
-</div>
+<textarea class="rejectBox" id="r_${id}" placeholder="Rejection reason..."></textarea>
 
-<button class="actionBtn edit" onclick="edit('${id}','${encodeURIComponent(JSON.stringify(p))}')">Edit</button>
-<button class="actionBtn approve" onclick="approve('${id}')">Approve</button>
-<button class="actionBtn reject" onclick="reject('${id}')">Reject</button>
-
+<button onclick="approve('${id}')">Approve</button>
+<button onclick="reject('${id}')">Reject</button>
+<button onclick="deletePending('${id}')">Delete</button>
 </div>
 `;
 }
 
-document.getElementById("list").innerHTML=html;
+document.getElementById("pendingList").innerHTML = html;
 });
 }
 
-/* APPROVED */
+/* ================= APPROVED ================= */
 function loadApproved(){
-db.ref("properties").on("value",snap=>{
-let data=snap.val()||{};
-let html="";
+db.ref("approvedProperties").on("value",snap=>{
+let data = snap.val() || {};
+let html = "";
 
 for(let id in data){
-let p=data[id];
+let p = data[id];
 
-html+=`
+html += `
 <div class="card">
+<span class="badge approved">Approved</span><br>
 
-<div class="badge approved">Approved</div><br>
+<b>${p.type || ""}</b><br>
+📍 ${p.location || ""}<br>
+💰 ${p.rent || ""}<br>
 
-<b>${p.title||""}</b><br>
-📍 ${p.location||""}<br>
+<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
 
-<div>
-${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
-</div>
-
-<button class="actionBtn reject" onclick="deleteApproved('${id}')">Delete</button>
-
+<button onclick="deleteApproved('${id}')">Delete</button>
 </div>
 `;
 }
 
-document.getElementById("approvedList").innerHTML=html;
+document.getElementById("approvedList").innerHTML = html;
 });
 }
 
-/* APPROVE */
-async function approve(id){
-let snap=await db.ref("pendingProperties/"+id).once("value");
+/* ================= REJECTED ================= */
+function loadRejected(){
+db.ref("rejectedProperties").on("value",snap=>{
+let data = snap.val() || {};
+let html = "";
+
+for(let id in data){
+let p = data[id];
+
+html += `
+<div class="card">
+<span class="badge rejected">Rejected</span><br>
+
+<b>${p.type || ""}</b><br>
+📍 ${p.location || ""}<br>
+💰 ${p.rent || ""}<br>
+
+<p><b>Reason:</b> ${p.rejectionReason || "No reason"}</p>
+
+<div>${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
+
+<button onclick="deleteRejected('${id}')">Delete</button>
+</div>
+`;
+}
+
+document.getElementById("rejectedList").innerHTML = html;
+});
+}
+
+/* ================= APPROVE ================= */
+function approve(id){
+db.ref("pendingProperties/"+id).once("value").then(snap=>{
 if(!snap.exists()) return;
 
-let data=snap.val();
-data.status="approved";
+let data = snap.val();
+data.status = "approved";
 
-await db.ref("properties/"+id).set(data);
-await db.ref("pendingProperties/"+id).remove();
-
-alert("Approved");
+db.ref("approvedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+});
 }
 
-/* REJECT */
-async function reject(id){
-await db.ref("pendingProperties/"+id).remove();
-}
+/* ================= REJECT ================= */
+function reject(id){
+let reason = document.getElementById("r_"+id).value || "";
 
-/* DELETE APPROVED */
-async function deleteApproved(id){
-await db.ref("properties/"+id).remove();
-}
-
-/* EDIT */
-function edit(id,data){
-currentEditId=id;
-let p=JSON.parse(decodeURIComponent(data));
-
-document.getElementById("editTitle").value=p.title||"";
-document.getElementById("editLocation").value=p.location||"";
-document.getElementById("editDesc").value=p.description||"";
-
-document.getElementById("editModal").style.display="block";
-}
-
-/* SAVE EDIT → BACK TO PENDING */
-async function saveEdit(){
-
-let snap=await db.ref("pendingProperties/"+currentEditId).once("value");
+db.ref("pendingProperties/"+id).once("value").then(snap=>{
 if(!snap.exists()) return;
 
-let old=snap.val();
+let data = snap.val();
+data.status = "rejected";
+data.rejectionReason = reason;
 
-old.title=document.getElementById("editTitle").value;
-old.location=document.getElementById("editLocation").value;
-old.description=document.getElementById("editDesc").value;
-
-old.status="pending";
-
-await db.ref("pendingProperties/"+currentEditId).set(old);
-
-closeEdit();
-alert("Updated → sent back for approval");
+db.ref("rejectedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+});
 }
 
-/* CLOSE EDIT */
-function closeEdit(){
-document.getElementById("editModal").style.display="none";
+/* ================= DELETE ================= */
+function deletePending(id){
+db.ref("pendingProperties/"+id).remove();
 }
 
-/* LOGOUT */
+function deleteApproved(id){
+db.ref("approvedProperties/"+id).remove();
+}
+
+function deleteRejected(id){
+db.ref("rejectedProperties/"+id).remove();
+}
+
+/* ================= LOGOUT ================= */
 function logout(){
 auth.signOut();
 location.reload();
