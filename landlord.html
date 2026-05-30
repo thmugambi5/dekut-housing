@@ -34,15 +34,16 @@ button:hover { background:#1a5dc9; }
 
 .hidden { display:none; }
 
-.property {
-    border:1px solid #ddd;
-    padding:10px;
-    margin-top:10px;
-}
 .switch {
     margin-top:10px;
     cursor:pointer;
     color:blue;
+}
+
+.property {
+    border:1px solid #ddd;
+    padding:10px;
+    margin-top:10px;
 }
 </style>
 </head>
@@ -51,18 +52,18 @@ button:hover { background:#1a5dc9; }
 
 <div class="container">
 
-<!-- AUTH SECTION -->
+<!-- AUTH -->
 <div id="authBox" class="card">
-    <h2 id="authTitle">Login</h2>
+    <h2 id="authTitle">Create Account</h2>
 
-    <input type="text" id="name" placeholder="Full Name (only signup)">
+    <input type="text" id="name" placeholder="Full Name">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
 
-    <button onclick="handleAuth()">Login</button>
+    <button onclick="handleAuth()">Continue</button>
 
     <div class="switch" onclick="toggleMode()">
-        Don't have an account? Create one
+        Already have an account? Login instead
     </div>
 </div>
 
@@ -74,7 +75,6 @@ button:hover { background:#1a5dc9; }
         <button onclick="logout()" style="background:red;">Logout</button>
     </div>
 
-    <!-- PROPERTY FORM -->
     <div class="card">
         <h3>Add / Edit Property</h3>
 
@@ -87,7 +87,6 @@ button:hover { background:#1a5dc9; }
         <button onclick="saveProperty()">Save Property</button>
     </div>
 
-    <!-- PROPERTY LIST -->
     <div class="card">
         <h3>Your Properties</h3>
         <div id="list"></div>
@@ -99,25 +98,27 @@ button:hover { background:#1a5dc9; }
 
 <script>
 
-let mode = "login"; // login or signup
+let mode = "signup"; // default starts with signup
 
-// ===== AUTH TOGGLE =====
+// ===== TOGGLE LOGIN/SIGNUP =====
 function toggleMode(){
-    mode = (mode === "login") ? "signup" : "login";
 
-    document.getElementById("authTitle").innerText =
-        mode === "login" ? "Login" : "Create Account";
-
-    document.querySelector(".switch").innerText =
-        mode === "login"
-        ? "Don't have an account? Create one"
-        : "Already have an account? Login";
+    if(mode === "signup"){
+        mode = "login";
+        document.getElementById("authTitle").innerText = "Login";
+        document.querySelector(".switch").innerText = "Don't have an account? Create one";
+    } else {
+        mode = "signup";
+        document.getElementById("authTitle").innerText = "Create Account";
+        document.querySelector(".switch").innerText = "Already have an account? Login instead";
+    }
 }
 
 // ===== STORAGE =====
 function getUsers(){
     return JSON.parse(localStorage.getItem("users") || "[]");
 }
+
 function saveUsers(u){
     localStorage.setItem("users", JSON.stringify(u));
 }
@@ -125,31 +126,35 @@ function saveUsers(u){
 function getProperties(){
     return JSON.parse(localStorage.getItem("properties") || "[]");
 }
+
 function saveProperties(p){
     localStorage.setItem("properties", JSON.stringify(p));
 }
 
-// ===== AUTH HANDLER =====
+// ===== AUTH (LOGIN + SIGNUP) =====
 function handleAuth(){
 
+    let name = document.getElementById("name").value;
     let email = document.getElementById("email").value;
     let password = document.getElementById("password").value;
-    let name = document.getElementById("name").value;
 
     let users = getUsers();
 
+    // SIGNUP
     if(mode === "signup"){
 
         if(users.find(u => u.email === email)){
-            alert("User already exists");
+            alert("Account already exists. Please login.");
             return;
         }
 
-        users.push({name, email, password});
+        let newUser = {name, email, password};
+        users.push(newUser);
         saveUsers(users);
 
-        alert("Account created. Now login.");
-        toggleMode();
+        // 🔥 AUTO LOGIN AFTER SIGNUP
+        localStorage.setItem("currentUser", JSON.stringify(newUser));
+        showDashboard();
         return;
     }
 
@@ -157,7 +162,7 @@ function handleAuth(){
     let user = users.find(u => u.email === email && u.password === password);
 
     if(!user){
-        alert("Invalid login");
+        alert("Invalid login details");
         return;
     }
 
@@ -167,6 +172,7 @@ function handleAuth(){
 
 // ===== DASHBOARD =====
 function showDashboard(){
+
     document.getElementById("authBox").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
 
@@ -259,14 +265,14 @@ function del(i){
     render();
 }
 
-// ===== CLEAR =====
+// ===== CLEAR FORM =====
 function clearForm(){
     document.getElementById("title").value = "";
     document.getElementById("location").value = "";
     document.getElementById("description").value = "";
 }
 
-// ===== AUTO LOGIN =====
+// ===== AUTO LOGIN ON REFRESH =====
 window.onload = function(){
     if(localStorage.getItem("currentUser")){
         showDashboard();
