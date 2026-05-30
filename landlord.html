@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
 body { font-family: Arial; background:#f4f4f4; margin:0; }
@@ -15,10 +15,10 @@ body { font-family: Arial; background:#f4f4f4; margin:0; }
 
 .card {
     background:white;
-    padding:20px;
-    margin-top:20px;
+    padding:15px;
+    margin-top:15px;
     border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
 input, textarea, button {
@@ -32,32 +32,30 @@ button {
     color:white;
     border:none;
     cursor:pointer;
+    border-radius:6px;
 }
 
 button:hover { background:#1a5dc9; }
 
 .hidden { display:none; }
 
-.switch {
-    margin-top:10px;
-    cursor:pointer;
-    color:blue;
-}
-
 .property {
     border:1px solid #ddd;
     padding:10px;
     margin-top:10px;
+    border-radius:8px;
 }
-.badge{
+
+.badge {
     display:inline-block;
     padding:4px 8px;
     border-radius:6px;
     font-size:12px;
     color:white;
 }
-.pending{background:orange;}
-.approved{background:green;}
+
+.pending { background:orange; }
+.approved { background:green; }
 </style>
 </head>
 
@@ -75,7 +73,7 @@ button:hover { background:#1a5dc9; }
 
     <button onclick="handleAuth()">Continue</button>
 
-    <div class="switch" onclick="toggleMode()">
+    <div style="margin-top:10px;color:blue;cursor:pointer;" onclick="toggleMode()">
         Already have an account? Login instead
     </div>
 </div>
@@ -88,18 +86,20 @@ button:hover { background:#1a5dc9; }
         <button onclick="logout()" style="background:red;">Logout</button>
     </div>
 
+    <!-- ADD PROPERTY -->
     <div class="card">
-        <h3>Add / Edit Property</h3>
+        <h3>Add Property (Pending Approval)</h3>
 
-        <input type="hidden" id="editIndex">
+        <input type="hidden" id="editId">
 
         <input type="text" id="title" placeholder="Property Title">
         <input type="text" id="location" placeholder="Location">
         <textarea id="description" placeholder="Description"></textarea>
 
-        <button onclick="saveProperty()">Save Property</button>
+        <button onclick="saveProperty()">Submit Property</button>
     </div>
 
+    <!-- LIST -->
     <div class="card">
         <h3>Your Properties</h3>
         <div id="list"></div>
@@ -111,194 +111,164 @@ button:hover { background:#1a5dc9; }
 
 <script>
 
-/* FIREBASE */
-firebase.initializeApp({
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+/* ================= FIREBASE ================= */
+const firebaseConfig = {
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
-});
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
 
-const auth = firebase.auth();
+firebase.initializeApp(firebaseConfig);
+
 const db = firebase.database();
+const auth = firebase.auth();
 
-/* STATE */
+/* ================= MODE ================= */
 let mode = "signup";
 
-/* TOGGLE */
 function toggleMode(){
-    if(mode === "signup"){
-        mode = "login";
-        document.getElementById("authTitle").innerText = "Login";
-        document.querySelector(".switch").innerText = "Don't have an account? Create one";
-    } else {
-        mode = "signup";
-        document.getElementById("authTitle").innerText = "Create Account";
-        document.querySelector(".switch").innerText = "Already have an account? Login instead";
-    }
+    mode = (mode === "signup") ? "login" : "signup";
+    document.getElementById("authTitle").innerText =
+        mode === "signup" ? "Create Account" : "Login";
 }
 
-/* USERS LOCAL (simple version) */
-function getUsers(){
-    return JSON.parse(localStorage.getItem("users") || "[]");
-}
-function saveUsers(u){
-    localStorage.setItem("users", JSON.stringify(u));
-}
-
-function getProperties(){
-    return JSON.parse(localStorage.getItem("properties") || "[]");
-}
-function saveProperties(p){
-    localStorage.setItem("properties", JSON.stringify(p));
-}
-
-/* AUTH */
+/* ================= AUTH ================= */
 function handleAuth(){
 
     let name = document.getElementById("name").value;
     let email = document.getElementById("email").value;
     let password = document.getElementById("password").value;
 
-    let users = getUsers();
-
     if(mode === "signup"){
 
-        if(users.find(u => u.email === email)){
-            alert("Account already exists");
-            return;
-        }
+        auth.createUserWithEmailAndPassword(email, password)
+        .then(res => {
 
-        let newUser = {name,email,password};
-        users.push(newUser);
-        saveUsers(users);
+            res.user.updateProfile({ displayName: name });
 
-        localStorage.setItem("currentUser", JSON.stringify(newUser));
-        showDashboard();
-        return;
+            showDashboard(res.user);
+
+        }).catch(err => alert(err.message));
+
+    } else {
+
+        auth.signInWithEmailAndPassword(email, password)
+        .then(res => showDashboard(res.user))
+        .catch(err => alert(err.message));
+
     }
-
-    let user = users.find(u => u.email === email && u.password === password);
-
-    if(!user){
-        alert("Invalid login");
-        return;
-    }
-
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    showDashboard();
 }
 
-/* DASHBOARD */
-function showDashboard(){
+/* ================= DASHBOARD ================= */
+function showDashboard(user){
+
     document.getElementById("authBox").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
 
-    let user = JSON.parse(localStorage.getItem("currentUser"));
-    document.getElementById("userName").innerText = user.name;
+    document.getElementById("userName").innerText =
+        user.displayName || user.email;
 
-    render();
+    loadProperties(user);
 }
 
-/* LOGOUT */
-function logout(){
-    localStorage.removeItem("currentUser");
-    location.reload();
-}
+/* ================= SAVE PROPERTY ================= */
+async function saveProperty(){
 
-/* SAVE PROPERTY (IMPORTANT FIX) */
-function saveProperty(){
-
-    let user = JSON.parse(localStorage.getItem("currentUser"));
+    let user = auth.currentUser;
 
     let title = document.getElementById("title").value;
     let location = document.getElementById("location").value;
     let description = document.getElementById("description").value;
-    let editIndex = document.getElementById("editIndex").value;
 
-    let props = getProperties();
+    if(!title || !location){
+        alert("Fill required fields");
+        return;
+    }
 
     let data = {
-        owner: user.email,
+        owner: user.uid,
+        ownerEmail: user.email,
         title,
         location,
         description,
-        status: "pending"   // IMPORTANT: admin updates this only
+        status: "pending",
+        createdAt: Date.now()
     };
 
-    if(editIndex === ""){
-        props.push(data);
-    } else {
-        props[editIndex] = data;
-        document.getElementById("editIndex").value = "";
-    }
+    await db.ref("pendingProperties").push(data);
 
-    saveProperties(props);
     clearForm();
-    render();
+    loadProperties(user);
+
+    alert("Property submitted for approval");
 }
 
-/* DISPLAY */
-function render(){
+/* ================= LOAD PROPERTIES ================= */
+function loadProperties(user){
 
-    let user = JSON.parse(localStorage.getItem("currentUser"));
-    let props = getProperties();
+    db.ref("pendingProperties").on("value", snap => {
 
-    let html = "";
+        let data = snap.val() || {};
+        let html = "";
 
-    props.forEach((p, i) => {
+        for(let id in data){
 
-        if(p.owner === user.email){
+            let p = data[id];
+
+            if(p.owner !== user.uid) continue;
+
+            let badgeClass = p.status === "approved" ? "approved" : "pending";
 
             html += `
-                <div class="property">
-                    <b>${p.title}</b>
-                    <span class="badge ${p.status}">${p.status}</span><br>
+            <div class="property">
 
-                    ${p.location}<br>
-                    <small>${p.description}</small><br><br>
+                <b>${p.title}</b>
+                <span class="badge ${badgeClass}">${p.status}</span><br>
 
-                    <button onclick="edit(${i})">Edit</button>
-                    <button onclick="del(${i})" style="background:red;">Delete</button>
-                </div>
+                📍 ${p.location}<br>
+                📝 ${p.description}<br><br>
+
+                ${p.status === "pending" ? `
+                    <button onclick="deleteProperty('${id}')"
+                    style="background:red;">Delete</button>
+                ` : `
+                    <small>Approved - cannot delete</small>
+                `}
+            </div>
             `;
         }
+
+        document.getElementById("list").innerHTML = html;
     });
-
-    document.getElementById("list").innerHTML = html;
 }
 
-/* EDIT */
-function edit(i){
-    let props = getProperties();
-    let p = props[i];
-
-    document.getElementById("title").value = p.title;
-    document.getElementById("location").value = p.location;
-    document.getElementById("description").value = p.description;
-    document.getElementById("editIndex").value = i;
+/* ================= DELETE (ONLY PENDING) ================= */
+async function deleteProperty(id){
+    await db.ref("pendingProperties/"+id).remove();
 }
 
-/* DELETE */
-function del(i){
-    let props = getProperties();
-    props.splice(i,1);
-    saveProperties(props);
-    render();
-}
-
-/* CLEAR */
+/* ================= CLEAR ================= */
 function clearForm(){
     document.getElementById("title").value = "";
     document.getElementById("location").value = "";
     document.getElementById("description").value = "";
 }
 
-/* AUTO LOGIN */
-window.onload = function(){
-    if(localStorage.getItem("currentUser")){
-        showDashboard();
+/* ================= AUTH STATE ================= */
+auth.onAuthStateChanged(user=>{
+    if(user){
+        showDashboard(user);
     }
+});
+
+/* ================= LOGOUT ================= */
+function logout(){
+    auth.signOut();
+    location.reload();
 }
 
 </script>
