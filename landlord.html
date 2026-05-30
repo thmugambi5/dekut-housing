@@ -2,10 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Firebase Test - Landlord</title>
+<title>Firebase Auth Test</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -18,57 +17,60 @@ body{
     justify-content:center;
     align-items:center;
     height:100vh;
+    margin:0;
 }
-
 .box{
     background:white;
-    padding:20px;
-    border-radius:10px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.2);
-    width:350px;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
     text-align:center;
+    width:350px;
 }
 </style>
 </head>
-
 <body>
 
 <div class="box">
-<h2>Firebase Test</h2>
-<p>Check console for results</p>
+    <h2>Firebase Authentication Test</h2>
+    <p>Open Console (F12) and check the output.</p>
 </div>
 
 <script>
 
-console.log("🔥 STEP 1: SCRIPT IS RUNNING");
+console.log("STEP 1: PAGE LOADED");
 
 const firebaseConfig = {
     apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
     authDomain: "dekut-housing.firebaseapp.com",
     databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
     projectId: "dekut-housing",
-    storageBucket: "dekut-housing.appspot.com",
+    storageBucket: "dekut-housing.firebasestorage.app",
     messagingSenderId: "784034754945",
     appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 
-console.log("🔥 FIREBASE INITIALIZED");
+console.log("STEP 2: FIREBASE INITIALIZED");
 
-console.log("Firebase object:", firebase);
-console.log("Apps:", firebase.apps);
+const auth = firebase.auth();
 
-try {
-    const testAuth = firebase.auth();
-    const testDB = firebase.database();
+console.log("STEP 3: AUTH OBJECT CREATED");
 
-    console.log("🔥 AUTH READY:", testAuth);
-    console.log("🔥 DATABASE READY:", testDB);
+auth.fetchSignInMethodsForEmail("admin@dekut.com")
+.then(methods => {
 
-} catch (e) {
-    console.error("❌ FIREBASE ERROR:", e.message);
-}
+    console.log("STEP 4: SUCCESS");
+    console.log("SIGN-IN METHODS:", methods);
+
+})
+.catch(err => {
+
+    console.log("STEP 4: ERROR");
+    console.error("AUTH ERROR:", err);
+
+});
 
 </script>
 
