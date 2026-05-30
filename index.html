@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -14,18 +15,20 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#f6f6f6;}
 
+/* HEADER */
 header{
 padding:14px;
 background:#fff;
 text-align:center;
 font-weight:bold;
 font-size:20px;
-box-shadow:0 2px 5px rgba(0,0,0,0.1);
 position:sticky;
 top:0;
 z-index:1000;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* FILTERS */
 .filters{
 display:flex;
 gap:8px;
@@ -42,6 +45,7 @@ border-radius:8px;
 width:160px;
 }
 
+/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -49,6 +53,7 @@ gap:14px;
 padding:14px;
 }
 
+/* CARD */
 .card{
 background:#fff;
 border-radius:14px;
@@ -56,6 +61,7 @@ overflow:hidden;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
+/* IMAGE */
 .card img{
 width:100%;
 height:220px;
@@ -63,43 +69,54 @@ object-fit:cover;
 cursor:pointer;
 }
 
-.cardContent{
-padding:12px;
-line-height:1.6;
+/* CONTENT */
+.cardContent{padding:12px;}
+
+/* BUTTON ROW */
+.btnRow{
+display:flex;
+flex-wrap:wrap;
+gap:6px;
+margin-top:10px;
 }
 
+.btn{
+flex:1;
+padding:8px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-size:12px;
+}
+
+/* BUTTON COLORS */
+.detailsbtn{background:#111;color:#fff;}
+.callBtn{background:#16a34a;color:#fff;}
+.waBtn{background:#25D366;color:#fff;}
+.mapBtn{background:#2563eb;color:#fff;}
+
+/* BADGE */
 .badge{
 display:inline-block;
 padding:4px 8px;
 border-radius:6px;
 font-size:12px;
 color:white;
-margin-top:6px;
 background:green;
+margin-top:5px;
 }
 
-.detailsbtn{
-background:#111;
-color:white;
-width:100%;
-margin-top:10px;
-padding:10px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-}
-
-.modal,.detailsModal,.photoModal{
+/* MODALS */
+.modal,.photoModal,.mapModal{
 display:none;
 position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
+top:0;left:0;
+width:100%;height:100%;
 background:black;
 z-index:9999;
 }
 
+/* DETAILS */
 .detailsContent{
 background:white;
 width:100%;
@@ -107,21 +124,18 @@ height:100%;
 overflow:auto;
 }
 
+.detailsBody{padding:15px;line-height:1.8;}
+
 .detailsImage{
 width:100%;
 height:300px;
 object-fit:cover;
 }
 
-.detailsBody{
-padding:15px;
-line-height:1.8;
-}
-
+/* BACK */
 .backBtn{
 position:absolute;
-top:10px;
-left:10px;
+top:10px;left:10px;
 background:white;
 padding:8px 12px;
 border-radius:8px;
@@ -129,34 +143,93 @@ z-index:10000;
 cursor:pointer;
 }
 
-.photoContainer{
+/* MAP */
+#map{width:100%;height:100%;}
+
+/* ===================== */
+/* 🔥 AIRBNB STYLE GALLERY */
+/* ===================== */
+.gallery{
+position:relative;
 width:100%;
-height:100%;
-overflow-x:auto;
-white-space:nowrap;
-scroll-snap-type:x mandatory;
+height:240px;
+overflow:hidden;
+background:#000;
 }
 
-.photoSlide{
-display:inline-block;
-width:100%;
+.galleryTrack{
+display:flex;
 height:100%;
-scroll-snap-align:start;
+transition:transform .5s ease;
 }
 
-.photoSlide img{
+.gallery img{
 width:100%;
-height:100%;
+height:240px;
+object-fit:cover;
+flex-shrink:0;
+cursor:zoom-in;
+}
+
+/* ARROWS */
+.arrow{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+background:rgba(0,0,0,0.5);
+color:#fff;
+border:none;
+padding:8px 10px;
+cursor:pointer;
+z-index:2;
+}
+
+.arrow.left{left:8px;}
+.arrow.right{right:8px;}
+
+/* DOTS */
+.dots{
+position:absolute;
+bottom:8px;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+gap:5px;
+}
+
+.dot{
+width:7px;height:7px;
+border-radius:50%;
+background:#bbb;
+cursor:pointer;
+}
+
+.dot.active{background:#fff;}
+
+/* ZOOM */
+.zoomModal{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.95);
+z-index:10000;
+align-items:center;
+justify-content:center;
+}
+
+.zoomModal img{
+max-width:95%;
+max-height:95%;
 object-fit:contain;
 }
+
 </style>
 </head>
 
 <body>
 
-<header>
-🏠 DeKUT Housing
-</header>
+<header>🏠 DeKUT Housing</header>
 
 <div class="filters">
 <input id="searchBox" placeholder="Search..." oninput="applyFilters()">
@@ -169,108 +242,98 @@ object-fit:contain;
 
 <div class="grid" id="list"></div>
 
-<div class="detailsModal" id="detailsModal">
-<div class="detailsContent" id="detailsContent"></div>
+<!-- MAP -->
+<div class="mapModal" id="mapModal">
+<div class="backBtn" onclick="closeMap()">⬅ Back</div>
+<div id="map"></div>
 </div>
 
-<div class="photoModal" id="photoModal">
-<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
-<div class="photoContainer" id="photoContainer"></div>
+<!-- ZOOM -->
+<div class="zoomModal" id="zoomModal" onclick="closeZoom()">
+<img id="zoomImg">
 </div>
 
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
-let data = {};
-let filtered = [];
-let page = 0;
-const SIZE = 6;
+let data={}, filtered=[], page=0;
+const SIZE=6;
 
-/* REALTIME LOAD */
-db.ref("properties").on("value", snap=>{
-data = snap.val() || {};
+const DEKUT=[-0.4167,36.9511];
+let map;
+
+/* LOAD */
+db.ref("properties").on("value",snap=>{
+data=snap.val()||{};
 applyFilters();
 });
 
 /* ONLY APPROVED */
 function isApproved(p){
-return p.status === "approved" || p.approved === true;
+return p.status==="approved";
 }
 
 /* FILTER */
 function applyFilters(){
+let search=document.getElementById("searchBox").value.toLowerCase();
+let min=+document.getElementById("minRent").value||0;
+let max=+document.getElementById("maxRent").value||999999;
+let dist=+document.getElementById("maxDist").value||999;
 
-let search = document.getElementById("searchBox").value.toLowerCase();
-let min = parseInt(document.getElementById("minRent").value)||0;
-let max = parseInt(document.getElementById("maxRent").value)||999999;
-let dist = parseFloat(document.getElementById("maxDist").value)||999;
-
-filtered = [];
+filtered=[];
 
 for(let id in data){
-
-let p = data[id];
-
+let p=data[id];
 if(!isApproved(p)) continue;
 
-let rent = parseInt(p.rent||0);
-let text = (p.type+" "+p.location+" "+p.amenities).toLowerCase();
+let rent=+p.rent||0;
+let text=(p.type+" "+p.location).toLowerCase();
+let d=+p.distance||999;
 
-let distance = parseFloat(p.distance||999);
-
-if(
-rent>=min &&
-rent<=max &&
-distance<=dist &&
-(search==="" || text.includes(search))
-){
+if(rent>=min && rent<=max && d<=dist && (search===""||text.includes(search))){
 filtered.push({...p,id});
 }
 }
 
-page = 0;
+page=0;
 document.getElementById("list").innerHTML="";
 renderMore();
 }
 
 /* RENDER */
 function renderMore(){
-
-let list = document.getElementById("list");
-
-let next = filtered.slice(page*SIZE,(page+1)*SIZE);
+let list=document.getElementById("list");
+let next=filtered.slice(page*SIZE,(page+1)*SIZE);
 
 next.forEach(p=>{
-
-let img = p.images?.[0] || "";
-
-list.innerHTML += `
+list.innerHTML+=`
 <div class="card">
 
-${img?`<img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>`:``}
+${renderGallery(p.images||[])}
 
 <div class="cardContent">
 
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-💰 KSh ${p.rent||""}<br>
-📏 ${p.distance||""} KM<br>
+<b>${p.type}</b><br>
+📍 ${p.location}<br>
+💰 KSh ${p.rent}<br>
 
-<div class="badge">Approved</div>
+<div class="btnRow">
 
-<button class="detailsbtn" onclick='openDetails(${JSON.stringify(p)})'>
-View Details
-</button>
+<button class="btn detailsbtn" onclick='openDetails(${JSON.stringify(p)})'>Details</button>
+<button class="btn waBtn" onclick="wa('${p.phone||""}')">WhatsApp</button>
+<button class="btn callBtn" onclick="call('${p.phone||""}')">Call</button>
+<button class="btn mapBtn" onclick='openMap(${JSON.stringify(p)})'>Map</button>
+
+</div>
 
 </div>
 </div>`;
@@ -279,62 +342,123 @@ View Details
 page++;
 }
 
-/* SCROLL */
-window.addEventListener("scroll",()=>{
-if(window.innerHeight+window.scrollY>=document.body.offsetHeight-200){
-renderMore();
+/* GALLERY STATE */
+let galleryState={};
+
+/* RENDER GALLERY */
+function renderGallery(images){
+let id=Math.random().toString(36).substr(2,9);
+galleryState[id]=0;
+
+setTimeout(()=>initGallery(id),0);
+
+return `
+<div class="gallery" data-id="${id}">
+<button class="arrow left" onclick="move('${id}',-1)">‹</button>
+
+<div class="galleryTrack" id="track-${id}">
+${images.map(img=>`
+<img src="${img}" onclick="zoom('${img}')">
+`).join("")}
+</div>
+
+<button class="arrow right" onclick="move('${id}',1)">›</button>
+
+<div class="dots" id="dots-${id}">
+${images.map((_,i)=>`<div class="dot" onclick="goTo('${id}',${i})"></div>`).join("")}
+</div>
+</div>`;
 }
+
+/* INIT */
+function initGallery(id){
+updateDots(id);
+autoSlide(id);
+}
+
+/* MOVE */
+function move(id,dir){
+let track=document.getElementById("track-"+id);
+let count=track.children.length;
+
+galleryState[id]=(galleryState[id]+dir+count)%count;
+track.style.transform=`translateX(-${galleryState[id]*100}%)`;
+updateDots(id);
+}
+
+/* DOT */
+function goTo(id,i){
+galleryState[id]=i;
+move(id,0);
+}
+
+/* DOT UPDATE */
+function updateDots(id){
+let dots=document.querySelectorAll("#dots-"+id+" .dot");
+dots.forEach((d,i)=>{
+d.classList.toggle("active",i===galleryState[id]);
 });
+}
+
+/* AUTO SLIDE */
+function autoSlide(id){
+setInterval(()=>{
+move(id,1);
+},5000);
+}
+
+/* ZOOM */
+function zoom(src){
+document.getElementById("zoomImg").src=src;
+document.getElementById("zoomModal").style.display="flex";
+}
+function closeZoom(){
+document.getElementById("zoomModal").style.display="none";
+}
+
+/* CALL / WA */
+function wa(p){
+if(!p) return;
+window.open(`https://wa.me/${p}`,"_blank");
+}
+
+function call(p){
+if(!p) return;
+window.location.href=`tel:${p}`;
+}
+
+/* MAP */
+function openMap(p){
+document.getElementById("mapModal").style.display="block";
+
+setTimeout(()=>{
+if(map) map.remove();
+
+map=L.map("map").setView(DEKUT,13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+let prop=[p.lat,p.lng];
+
+L.marker(prop).addTo(map).bindPopup("Property");
+L.marker(DEKUT).addTo(map).bindPopup("DeKUT");
+
+L.polyline([DEKUT,prop],{color:"blue"}).addTo(map);
+
+map.fitBounds([DEKUT,prop]);
+},300);
+}
+
+function closeMap(){
+document.getElementById("mapModal").style.display="none";
+}
 
 /* DETAILS */
 function openDetails(p){
-
-document.getElementById("detailsContent").innerHTML=`
-<div class="backBtn" onclick="closeDetails()">⬅ Back</div>
-
-${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
-
-<div class="detailsBody">
-
-<h2>${p.type}</h2>
-
-<p><b>Rent:</b> ${p.rent}</p>
-<p><b>Location:</b> ${p.location}</p>
-<p><b>Distance:</b> ${p.distance||"N/A"} KM</p>
-<p><b>Phone:</b> ${p.phone||""}</p>
-<p><b>Description:</b> ${p.description||""}</p>
-
-</div>
-`;
-
-document.getElementById("detailsModal").style.display="block";
+alert("You can extend this modal if needed");
 }
 
-function closeDetails(){
-document.getElementById("detailsModal").style.display="none";
-}
-
-/* PHOTOS */
-function openPhotos(images){
-
-let container = document.getElementById("photoContainer");
-container.innerHTML="";
-
-images.forEach(img=>{
-container.innerHTML+=`
-<div class="photoSlide">
-<img src="${img}">
-</div>`;
-});
-
-document.getElementById("photoModal").style.display="block";
-}
-
-function closePhotos(){
-document.getElementById("photoModal").style.display="none";
-}
-
-/* RESET */
+/* FILTER RESET */
 function resetFilters(){
 document.getElementById("searchBox").value="";
 document.getElementById("minRent").value="";
@@ -342,6 +466,22 @@ document.getElementById("maxRent").value="";
 document.getElementById("maxDist").value="";
 applyFilters();
 }
+
+/* KEYBOARD NAVIGATION */
+document.addEventListener("keydown",e=>{
+if(e.key==="ArrowRight"){
+document.querySelectorAll(".gallery").forEach(g=>{
+let id=g.dataset.id;
+move(id,1);
+});
+}
+if(e.key==="ArrowLeft"){
+document.querySelectorAll(".gallery").forEach(g=>{
+let id=g.dataset.id;
+move(id,-1);
+});
+}
+});
 
 </script>
 
