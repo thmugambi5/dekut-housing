@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Firebase Auth Test</title>
+<title>Landlord System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,68 +10,186 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-    font-family:Arial;
-    background:#f4f6fb;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    margin:0;
-}
-.box{
-    background:white;
-    padding:25px;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.15);
-    text-align:center;
-    width:350px;
-}
+body{font-family:Arial;margin:0;background:#f4f4f4;}
+.container{max-width:900px;margin:auto;padding:20px;}
+.card{background:#fff;padding:15px;margin-top:15px;border-radius:10px;}
+input,textarea,button{width:100%;padding:10px;margin-top:10px;}
+button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.hidden{display:none;}
+.property{padding:10px;border:1px solid #ddd;margin-top:10px;border-radius:8px;}
+.badge{padding:4px 8px;border-radius:6px;color:#fff;font-size:12px;}
+.pending{background:orange;}
+.approved{background:green;}
+.rejected{background:red;}
+img{width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
 </style>
 </head>
+
 <body>
 
-<div class="box">
-    <h2>Firebase Authentication Test</h2>
-    <p>Open Console (F12) and check the output.</p>
+<div class="container">
+
+<!-- AUTH -->
+<div id="authBox" class="card">
+<h2>Landlord Login / Signup</h2>
+
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="authAction()">Continue</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+<div class="card">
+<h3>Welcome <span id="userName"></span></h3>
+<button onclick="logout()" style="background:red;">Logout</button>
+</div>
+
+<div class="card">
+<h3>Add Property</h3>
+
+<input id="title" placeholder="Title">
+<input id="location" placeholder="Location (e.g Bomas, Embakasi)">
+
+<textarea id="description" placeholder="Description"></textarea>
+
+<input type="file" id="images" multiple accept="image/*">
+
+<button onclick="saveProperty()">Submit Property</button>
+</div>
+
+<div class="card">
+<h3>Your Properties</h3>
+<div id="list"></div>
+</div>
+
+</div>
+
 </div>
 
 <script>
-
-console.log("STEP 1: PAGE LOADED");
-
 const firebaseConfig = {
-    apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
-    authDomain: "dekut-housing.firebaseapp.com",
-    databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-    projectId: "dekut-housing",
-    storageBucket: "dekut-housing.firebasestorage.app",
-    messagingSenderId: "784034754945",
-    appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 
-console.log("STEP 2: FIREBASE INITIALIZED");
+const auth=firebase.auth();
+const db=firebase.database();
 
-const auth = firebase.auth();
+let mode="signup";
+let currentUser=null;
 
-console.log("STEP 3: AUTH OBJECT CREATED");
+/* AUTH */
+function authAction(){
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
+let name=document.getElementById("name").value;
 
-auth.fetchSignInMethodsForEmail("admin@dekut.com")
-.then(methods => {
-
-    console.log("STEP 4: SUCCESS");
-    console.log("SIGN-IN METHODS:", methods);
-
-})
-.catch(err => {
-
-    console.log("STEP 4: ERROR");
-    console.error("AUTH ERROR:", err);
-
+if(mode==="signup"){
+auth.createUserWithEmailAndPassword(email,pass)
+.then(u=>{
+u.user.updateProfile({displayName:name});
+show(u.user);
 });
+}else{
+auth.signInWithEmailAndPassword(email,pass)
+.then(u=>show(u.user));
+}
+}
 
+/* SHOW */
+function show(user){
+currentUser=user;
+document.getElementById("authBox").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("userName").innerText=user.displayName||user.email;
+load();
+}
+
+/* CONVERT IMAGES TO BASE64 */
+function toBase64(file){
+return new Promise((res,rej)=>{
+const reader=new FileReader();
+reader.onload=()=>res(reader.result);
+reader.readAsDataURL(file);
+});
+}
+
+/* SAVE PROPERTY */
+async function saveProperty(){
+
+let files=document.getElementById("images").files;
+let images=[];
+
+for(let f of files){
+images.push(await toBase64(f));
+}
+
+let data={
+owner:auth.currentUser.uid,
+ownerEmail:auth.currentUser.email,
+title:document.getElementById("title").value,
+location:document.getElementById("location").value,
+description:document.getElementById("description").value,
+images:images,
+status:"pending",
+updatedAt:Date.now()
+};
+
+db.ref("pendingProperties").push(data);
+
+alert("Submitted for approval");
+load();
+}
+
+/* LOAD */
+function load(){
+db.ref("pendingProperties").on("value",snap=>{
+let d=snap.val()||{};
+let html="";
+
+for(let id in d){
+if(d[id].owner!==auth.currentUser.uid) continue;
+
+let p=d[id];
+
+html+=`
+<div class="property">
+<b>${p.title}</b>
+<span class="badge ${p.status}">${p.status}</span><br>
+${p.location}<br>
+
+<div>
+${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+</div>
+</div>
+`;
+}
+
+document.getElementById("list").innerHTML=html;
+});
+}
+
+/* LOGOUT */
+function logout(){
+auth.signOut();
+location.reload();
+}
+
+/* AUTO LOGIN */
+auth.onAuthStateChanged(u=>{
+if(u) show(u);
+});
 </script>
 
 </body>
