@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin System</title>
+<title>Admin Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -12,135 +12,48 @@
 <style>
 body{margin:0;font-family:Arial;background:#f5f7fb;}
 
-/* LOGIN */
+.topbar{
+display:flex;justify-content:space-between;
+background:#111;color:white;padding:12px;
+}
+
+button{cursor:pointer}
+
 .loginBox{
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-background:#0f172a;
+display:flex;justify-content:center;align-items:center;
+height:100vh;background:#0f172a;
 }
 
 .box{
-width:350px;
-background:white;
-padding:20px;
-border-radius:12px;
+background:#fff;padding:20px;border-radius:10px;width:320px;
 }
 
-input{
-width:100%;
-padding:12px;
-margin:10px 0;
-border-radius:8px;
-border:1px solid #ccc;
+input,textarea{
+width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;
 }
 
 button{
-width:100%;
-padding:12px;
-border:none;
-border-radius:8px;
-background:#2563eb;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
-/* DASHBOARD */
-.topbar{
-display:flex;
-justify-content:space-between;
-align-items:center;
-background:#111;
-color:white;
-padding:12px;
-}
-
-.container{
-display:flex;
-}
-
-.sidebar{
-width:220px;
-background:#111;
-color:white;
-height:100vh;
-padding:10px;
-}
-
-.sidebar button{
-width:100%;
-padding:10px;
-margin:6px 0;
-background:#222;
-border:none;
-color:white;
-border-radius:8px;
-cursor:pointer;
-}
-
-.main{
-flex:1;
-padding:15px;
+padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;
 }
 
 .card{
-background:white;
-padding:15px;
-margin:10px 0;
-border-radius:12px;
-box-shadow:0 2px 10px rgba(0,0,0,0.08);
+background:#fff;margin:10px;padding:10px;border-radius:10px;
 }
 
-.badge{
-display:inline-block;
-padding:4px 8px;
-border-radius:6px;
-font-size:12px;
-color:white;
-}
-
+.badge{padding:4px 8px;color:white;border-radius:6px;font-size:12px;}
 .pending{background:orange;}
 .approved{background:green;}
-.rejected{background:red;}
 
-.action{
-padding:8px 10px;
-margin:4px;
-border:none;
-border-radius:6px;
-cursor:pointer;
+img{width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
+
+.actionBtn{
+margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;
 }
 
-.view{background:#2563eb;color:white;}
-.approve{background:green;color:white;}
-.reject{background:red;color:white;}
-
-img{
-width:100%;
-max-height:250px;
-object-fit:cover;
-border-radius:10px;
-margin-top:10px;
-}
-
-/* MODAL */
-.modal{
-display:none;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.8);
-}
-
-.modalContent{
-background:white;
-max-width:700px;
-margin:40px auto;
-padding:20px;
-border-radius:12px;
-}
+.approve{background:green;}
+.reject{background:red;}
+.edit{background:#f59e0b;}
+.save{background:#2563eb;}
 </style>
 </head>
 
@@ -151,11 +64,11 @@ border-radius:12px;
 <div class="box">
 <h2>Admin Login</h2>
 
-<input id="email" type="email" placeholder="Email">
+<input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 
 <button onclick="login()">Login</button>
-<p id="msg" style="text-align:center;"></p>
+<p id="msg"></p>
 </div>
 </div>
 
@@ -167,66 +80,59 @@ border-radius:12px;
 <button onclick="logout()">Logout</button>
 </div>
 
-<div class="container">
-
-<div class="sidebar">
-<button onclick="loadPending()">Pending</button>
-<button onclick="loadApproved()">Approved</button>
-</div>
-
-<div class="main">
-<h2 id="title">Pending Properties</h2>
+<div class="card">
+<h3>Pending Properties</h3>
 <div id="list"></div>
 </div>
 
 </div>
-</div>
 
-<!-- MODAL -->
-<div id="modal" class="modal">
-<div class="modalContent" id="modalContent"></div>
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:white;padding:20px;overflow:auto;">
+<h2>Edit Property</h2>
+
+<input id="editTitle">
+<input id="editLocation">
+<textarea id="editDesc"></textarea>
+
+<button onclick="saveEdit()">Save Changes</button>
+<button onclick="closeEdit()">Close</button>
 </div>
 
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
-const ADMIN_EMAIL = "admin@dekut.com";
+const ADMIN_EMAIL="admin@dekut.com";
 
-let currentUser = null;
+let currentEditId=null;
 
 /* LOGIN */
 async function login(){
-
-let email = document.getElementById("email").value;
-let pass = document.getElementById("password").value;
-let msg = document.getElementById("msg");
-
-msg.innerText = "Logging in...";
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
 
 try{
+let res=await auth.signInWithEmailAndPassword(email,pass);
 
-let res = await auth.signInWithEmailAndPassword(email,pass);
-let user = res.user;
-
-/* ADMIN CHECK */
-if(user.email !== ADMIN_EMAIL){
-await auth.signOut();
-msg.innerText = "Not authorized";
+if(res.user.email!==ADMIN_EMAIL){
+alert("Not authorized");
+auth.signOut();
 return;
 }
-
-currentUser = user;
 
 document.getElementById("loginView").style.display="none";
 document.getElementById("dashboard").style.display="block";
@@ -234,96 +140,55 @@ document.getElementById("dashboard").style.display="block";
 loadPending();
 
 }catch(e){
-msg.innerText = e.message;
+document.getElementById("msg").innerText=e.message;
 }
 }
-
-/* AUTO LOGIN */
-auth.onAuthStateChanged(user=>{
-if(user && user.email === ADMIN_EMAIL){
-currentUser = user;
-document.getElementById("loginView").style.display="none";
-document.getElementById("dashboard").style.display="block";
-loadPending();
-}
-});
 
 /* LOAD PENDING */
 function loadPending(){
-
-document.getElementById("title").innerText="Pending Properties";
-
 db.ref("pendingProperties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
+let data=snap.val()||{};
+let html="";
 
 for(let id in data){
-let p = data[id];
+let p=data[id];
 
-html += `
+html+=`
 <div class="card">
 
-<div class="badge pending">${p.status}</div>
+<div class="badge pending">Pending</div><br>
 
-<b>${p.type}</b><br>
+<b>${p.title}</b><br>
 📍 ${p.location}<br>
-💰 KSh ${p.rent}<br>
 
-<button class="action view" onclick='view(${JSON.stringify(p)})'>View</button>
-<button class="action approve" onclick="approve('${id}')">Approve</button>
-<button class="action reject" onclick="reject('${id}')">Reject</button>
+<div>
+${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+</div>
 
-</div>`;
+<button class="actionBtn edit" onclick="edit('${id}', '${encodeURIComponent(JSON.stringify(p))}')">Edit</button>
+<button class="actionBtn approve" onclick="approve('${id}')">Approve</button>
+<button class="actionBtn reject" onclick="reject('${id}')">Reject</button>
+
+</div>
+`;
 }
 
-document.getElementById("list").innerHTML = html;
-});
-}
-
-/* LOAD APPROVED */
-function loadApproved(){
-
-document.getElementById("title").innerText="Approved Properties";
-
-db.ref("properties").on("value",snap=>{
-let data = snap.val() || {};
-let html = "";
-
-for(let id in data){
-let p = data[id];
-
-html += `
-<div class="card">
-
-<div class="badge approved">${p.status}</div>
-
-<b>${p.type}</b><br>
-📍 ${p.location}<br>
-💰 KSh ${p.rent}<br>
-
-<button class="action view" onclick='view(${JSON.stringify(p)})'>View</button>
-<button class="action reject" onclick="removeProp('${id}')">Delete</button>
-
-</div>`;
-}
-
-document.getElementById("list").innerHTML = html;
+document.getElementById("list").innerHTML=html;
 });
 }
 
 /* APPROVE */
 async function approve(id){
-
-let snap = await db.ref("pendingProperties/"+id).once("value");
+let snap=await db.ref("pendingProperties/"+id).once("value");
 if(!snap.exists()) return;
 
-let p = snap.val();
+let data=snap.val();
+data.status="approved";
 
-p.status = "approved";
-p.approved = true;
-
-await db.ref("properties/"+id).set(p);
+await db.ref("properties/"+id).set(data);
 await db.ref("pendingProperties/"+id).remove();
+
+alert("Approved");
 }
 
 /* REJECT */
@@ -331,36 +196,47 @@ async function reject(id){
 await db.ref("pendingProperties/"+id).remove();
 }
 
-/* DELETE APPROVED */
-async function removeProp(id){
-await db.ref("properties/"+id).remove();
+/* EDIT */
+function edit(id,data){
+currentEditId=id;
+
+let p=JSON.parse(decodeURIComponent(data));
+
+document.getElementById("editTitle").value=p.title;
+document.getElementById("editLocation").value=p.location;
+document.getElementById("editDesc").value=p.description;
+
+document.getElementById("editModal").style.display="block";
 }
 
-/* VIEW */
-function view(p){
+/* SAVE EDIT (returns to pending again) */
+async function saveEdit(){
 
-document.getElementById("modalContent").innerHTML = `
-<h2>${p.type}</h2>
+let snap=await db.ref("pendingProperties/"+currentEditId).once("value");
+if(!snap.exists()) return;
 
-${p.images?.[0] ? `<img src="${p.images[0]}">` : ""}
+let old=snap.val();
 
-<p><b>Rent:</b> ${p.rent}</p>
-<p><b>Location:</b> ${p.location}</p>
-<p><b>Description:</b> ${p.description || ""}</p>
+old.title=document.getElementById("editTitle").value;
+old.location=document.getElementById("editLocation").value;
+old.description=document.getElementById("editDesc").value;
 
-<button onclick="closeModal()">Close</button>
-`;
+old.status="pending"; // goes back for re-approval
 
-document.getElementById("modal").style.display="block";
+await db.ref("pendingProperties/"+currentEditId).set(old);
+
+closeEdit();
+alert("Updated and returned to pending");
 }
 
-function closeModal(){
-document.getElementById("modal").style.display="none";
+/* CLOSE EDIT */
+function closeEdit(){
+document.getElementById("editModal").style.display="none";
 }
 
 /* LOGOUT */
-async function logout(){
-await auth.signOut();
+function logout(){
+auth.signOut();
 location.reload();
 }
 
