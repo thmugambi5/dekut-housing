@@ -131,6 +131,7 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
+  console.log("STEP 1 - Firebase apps:", firebase.apps);
   console.log("CONFIG CHECK:", firebase.apps.length);
 
 const auth = firebase.auth();
