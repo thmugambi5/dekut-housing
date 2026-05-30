@@ -97,23 +97,12 @@ width:100%;height:100%;background:rgba(0,0,0,0.7);
 background:white;max-width:700px;margin:40px auto;
 padding:20px;border-radius:10px;
 }
-
-#loading{
-display:none;
-position:fixed;
-top:0;left:0;width:100%;height:100%;
-background:#0f172a;color:white;
-justify-content:center;align-items:center;
-}
 </style>
 </head>
 
 <body>
 
-<!-- LOADING -->
-<div id="loading"><h2>Loading...</h2></div>
-
-<!-- LOGIN -->
+<!-- LOGIN VIEW -->
 <div id="loginView" class="loginBox">
 <div class="box">
 <h2>Admin Login</h2>
@@ -155,11 +144,15 @@ justify-content:center;align-items:center;
 
 <script>
 
+/* FIREBASE */
 firebase.initializeApp({
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 });
 
 const auth = firebase.auth();
@@ -167,14 +160,14 @@ const db = firebase.database();
 
 const ADMIN_EMAIL = "admin@dekut.com";
 
-let currentUser=null;
+let currentUser = null;
 
 /* DEVICE */
 function getDeviceId(){
-let id=localStorage.getItem("device_id");
+let id = localStorage.getItem("device_id");
 if(!id){
-id="dev_"+crypto.randomUUID();
-localStorage.setItem("device_id",id);
+id = "dev_" + crypto.randomUUID();
+localStorage.setItem("device_id", id);
 }
 return id;
 }
@@ -182,65 +175,61 @@ return id;
 /* LOGIN */
 async function login(){
 
-const email=document.getElementById("email").value;
-const pass=document.getElementById("password").value;
+const email = document.getElementById("email").value;
+const pass = document.getElementById("password").value;
+const msg = document.getElementById("msg");
 
-const msg=document.getElementById("msg");
-msg.innerText="Logging in...";
+msg.innerText = "Logging in...";
 
 try{
 
-const res=await auth.signInWithEmailAndPassword(email,pass);
-const user=res.user;
+const res = await auth.signInWithEmailAndPassword(email, pass);
+const user = res.user;
 
-if(user.email!==ADMIN_EMAIL){
+if(user.email !== ADMIN_EMAIL){
 await auth.signOut();
-msg.innerText="Not authorized";
+msg.innerText = "Not authorized";
 return;
 }
 
-const token="t_"+crypto.randomUUID();
+const token = "t_" + crypto.randomUUID();
 
-await db.ref("adminSessions/"+user.uid).set({
+await db.ref("adminSessions/" + user.uid).set({
 token,
-createdAt:Date.now(),
-device:getDeviceId()
+createdAt: Date.now(),
+device: getDeviceId()
 });
 
-startSession(user, token);
+startSession(user);
 
 }catch(e){
-msg.innerText=e.message;
+msg.innerText = e.message;
 }
 
 }
 
-/* SESSION START */
-function startSession(user, token){
+/* START SESSION */
+function startSession(user){
 
-currentUser=user;
+currentUser = user;
 
-document.getElementById("loginView").style.display="none";
-document.getElementById("dashboard").style.display="block";
+document.getElementById("loginView").style.display = "none";
+document.getElementById("dashboard").style.display = "block";
 
 loadPending();
 
 }
 
-/* CHECK SESSION ON RELOAD */
+/* AUTO LOGIN */
 auth.onAuthStateChanged(async user=>{
 
-if(!user){
-return;
-}
+if(!user) return;
 
-const snap=await db.ref("adminSessions/"+user.uid).once("value");
+const snap = await db.ref("adminSessions/"+user.uid).once("value");
 
-if(!snap.exists()){
-return;
-}
+if(!snap.exists()) return;
 
-currentUser=user;
+currentUser = user;
 
 document.getElementById("loginView").style.display="none";
 document.getElementById("dashboard").style.display="block";
@@ -254,29 +243,29 @@ function toggleMenu(){
 document.getElementById("sidebar").classList.toggle("show");
 }
 
-/* LOAD PENDING */
+/* PENDING */
 function loadPending(){
 
-document.getElementById("title").innerText="Pending";
+document.getElementById("title").innerText="Pending Properties";
 
 db.ref("pendingProperties").on("value",snap=>{
 
-const data=snap.val()||{};
-const list=document.getElementById("list");
-list.innerHTML="";
+const data = snap.val() || {};
+const list = document.getElementById("list");
+list.innerHTML = "";
 
 for(let id in data){
 
-const p=data[id];
+const p = data[id];
 
-list.innerHTML+=`
+list.innerHTML += `
 <div class="card">
 
 <div class="badge pending">Pending</div>
 
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-💰 ${p.rent||""}<br>
+<b>${p.type || ""}</b><br>
+📍 ${p.location || ""}<br>
+💰 ${p.rent || ""}<br>
 
 <button class="action view" onclick="view('${id}','pending')">View</button>
 <button class="action approve" onclick="approve('${id}')">Approve</button>
@@ -288,28 +277,28 @@ list.innerHTML+=`
 });
 }
 
-/* LOAD APPROVED */
+/* APPROVED */
 function loadApproved(){
 
-document.getElementById("title").innerText="Approved";
+document.getElementById("title").innerText="Approved Properties";
 
 db.ref("properties").on("value",snap=>{
 
-const data=snap.val()||{};
-const list=document.getElementById("list");
-list.innerHTML="";
+const data = snap.val() || {};
+const list = document.getElementById("list");
+list.innerHTML = "";
 
 for(let id in data){
 
-const p=data[id];
+const p = data[id];
 
-list.innerHTML+=`
+list.innerHTML += `
 <div class="card">
 
 <div class="badge approved">Approved</div>
 
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
+<b>${p.type || ""}</b><br>
+📍 ${p.location || ""}<br>
 
 <button class="action view" onclick="view('${id}','approved')">View</button>
 <button class="action delete" onclick="del('${id}')">Delete</button>
@@ -323,12 +312,13 @@ list.innerHTML+=`
 /* APPROVE */
 async function approve(id){
 
-const snap=await db.ref("pendingProperties/"+id).once("value");
+const snap = await db.ref("pendingProperties/"+id).once("value");
 if(!snap.exists()) return;
 
-const p=snap.val();
-p.status="approved";
-p.approved=true;
+const p = snap.val();
+
+p.status = "approved";
+p.approved = true;
 
 await db.ref("properties/"+id).set(p);
 await db.ref("pendingProperties/"+id).remove();
@@ -348,14 +338,14 @@ await db.ref("properties/"+id).remove();
 /* VIEW */
 async function view(id,type){
 
-const path=type==="pending"
-?"pendingProperties/"+id
-:"properties/"+id;
+const path = type==="pending"
+? "pendingProperties/"+id
+: "properties/"+id;
 
-const snap=await db.ref(path).once("value");
-const p=snap.val();
+const snap = await db.ref(path).once("value");
+const p = snap.val();
 
-document.getElementById("detailsContent").innerHTML=`
+document.getElementById("detailsContent").innerHTML = `
 <h2>${p.type}</h2>
 <p>${p.location}</p>
 <p>${p.rent}</p>
@@ -378,7 +368,6 @@ await auth.signOut();
 }
 
 location.reload();
-
 }
 
 </script>
