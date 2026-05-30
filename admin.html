@@ -17,8 +17,6 @@ display:flex;justify-content:space-between;
 background:#111;color:white;padding:12px;
 }
 
-button{cursor:pointer}
-
 .loginBox{
 display:flex;justify-content:center;align-items:center;
 height:100vh;background:#0f172a;
@@ -33,7 +31,7 @@ width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;
 }
 
 button{
-padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;
+padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer;
 }
 
 .card{
@@ -44,16 +42,24 @@ background:#fff;margin:10px;padding:10px;border-radius:10px;
 .pending{background:orange;}
 .approved{background:green;}
 
-img{width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
+img{
+width:80px;height:60px;object-fit:cover;margin:3px;border-radius:5px;
+}
 
 .actionBtn{
-margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;
+margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;cursor:pointer;
 }
 
 .approve{background:green;}
 .reject{background:red;}
 .edit{background:#f59e0b;}
-.save{background:#2563eb;}
+.view{background:#2563eb;}
+
+#editModal{
+display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+background:white;padding:20px;overflow:auto;
+z-index:9999;
+}
 </style>
 </head>
 
@@ -85,10 +91,15 @@ margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;
 <div id="list"></div>
 </div>
 
+<div class="card">
+<h3>Approved Properties</h3>
+<div id="approvedList"></div>
+</div>
+
 </div>
 
 <!-- EDIT MODAL -->
-<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:white;padding:20px;overflow:auto;">
+<div id="editModal">
 <h2>Edit Property</h2>
 
 <input id="editTitle">
@@ -102,7 +113,7 @@ margin:3px;padding:6px 8px;border:none;border-radius:6px;color:white;
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing",
@@ -122,6 +133,7 @@ let currentEditId=null;
 
 /* LOGIN */
 async function login(){
+
 let email=document.getElementById("email").value;
 let pass=document.getElementById("password").value;
 
@@ -138,13 +150,14 @@ document.getElementById("loginView").style.display="none";
 document.getElementById("dashboard").style.display="block";
 
 loadPending();
+loadApproved();
 
 }catch(e){
 document.getElementById("msg").innerText=e.message;
 }
 }
 
-/* LOAD PENDING */
+/* PENDING */
 function loadPending(){
 db.ref("pendingProperties").on("value",snap=>{
 let data=snap.val()||{};
@@ -158,14 +171,14 @@ html+=`
 
 <div class="badge pending">Pending</div><br>
 
-<b>${p.title}</b><br>
-📍 ${p.location}<br>
+<b>${p.title||""}</b><br>
+📍 ${p.location||""}<br>
 
 <div>
 ${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
 </div>
 
-<button class="actionBtn edit" onclick="edit('${id}', '${encodeURIComponent(JSON.stringify(p))}')">Edit</button>
+<button class="actionBtn edit" onclick="edit('${id}','${encodeURIComponent(JSON.stringify(p))}')">Edit</button>
 <button class="actionBtn approve" onclick="approve('${id}')">Approve</button>
 <button class="actionBtn reject" onclick="reject('${id}')">Reject</button>
 
@@ -174,6 +187,37 @@ ${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
 }
 
 document.getElementById("list").innerHTML=html;
+});
+}
+
+/* APPROVED */
+function loadApproved(){
+db.ref("properties").on("value",snap=>{
+let data=snap.val()||{};
+let html="";
+
+for(let id in data){
+let p=data[id];
+
+html+=`
+<div class="card">
+
+<div class="badge approved">Approved</div><br>
+
+<b>${p.title||""}</b><br>
+📍 ${p.location||""}<br>
+
+<div>
+${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+</div>
+
+<button class="actionBtn reject" onclick="deleteApproved('${id}')">Delete</button>
+
+</div>
+`;
+}
+
+document.getElementById("approvedList").innerHTML=html;
 });
 }
 
@@ -196,20 +240,24 @@ async function reject(id){
 await db.ref("pendingProperties/"+id).remove();
 }
 
+/* DELETE APPROVED */
+async function deleteApproved(id){
+await db.ref("properties/"+id).remove();
+}
+
 /* EDIT */
 function edit(id,data){
 currentEditId=id;
-
 let p=JSON.parse(decodeURIComponent(data));
 
-document.getElementById("editTitle").value=p.title;
-document.getElementById("editLocation").value=p.location;
-document.getElementById("editDesc").value=p.description;
+document.getElementById("editTitle").value=p.title||"";
+document.getElementById("editLocation").value=p.location||"";
+document.getElementById("editDesc").value=p.description||"";
 
 document.getElementById("editModal").style.display="block";
 }
 
-/* SAVE EDIT (returns to pending again) */
+/* SAVE EDIT → BACK TO PENDING */
 async function saveEdit(){
 
 let snap=await db.ref("pendingProperties/"+currentEditId).once("value");
@@ -221,12 +269,12 @@ old.title=document.getElementById("editTitle").value;
 old.location=document.getElementById("editLocation").value;
 old.description=document.getElementById("editDesc").value;
 
-old.status="pending"; // goes back for re-approval
+old.status="pending";
 
 await db.ref("pendingProperties/"+currentEditId).set(old);
 
 closeEdit();
-alert("Updated and returned to pending");
+alert("Updated → sent back for approval");
 }
 
 /* CLOSE EDIT */
