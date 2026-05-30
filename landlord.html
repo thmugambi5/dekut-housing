@@ -291,12 +291,21 @@ const distance=calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
    🔐 STEP 2 ADDITION
 ========================= */
 
-const ownerUid = getLandlordId();
+const auth = firebase.auth();
+let currentUser = null;
+
+auth.onAuthStateChanged(user => {
+  if(!user){
+    window.location.href = "landlord-login.html";
+    return;
+  }
+  currentUser = user;
+});
 
 /* SAVE */
 await db.ref("pendingProperties").push({
 
-ownerUid,   // 👈 ADDED (IMPORTANT)
+ownerUid: currentUser.uid,  // 👈 ADDED (IMPORTANT)
 
 type,
 rent,
