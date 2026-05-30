@@ -98,9 +98,9 @@ button:hover { background:#1a5dc9; }
 
 <script>
 
-let mode = "signup"; // default starts with signup
+let mode = "signup";
 
-// ===== TOGGLE LOGIN/SIGNUP =====
+// ===== TOGGLE =====
 function toggleMode(){
 
     if(mode === "signup"){
@@ -118,7 +118,6 @@ function toggleMode(){
 function getUsers(){
     return JSON.parse(localStorage.getItem("users") || "[]");
 }
-
 function saveUsers(u){
     localStorage.setItem("users", JSON.stringify(u));
 }
@@ -126,12 +125,11 @@ function saveUsers(u){
 function getProperties(){
     return JSON.parse(localStorage.getItem("properties") || "[]");
 }
-
 function saveProperties(p){
     localStorage.setItem("properties", JSON.stringify(p));
 }
 
-// ===== AUTH (LOGIN + SIGNUP) =====
+// ===== AUTH =====
 function handleAuth(){
 
     let name = document.getElementById("name").value;
@@ -140,11 +138,10 @@ function handleAuth(){
 
     let users = getUsers();
 
-    // SIGNUP
     if(mode === "signup"){
 
         if(users.find(u => u.email === email)){
-            alert("Account already exists. Please login.");
+            alert("Account already exists");
             return;
         }
 
@@ -152,17 +149,16 @@ function handleAuth(){
         users.push(newUser);
         saveUsers(users);
 
-        // 🔥 AUTO LOGIN AFTER SIGNUP
+        // AUTO LOGIN
         localStorage.setItem("currentUser", JSON.stringify(newUser));
         showDashboard();
         return;
     }
 
-    // LOGIN
     let user = users.find(u => u.email === email && u.password === password);
 
     if(!user){
-        alert("Invalid login details");
+        alert("Invalid login");
         return;
     }
 
@@ -188,7 +184,7 @@ function logout(){
     location.reload();
 }
 
-// ===== SAVE PROPERTY =====
+// ===== SAVE PROPERTY (🔥 UPDATED HERE) =====
 function saveProperty(){
 
     let user = JSON.parse(localStorage.getItem("currentUser"));
@@ -204,7 +200,8 @@ function saveProperty(){
         owner: user.email,
         title,
         location,
-        description
+        description,
+        status: "pending"   // 🔥 NEW: must be approved by admin
     };
 
     if(editIndex === ""){
@@ -232,7 +229,9 @@ function render(){
 
             html += `
                 <div class="property">
-                    <b>${p.title}</b><br>
+                    <b>${p.title}</b> 
+                    <small>(${p.status})</small><br>
+
                     ${p.location}<br>
                     <small>${p.description}</small><br><br>
 
@@ -265,14 +264,14 @@ function del(i){
     render();
 }
 
-// ===== CLEAR FORM =====
+// ===== CLEAR =====
 function clearForm(){
     document.getElementById("title").value = "";
     document.getElementById("location").value = "";
     document.getElementById("description").value = "";
 }
 
-// ===== AUTO LOGIN ON REFRESH =====
+// ===== AUTO LOGIN =====
 window.onload = function(){
     if(localStorage.getItem("currentUser")){
         showDashboard();
