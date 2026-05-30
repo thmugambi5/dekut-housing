@@ -6,12 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body { font-family: Arial; background:#f4f4f4; margin:0; }
-.container { max-width:900px; margin:auto; padding:20px; }
+body { font-family: Arial; margin:0; background:#f4f4f4; }
+
+.container { max-width:800px; margin:auto; padding:20px; }
 
 .card {
     background:white;
@@ -28,14 +29,14 @@ input, textarea, button {
 }
 
 button {
-    background:#2c7be5;
+    background:#2563eb;
     color:white;
     border:none;
-    cursor:pointer;
     border-radius:6px;
+    cursor:pointer;
 }
 
-button:hover { background:#1a5dc9; }
+button:hover { background:#1d4ed8; }
 
 .hidden { display:none; }
 
@@ -47,7 +48,6 @@ button:hover { background:#1a5dc9; }
 }
 
 .badge {
-    display:inline-block;
     padding:4px 8px;
     border-radius:6px;
     font-size:12px;
@@ -65,7 +65,7 @@ button:hover { background:#1a5dc9; }
 
 <!-- AUTH -->
 <div id="authBox" class="card">
-    <h2 id="authTitle">Create Account</h2>
+    <h2 id="title">Create Account</h2>
 
     <input type="text" id="name" placeholder="Full Name">
     <input type="email" id="email" placeholder="Email">
@@ -74,7 +74,7 @@ button:hover { background:#1a5dc9; }
     <button onclick="handleAuth()">Continue</button>
 
     <div style="margin-top:10px;color:blue;cursor:pointer;" onclick="toggleMode()">
-        Already have an account? Login instead
+        Switch Login / Signup
     </div>
 </div>
 
@@ -86,13 +86,11 @@ button:hover { background:#1a5dc9; }
         <button onclick="logout()" style="background:red;">Logout</button>
     </div>
 
-    <!-- ADD PROPERTY -->
+    <!-- PROPERTY FORM -->
     <div class="card">
-        <h3>Add Property (Pending Approval)</h3>
+        <h3>Submit Property (Test Mode)</h3>
 
-        <input type="hidden" id="editId">
-
-        <input type="text" id="title" placeholder="Property Title">
+        <input type="text" id="title" placeholder="Title">
         <input type="text" id="location" placeholder="Location">
         <textarea id="description" placeholder="Description"></textarea>
 
@@ -124,15 +122,15 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 
 firebase.initializeApp(firebaseConfig);
 
-const db = firebase.database();
 const auth = firebase.auth();
+const db = firebase.database();
 
 /* ================= MODE ================= */
 let mode = "signup";
 
 function toggleMode(){
-    mode = (mode === "signup") ? "login" : "signup";
-    document.getElementById("authTitle").innerText =
+    mode = mode === "signup" ? "login" : "signup";
+    document.getElementById("title").innerText =
         mode === "signup" ? "Create Account" : "Login";
 }
 
@@ -147,23 +145,20 @@ function handleAuth(){
 
         auth.createUserWithEmailAndPassword(email, password)
         .then(res => {
-
             res.user.updateProfile({ displayName: name });
-
             showDashboard(res.user);
-
-        }).catch(err => alert(err.message));
+        })
+        .catch(err => alert(err.message));
 
     } else {
 
         auth.signInWithEmailAndPassword(email, password)
         .then(res => showDashboard(res.user))
         .catch(err => alert(err.message));
-
     }
 }
 
-/* ================= DASHBOARD ================= */
+/* ================= SHOW DASHBOARD ================= */
 function showDashboard(user){
 
     document.getElementById("authBox").classList.add("hidden");
@@ -185,7 +180,7 @@ async function saveProperty(){
     let description = document.getElementById("description").value;
 
     if(!title || !location){
-        alert("Fill required fields");
+        alert("Fill all required fields");
         return;
     }
 
@@ -199,15 +194,20 @@ async function saveProperty(){
         createdAt: Date.now()
     };
 
-    await db.ref("pendingProperties").push(data);
+    try {
 
-    clearForm();
-    loadProperties(user);
+        await db.ref("pendingProperties").push(data);
 
-    alert("Property submitted for approval");
+        alert("Property sent for approval");
+
+        clearForm();
+
+    } catch (err) {
+        alert("Firebase error: " + err.message);
+    }
 }
 
-/* ================= LOAD PROPERTIES ================= */
+/* ================= LOAD USER PROPERTIES ================= */
 function loadProperties(user){
 
     db.ref("pendingProperties").on("value", snap => {
@@ -221,34 +221,23 @@ function loadProperties(user){
 
             if(p.owner !== user.uid) continue;
 
-            let badgeClass = p.status === "approved" ? "approved" : "pending";
-
             html += `
             <div class="property">
 
                 <b>${p.title}</b>
-                <span class="badge ${badgeClass}">${p.status}</span><br>
+                <span class="badge ${p.status === "approved" ? "approved" : "pending"}">
+                    ${p.status}
+                </span><br>
 
                 📍 ${p.location}<br>
-                📝 ${p.description}<br><br>
+                📝 ${p.description}<br>
 
-                ${p.status === "pending" ? `
-                    <button onclick="deleteProperty('${id}')"
-                    style="background:red;">Delete</button>
-                ` : `
-                    <small>Approved - cannot delete</small>
-                `}
             </div>
             `;
         }
 
         document.getElementById("list").innerHTML = html;
     });
-}
-
-/* ================= DELETE (ONLY PENDING) ================= */
-async function deleteProperty(id){
-    await db.ref("pendingProperties/"+id).remove();
 }
 
 /* ================= CLEAR ================= */
@@ -258,7 +247,7 @@ function clearForm(){
     document.getElementById("description").value = "";
 }
 
-/* ================= AUTH STATE ================= */
+/* ================= AUTO LOGIN ================= */
 auth.onAuthStateChanged(user=>{
     if(user){
         showDashboard(user);
