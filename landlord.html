@@ -2,22 +2,19 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Access</title>
+<title>Landlord Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
 body{
+margin:0;
 font-family:Arial;
 background:#0f172a;
-color:white;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-margin:0;
+color:white;
 }
 
 .box{
@@ -35,8 +32,8 @@ padding:12px;
 margin-top:10px;
 border:none;
 border-radius:8px;
-cursor:pointer;
 font-weight:bold;
+cursor:pointer;
 }
 
 .login{background:#2563eb;color:white;}
@@ -57,7 +54,6 @@ font-weight:bold;
 function goLogin(){
 window.location.href="landlord-login.html";
 }
-
 function goSignup(){
 window.location.href="landlord-signup.html";
 }
