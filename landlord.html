@@ -274,7 +274,7 @@ load();
 
 /* ================= LOAD ================= */
 function load(){
-db.ref("Properties").on("value",snap=>{
+db.ref("pendingProperties").on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
