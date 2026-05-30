@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Landlord Signup</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -11,9 +10,9 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;display:flex;justify-content:center;align-items:center;height:100vh;}
-.box{background:#fff;padding:20px;border-radius:12px;width:340px;}
+.box{background:white;padding:20px;border-radius:12px;width:340px;}
 input{width:100%;padding:12px;margin:8px 0;}
-button{width:100%;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;}
+button{width:100%;padding:12px;background:#16a34a;color:white;border:none;}
 .msg{text-align:center;margin-top:10px;}
 </style>
 </head>
@@ -50,9 +49,9 @@ const db = firebase.database();
 
 async function signup(){
 
-const name = name.value;
-const email = email.value;
-const password = password.value;
+const name = document.getElementById("name").value;
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
 
 const msg = document.getElementById("msg");
 
@@ -68,10 +67,10 @@ email,
 createdAt:Date.now()
 });
 
-msg.innerText = "Success! Redirecting...";
+msg.innerText = "Account created";
 
 setTimeout(()=>{
-window.location.href = "landlord-login.html";
+window.location.href="landlord-login.html";
 },1000);
 
 }catch(e){
