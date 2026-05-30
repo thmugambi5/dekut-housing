@@ -265,7 +265,7 @@ status:"pending",
 createdAt:Date.now()
 };
 
-db.ref("Properties").push(data);
+db.ref("pendingProperties").push(data);
 
 alert("Sent for approval");
 clearForm();
@@ -274,7 +274,7 @@ load();
 
 /* ================= LOAD ================= */
 function load(){
-db.ref("pendingProperties").on("value",snap=>{
+db.ref("Properties").on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
