@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin System</title>
+<title>Landlord System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,142 +10,112 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f7fb;}
+body { font-family: Arial; margin:0; background:#f4f4f4; }
 
-/* LOGIN */
-.loginBox{
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-background:#0f172a;
+.container { max-width:850px; margin:auto; padding:20px; }
+
+.card {
+    background:white;
+    padding:15px;
+    margin-top:15px;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-.box{
-width:340px;
-background:white;
-padding:20px;
-border-radius:12px;
+input, textarea, button {
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border-radius:6px;
 }
 
-input{
-width:100%;
-padding:12px;
-margin:10px 0;
-border-radius:8px;
-border:1px solid #ccc;
+button {
+    background:#2563eb;
+    color:white;
+    border:none;
+    cursor:pointer;
+    font-weight:bold;
 }
 
-button{
-width:100%;
-padding:12px;
-border:none;
-border-radius:8px;
-background:#2563eb;
-color:white;
-font-weight:bold;
-cursor:pointer;
+button:hover { background:#1d4ed8; }
+
+.hidden { display:none; }
+
+.property {
+    border:1px solid #ddd;
+    padding:10px;
+    margin-top:10px;
+    border-radius:8px;
+    background:#fff;
 }
 
-.msg{text-align:center;font-size:13px;margin-top:10px}
-
-/* DASHBOARD */
-.topbar{
-display:flex;justify-content:space-between;
-align-items:center;background:#111;color:white;
-padding:12px;
+.badge {
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:12px;
+    color:white;
 }
 
-.sidebar{
-position:fixed;left:0;top:0;width:220px;height:100%;
-background:#111;color:white;padding:20px;
-transform:translateX(-100%);transition:.3s;
-}
-
-.sidebar.show{transform:translateX(0);}
-
-.sidebar button{
-width:100%;padding:12px;margin:6px 0;
-background:#222;color:white;border:none;border-radius:8px;
-}
-
-.main{padding:15px;}
-
-.card{
-background:white;padding:15px;margin:10px 0;
-border-radius:12px;
-}
-
-.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
-.pending{background:orange;}
-.approved{background:green;}
-
-.action{
-padding:8px 10px;margin:3px;border:none;border-radius:6px;
-cursor:pointer;
-}
-.view{background:#2563eb;color:white;}
-.approve{background:green;color:white;}
-.delete{background:red;color:white;}
-
-#detailsModal{
-display:none;position:fixed;top:0;left:0;
-width:100%;height:100%;background:rgba(0,0,0,0.7);
-}
-
-.detailsContent{
-background:white;max-width:700px;margin:40px auto;
-padding:20px;border-radius:10px;
-}
+.pending { background:orange; }
+.approved { background:green; }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN VIEW -->
-<div id="loginView" class="loginBox">
-<div class="box">
-<h2>Admin Login</h2>
+<div class="container">
 
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
+<!-- AUTH -->
+<div id="authBox" class="card">
+    <h2 id="authTitle">Landlord Signup</h2>
 
-<button onclick="login()">Login</button>
-<div class="msg" id="msg"></div>
-</div>
+    <input type="text" id="name" placeholder="Full Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="handleAuth()">Continue</button>
+
+    <div style="margin-top:10px;color:blue;cursor:pointer;" onclick="toggleMode()">
+        Switch Login / Signup
+    </div>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" style="display:none;">
+<div id="dashboard" class="hidden">
 
-<div class="topbar">
-<button onclick="toggleMenu()">☰</button>
-<div>Admin Dashboard</div>
-<button onclick="logout()">Logout</button>
+    <div class="card">
+        <h2>Welcome, <span id="userName"></span></h2>
+        <button onclick="logout()" style="background:red;">Logout</button>
+    </div>
+
+    <!-- PROPERTY FORM -->
+    <div class="card">
+        <h3>Submit Property</h3>
+
+        <input type="hidden" id="editId">
+
+        <input type="text" id="title" placeholder="Title">
+        <input type="text" id="location" placeholder="Location">
+        <textarea id="description" placeholder="Description"></textarea>
+        <input type="number" id="rent" placeholder="Rent">
+
+        <button onclick="saveProperty()">Submit Property</button>
+    </div>
+
+    <!-- LIST -->
+    <div class="card">
+        <h3>Your Properties</h3>
+        <div id="list"></div>
+    </div>
+
 </div>
 
-<div class="sidebar" id="sidebar">
-<h3>Menu</h3>
-<button onclick="loadPending()">Pending</button>
-<button onclick="loadApproved()">Approved</button>
-</div>
-
-<div class="main">
-<h2 id="title">Pending Properties</h2>
-<div id="list"></div>
-</div>
-
-</div>
-
-<!-- DETAILS -->
-<div id="detailsModal">
-<div class="detailsContent" id="detailsContent"></div>
 </div>
 
 <script>
 
 /* FIREBASE */
-firebase.initializeApp({
+const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
@@ -153,220 +123,223 @@ projectId:"dekut-housing",
 storageBucket:"dekut-housing.appspot.com",
 messagingSenderId:"784034754945",
 appId:"1:784034754945:web:198f5e3cf47777ab97f880"
-});
+};
+
+firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.database();
 
-const ADMIN_EMAIL = "admin@dekut.com";
+let mode = "signup";
 
-let currentUser = null;
-
-/* DEVICE */
-function getDeviceId(){
-let id = localStorage.getItem("device_id");
-if(!id){
-id = "dev_" + crypto.randomUUID();
-localStorage.setItem("device_id", id);
-}
-return id;
+/* TOGGLE LOGIN */
+function toggleMode(){
+mode = mode === "signup" ? "login" : "signup";
+document.getElementById("authTitle").innerText =
+mode === "signup" ? "Landlord Signup" : "Landlord Login";
 }
 
-/* LOGIN */
-async function login(){
+/* AUTH */
+function handleAuth(){
 
-const email = document.getElementById("email").value;
-const pass = document.getElementById("password").value;
-const msg = document.getElementById("msg");
+let name = document.getElementById("name").value;
+let email = document.getElementById("email").value;
+let password = document.getElementById("password").value;
 
-msg.innerText = "Logging in...";
+if(mode === "signup"){
 
-try{
+auth.createUserWithEmailAndPassword(email, password)
+.then(res => {
+res.user.updateProfile({ displayName: name });
+showDashboard(res.user);
+})
+.catch(err => alert(err.message));
 
-const res = await auth.signInWithEmailAndPassword(email, pass);
-const user = res.user;
+} else {
 
-if(user.email !== ADMIN_EMAIL){
-await auth.signOut();
-msg.innerText = "Not authorized";
+auth.signInWithEmailAndPassword(email, password)
+.then(res => showDashboard(res.user))
+.catch(err => alert(err.message));
+
+}
+
+}
+
+/* DASHBOARD */
+function showDashboard(user){
+
+document.getElementById("authBox").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+
+document.getElementById("userName").innerText =
+user.displayName || user.email;
+
+loadProperties(user);
+}
+
+/* SAVE PROPERTY → PENDING */
+async function saveProperty(){
+
+let user = auth.currentUser;
+
+let id = document.getElementById("editId").value;
+
+let data = {
+owner: user.uid,
+ownerEmail: user.email,
+title: document.getElementById("title").value,
+location: document.getElementById("location").value,
+description: document.getElementById("description").value,
+rent: document.getElementById("rent").value,
+status: "pending",
+approved: false,
+createdAt: Date.now()
+};
+
+if(!data.title || !data.location){
+alert("Fill required fields");
 return;
 }
 
-const token = "t_" + crypto.randomUUID();
+/* EDIT MODE */
+if(id){
+await db.ref("pendingProperties/"+id).set(data);
+document.getElementById("editId").value = "";
+alert("Updated!");
+clearForm();
+return;
+}
 
-await db.ref("adminSessions/" + user.uid).set({
-token,
-createdAt: Date.now(),
-device: getDeviceId()
+/* NEW PROPERTY */
+await db.ref("pendingProperties").push(data);
+
+alert("Submitted for approval");
+clearForm();
+}
+
+/* LOAD BOTH PENDING + APPROVED */
+function loadProperties(user){
+
+db.ref("pendingProperties").on("value", snap=>{
+renderAll(user);
 });
 
-startSession(user);
-
-}catch(e){
-msg.innerText = e.message;
-}
-
-}
-
-/* START SESSION */
-function startSession(user){
-
-currentUser = user;
-
-document.getElementById("loginView").style.display = "none";
-document.getElementById("dashboard").style.display = "block";
-
-loadPending();
-
-}
-
-/* AUTO LOGIN */
-auth.onAuthStateChanged(async user=>{
-
-if(!user) return;
-
-const snap = await db.ref("adminSessions/"+user.uid).once("value");
-
-if(!snap.exists()) return;
-
-currentUser = user;
-
-document.getElementById("loginView").style.display="none";
-document.getElementById("dashboard").style.display="block";
-
-loadPending();
-
+db.ref("properties").on("value", snap=>{
+renderAll(user);
 });
 
-/* MENU */
-function toggleMenu(){
-document.getElementById("sidebar").classList.toggle("show");
 }
+
+/* RENDER */
+function renderAll(user){
+
+let html = "";
 
 /* PENDING */
-function loadPending(){
-
-document.getElementById("title").innerText="Pending Properties";
-
-db.ref("pendingProperties").on("value",snap=>{
-
-const data = snap.val() || {};
-const list = document.getElementById("list");
-list.innerHTML = "";
+db.ref("pendingProperties").once("value", snap=>{
+let data = snap.val() || {};
 
 for(let id in data){
+let p = data[id];
 
-const p = data[id];
+if(p.owner !== user.uid) continue;
 
-list.innerHTML += `
-<div class="card">
+html += `
+<div class="property">
+<b>${p.title}</b>
+<span class="badge pending">Pending</span><br>
+📍 ${p.location}<br>
+💰 ${p.rent}<br>
 
-<div class="badge pending">Pending</div>
-
-<b>${p.type || ""}</b><br>
-📍 ${p.location || ""}<br>
-💰 ${p.rent || ""}<br>
-
-<button class="action view" onclick="view('${id}','pending')">View</button>
-<button class="action approve" onclick="approve('${id}')">Approve</button>
-<button class="action delete" onclick="reject('${id}')">Reject</button>
-
+<button onclick="editPending('${id}')">Edit</button>
+<button onclick="deletePending('${id}')" style="background:red;">Delete</button>
 </div>`;
-}
-
-});
 }
 
 /* APPROVED */
-function loadApproved(){
+db.ref("properties").once("value", snap2=>{
+let data2 = snap2.val() || {};
 
-document.getElementById("title").innerText="Approved Properties";
+for(let id in data2){
+let p = data2[id];
 
-db.ref("properties").on("value",snap=>{
+if(p.owner !== user.uid) continue;
 
-const data = snap.val() || {};
-const list = document.getElementById("list");
-list.innerHTML = "";
+html += `
+<div class="property">
+<b>${p.title}</b>
+<span class="badge approved">Approved</span><br>
+📍 ${p.location}<br>
+💰 ${p.rent}<br>
 
-for(let id in data){
-
-const p = data[id];
-
-list.innerHTML += `
-<div class="card">
-
-<div class="badge approved">Approved</div>
-
-<b>${p.type || ""}</b><br>
-📍 ${p.location || ""}<br>
-
-<button class="action view" onclick="view('${id}','approved')">View</button>
-<button class="action delete" onclick="del('${id}')">Delete</button>
-
+<button onclick="editApproved('${id}')">Edit</button>
+<button onclick="deleteApproved('${id}')" style="background:red;">Delete</button>
 </div>`;
 }
 
+document.getElementById("list").innerHTML = html;
+
+});
+
+});
+
+}
+
+/* EDIT PENDING */
+function editPending(id){
+
+db.ref("pendingProperties/"+id).once("value").then(snap=>{
+let p = snap.val();
+
+document.getElementById("editId").value = id;
+document.getElementById("title").value = p.title;
+document.getElementById("location").value = p.location;
+document.getElementById("description").value = p.description;
+document.getElementById("rent").value = p.rent;
 });
 }
 
-/* APPROVE */
-async function approve(id){
+/* EDIT APPROVED */
+function editApproved(id){
 
-const snap = await db.ref("pendingProperties/"+id).once("value");
-if(!snap.exists()) return;
+db.ref("properties/"+id).once("value").then(snap=>{
+let p = snap.val();
 
-const p = snap.val();
-
-p.status = "approved";
-p.approved = true;
-
-await db.ref("properties/"+id).set(p);
-await db.ref("pendingProperties/"+id).remove();
-
-}
-
-/* REJECT */
-async function reject(id){
-await db.ref("pendingProperties/"+id).remove();
+document.getElementById("editId").value = id;
+document.getElementById("title").value = p.title;
+document.getElementById("location").value = p.location;
+document.getElementById("description").value = p.description;
+document.getElementById("rent").value = p.rent;
+});
 }
 
 /* DELETE */
-async function del(id){
-await db.ref("properties/"+id).remove();
+function deletePending(id){
+db.ref("pendingProperties/"+id).remove();
 }
 
-/* VIEW */
-async function view(id,type){
-
-const path = type==="pending"
-? "pendingProperties/"+id
-: "properties/"+id;
-
-const snap = await db.ref(path).once("value");
-const p = snap.val();
-
-document.getElementById("detailsContent").innerHTML = `
-<h2>${p.type}</h2>
-<p>${p.location}</p>
-<p>${p.rent}</p>
-<button onclick="closeModal()">Close</button>
-`;
-
-document.getElementById("detailsModal").style.display="block";
+function deleteApproved(id){
+db.ref("properties/"+id).remove();
 }
 
-function closeModal(){
-document.getElementById("detailsModal").style.display="none";
+/* CLEAR */
+function clearForm(){
+document.getElementById("title").value = "";
+document.getElementById("location").value = "";
+document.getElementById("description").value = "";
+document.getElementById("rent").value = "";
 }
+
+/* AUTO LOGIN */
+auth.onAuthStateChanged(user=>{
+if(user){
+showDashboard(user);
+}
+});
 
 /* LOGOUT */
-async function logout(){
-
-if(currentUser){
-await db.ref("adminSessions/"+currentUser.uid).remove();
-await auth.signOut();
-}
-
+function logout(){
+auth.signOut();
 location.reload();
 }
 
