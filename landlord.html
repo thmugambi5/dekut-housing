@@ -2,17 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Form - DeKUT Housing</title>
+<title>Landlord Dashboard - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-/* (UNCHANGED STYLES - EXACT SAME AS YOUR ORIGINAL) */
-
-*{box-sizing:border-box;}
-
 body{
 font-family:Arial;
 background:#f5f5f5;
@@ -29,54 +26,28 @@ border-radius:14px;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-h2{text-align:center;margin-top:0;}
-
-label{font-weight:bold;display:block;margin-top:14px;}
-
 input,select,textarea,button{
 width:100%;
 padding:12px;
-margin-top:6px;
+margin-top:8px;
 border-radius:10px;
 border:1px solid #ccc;
-font-size:15px;
 }
-
-textarea{resize:vertical;min-height:90px;}
 
 button{
 background:#ff385c;
 color:white;
 border:none;
-cursor:pointer;
 font-weight:bold;
+cursor:pointer;
 }
 
-button:hover{opacity:0.95;}
-
-.locationBtn{background:#007bff;}
-
-.amenitiesBox{background:#f1f1f1;padding:12px;border-radius:10px;margin-top:10px;}
-
-.amenity-item{display:flex;align-items:center;gap:10px;margin:8px 0;}
-
-.amenity-item input{width:auto;}
-
-.preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-
-.preview img{width:80px;height:80px;object-fit:cover;border-radius:10px;}
-
-.statusBox{margin-top:10px;padding:10px;background:#f7f7f7;border-radius:8px;}
-
-.success{background:#dff5e1;color:#1b5e20;padding:12px;border-radius:10px;margin-top:15px;text-align:center;}
-
-.progressWrapper{display:none;margin-top:18px;}
-
-.progressBar{width:100%;height:18px;background:#e0e0e0;border-radius:30px;overflow:hidden;}
-
-.progressFill{height:100%;width:0%;background:#28a745;transition:width .3s;}
-
-.progressText{margin-bottom:8px;font-weight:bold;}
+.success{
+background:#dff5e1;
+padding:12px;
+margin-top:10px;
+border-radius:10px;
+}
 </style>
 </head>
 
@@ -84,10 +55,9 @@ button:hover{opacity:0.95;}
 
 <div class="card">
 
-<h2>🏠 Landlord Property Upload</h2>
+<h2>🏠 Landlord Dashboard</h2>
 
-<!-- FORM FIELDS (UNCHANGED) -->
-<label>House Type</label>
+<!-- FORM -->
 <select id="type">
 <option>Bedsitter</option>
 <option>Single Room</option>
@@ -95,67 +65,36 @@ button:hover{opacity:0.95;}
 <option>Two Bedroom</option>
 </select>
 
-<label>Rent</label>
-<input id="rent" type="number">
+<input id="rent" placeholder="Rent">
+<input id="deposit" placeholder="Deposit">
 
-<label>Deposit</label>
-<input id="deposit" type="number">
-
-<label>Gender</label>
 <select id="gender">
 <option>Any Gender</option>
 <option>Male Only</option>
 <option>Female Only</option>
 </select>
 
-<label>Status</label>
 <select id="availability">
 <option>Available</option>
 <option>Occupied</option>
 </select>
 
-<label>Rooms</label>
-<input id="roomsAvailable" type="number">
+<input id="roomsAvailable" placeholder="Rooms">
+<input id="utilities" placeholder="Utilities">
+<input id="phone" placeholder="Phone">
+<textarea id="extra" placeholder="Description"></textarea>
+<input id="location" placeholder="Location">
 
-<label>Utilities</label>
-<select id="utilities">
-<option>Yes</option>
-<option>No</option>
-</select>
+<input type="file" id="images" multiple>
 
-<label>Phone</label>
-<input id="phone">
-
-<label>Description</label>
-<textarea id="extra"></textarea>
-
-<!-- LOCATION -->
-<label>Location</label>
-<input id="location">
-
-<button class="locationBtn" onclick="getLocation()">
-📍 Get GPS Location
-</button>
-
-<div class="statusBox" id="locStatus">No location selected</div>
-
-<!-- IMAGES -->
-<label>Photos</label>
-<input type="file" id="images" multiple accept="image/*">
-<div class="preview" id="preview"></div>
-
-<!-- UPLOAD -->
-<button id="uploadBtn" onclick="upload()">Upload Property</button>
-
-<!-- PROGRESS -->
-<div class="progressWrapper" id="progressWrapper">
-<div class="progressText" id="progressText"></div>
-<div class="progressBar">
-<div class="progressFill" id="progressFill"></div>
-</div>
-</div>
+<button onclick="upload()">Upload Property</button>
 
 <div id="msg"></div>
+
+<hr>
+
+<h3>My Listings</h3>
+<div id="list"></div>
 
 </div>
 
@@ -165,59 +104,25 @@ const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing",
-storageBucket:"dekut-housing.appspot.com",
-messagingSenderId:"784034754945",
-appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+projectId:"dekut-housing"
 };
 
 firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
 const db = firebase.database();
 
-/* =========================
-   🔐 STEP 2: LANDLORD ID
-========================= */
-function getLandlordId(){
-let id = localStorage.getItem("landlord_id");
+let currentUser = null;
 
-if(!id){
-id = "land_" + crypto.randomUUID();
-localStorage.setItem("landlord_id", id);
+/* AUTH */
+auth.onAuthStateChanged(user=>{
+if(!user){
+window.location.href="landlord-login.html";
+return;
 }
-
-return id;
-}
-
-/* GPS */
-let lat="", lng="";
-
-const DEKUT_LAT = -0.3977905;
-const DEKUT_LNG = 36.9608515;
-
-/* DISTANCE */
-function calculateDistance(lat1,lon1,lat2,lon2){
-const R=6371;
-const dLat=(lat2-lat1)*Math.PI/180;
-const dLon=(lon2-lon1)*Math.PI/180;
-
-const a =
-Math.sin(dLat/2)*Math.sin(dLat/2)+
-Math.cos(lat1*Math.PI/180)*
-Math.cos(lat2*Math.PI/180)*
-Math.sin(dLon/2)*Math.sin(dLon/2);
-
-const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-return (R*c).toFixed(1);
-}
-
-/* LOCATION */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-document.getElementById("locStatus").innerText="Location captured ✔";
+currentUser=user;
+loadMyListings();
 });
-}
 
 /* BASE64 */
 function toBase64(file){
@@ -228,114 +133,78 @@ r.readAsDataURL(file);
 });
 }
 
-/* PREVIEW */
-document.getElementById("images").onchange=async e=>{
-let box=document.getElementById("preview");
-box.innerHTML="";
-for(let f of e.target.files){
-let img=document.createElement("img");
-img.src=await toBase64(f);
-box.appendChild(img);
-}
-};
-
-/* PROGRESS */
-function progress(p,t){
-document.getElementById("progressWrapper").style.display="block";
-document.getElementById("progressFill").style.width=p+"%";
-document.getElementById("progressText").innerText=t;
-}
-
 /* UPLOAD */
 async function upload(){
 
-const btn=document.getElementById("uploadBtn");
-btn.disabled=true;
-
-const type=document.getElementById("type").value;
-const rent=document.getElementById("rent").value;
-const deposit=document.getElementById("deposit").value;
-const gender=document.getElementById("gender").value;
-const availability=document.getElementById("availability").value;
-const rooms=document.getElementById("roomsAvailable").value;
-const utilities=document.getElementById("utilities").value;
-const phone=document.getElementById("phone").value;
-const extra=document.getElementById("extra").value;
-const location=document.getElementById("location").value;
-
-if(!type||!rent||!phone||!location){
-alert("Fill required fields");
-btn.disabled=false;
-return;
-}
-
-if(!lat||!lng){
-alert("Get GPS first");
-btn.disabled=false;
+if(!currentUser){
+alert("Login required");
 return;
 }
 
 let images=[];
 let files=document.getElementById("images").files;
 
-for(let i=0;i<files.length;i++){
-images.push(await toBase64(files[i]));
-progress(10+(i/files.length)*50,"Uploading images...");
+for(let f of files){
+images.push(await toBase64(f));
 }
 
-progress(70,"Preparing...");
-
-const distance=calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
-
-/* =========================
-   🔐 STEP 2 ADDITION
-========================= */
-
-const auth = firebase.auth();
-let currentUser = null;
-
-auth.onAuthStateChanged(user => {
-  if(!user){
-    window.location.href = "landlord-login.html";
-    return;
-  }
-  currentUser = user;
-});
-
-/* SAVE */
 await db.ref("pendingProperties").push({
 
-ownerUid: currentUser.uid,  // 👈 ADDED (IMPORTANT)
+ownerUid: currentUser.uid,
 
-type,
-rent,
-deposit,
-gender,
-availability,
-roomsAvailable:rooms,
-utilities,
-phone,
-extra,
-location,
-
-lat,
-lng,
-distance,
+type:document.getElementById("type").value,
+rent:document.getElementById("rent").value,
+deposit:document.getElementById("deposit").value,
+gender:document.getElementById("gender").value,
+availability:document.getElementById("availability").value,
+roomsAvailable:document.getElementById("roomsAvailable").value,
+utilities:document.getElementById("utilities").value,
+phone:document.getElementById("phone").value,
+extra:document.getElementById("extra").value,
+location:document.getElementById("location").value,
 
 images,
-
 approved:false,
-status:availability,
 createdAt:Date.now()
 });
 
-progress(100,"Done ✔");
-
 document.getElementById("msg").innerHTML=
-"<div class='success'>Uploaded successfully. Waiting approval.</div>";
+"<div class='success'>Uploaded successfully</div>";
+}
 
-btn.disabled=false;
+/* MY LISTINGS */
+function loadMyListings(){
 
+db.ref("pendingProperties").on("value",snap=>{
+
+const data=snap.val()||{};
+const list=document.getElementById("list");
+
+list.innerHTML="";
+
+for(let id in data){
+
+const p=data[id];
+
+if(p.ownerUid !== currentUser.uid) continue;
+
+list.innerHTML+=`
+<div class="card">
+<b>${p.type}</b><br>
+${p.location}<br>
+KSh ${p.rent}<br>
+
+<button onclick="del('${id}')">Delete</button>
+</div>
+`;
+}
+
+});
+
+}
+
+function del(id){
+db.ref("pendingProperties/"+id).remove();
 }
 
 </script>
