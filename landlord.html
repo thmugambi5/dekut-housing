@@ -45,6 +45,13 @@ button:hover { background:#1a5dc9; }
     padding:10px;
     margin-top:10px;
 }
+
+.smallBtn{
+    width:auto;
+    padding:8px 12px;
+    margin-top:5px;
+    background:#444;
+}
 </style>
 </head>
 
@@ -75,14 +82,26 @@ button:hover { background:#1a5dc9; }
         <button onclick="logout()" style="background:red;">Logout</button>
     </div>
 
+    <!-- PROPERTY FORM -->
     <div class="card">
-        <h3>Add / Edit Property</h3>
+        <h3>Add Property</h3>
 
         <input type="hidden" id="editIndex">
 
         <input type="text" id="title" placeholder="Property Title">
         <input type="text" id="location" placeholder="Location">
+        <input type="number" id="rent" placeholder="Rent (KSh)">
+        <input type="text" id="phone" placeholder="Phone Number">
+        <input type="text" id="amenities" placeholder="Amenities (wifi, parking...)">
+
         <textarea id="description" placeholder="Description"></textarea>
+
+        <!-- GPS -->
+        <button class="smallBtn" onclick="getLocation()">📍 Share My Location</button>
+        <div id="gpsText"></div>
+
+        <!-- IMAGES -->
+        <input type="file" id="images" multiple accept="image/*">
 
         <button onclick="saveProperty()">Save Property</button>
     </div>
@@ -100,7 +119,11 @@ button:hover { background:#1a5dc9; }
 
 let mode = "signup";
 
-// ===== TOGGLE =====
+let lat = null;
+let lng = null;
+let imageData = [];
+
+// ===== AUTH MODE =====
 function toggleMode(){
 
     if(mode === "signup"){
@@ -149,7 +172,6 @@ function handleAuth(){
         users.push(newUser);
         saveUsers(users);
 
-        // AUTO LOGIN
         localStorage.setItem("currentUser", JSON.stringify(newUser));
         showDashboard();
         return;
@@ -178,40 +200,63 @@ function showDashboard(){
     render();
 }
 
-// ===== LOGOUT =====
-function logout(){
-    localStorage.removeItem("currentUser");
-    location.reload();
+// ===== GPS =====
+function getLocation(){
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>{
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+            document.getElementById("gpsText").innerText =
+            `📍 Location saved: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        });
+    } else {
+        alert("GPS not supported");
+    }
 }
 
-// ===== SAVE PROPERTY (🔥 UPDATED HERE) =====
+// ===== IMAGES =====
+document.getElementById("images").addEventListener("change", function(e){
+
+    imageData = [];
+
+    for(let file of e.target.files){
+
+        let reader = new FileReader();
+
+        reader.onload = function(evt){
+            imageData.push(evt.target.result);
+        }
+
+        reader.readAsDataURL(file);
+    }
+
+});
+
+// ===== SAVE PROPERTY =====
 function saveProperty(){
 
     let user = JSON.parse(localStorage.getItem("currentUser"));
-
-    let title = document.getElementById("title").value;
-    let location = document.getElementById("location").value;
-    let description = document.getElementById("description").value;
-    let editIndex = document.getElementById("editIndex").value;
 
     let props = getProperties();
 
     let data = {
         owner: user.email,
-        title,
-        location,
-        description,
-        status: "pending"   // 🔥 NEW: must be approved by admin
+        title: document.getElementById("title").value,
+        location: document.getElementById("location").value,
+        rent: document.getElementById("rent").value,
+        phone: document.getElementById("phone").value,
+        amenities: document.getElementById("amenities").value,
+        description: document.getElementById("description").value,
+        images: imageData,
+        lat,
+        lng,
+        status: "pending"   // 🔥 MUST go to admin approval
     };
 
-    if(editIndex === ""){
-        props.push(data);
-    } else {
-        props[editIndex] = data;
-        document.getElementById("editIndex").value = "";
-    }
+    props.push(data);
 
     saveProperties(props);
+
     clearForm();
     render();
 }
@@ -224,22 +269,29 @@ function render(){
 
     let html = "";
 
-    props.forEach((p, i) => {
+    props.forEach((p,i)=>{
+
         if(p.owner === user.email){
 
             html += `
-                <div class="property">
-                    <b>${p.title}</b> 
-                    <small>(${p.status})</small><br>
+            <div class="property">
 
-                    ${p.location}<br>
-                    <small>${p.description}</small><br><br>
+                <b>${p.title}</b>
+                <small>(${p.status})</small><br>
 
-                    <button onclick="edit(${i})">Edit</button>
-                    <button onclick="del(${i})" style="background:red;">Delete</button>
-                </div>
+                📍 ${p.location}<br>
+                💰 KSh ${p.rent}<br>
+                📞 ${p.phone}<br>
+
+                <small>${p.amenities}</small><br>
+
+                <button onclick="edit(${i})">Edit</button>
+                <button onclick="del(${i})" style="background:red;">Delete</button>
+
+            </div>
             `;
         }
+
     });
 
     document.getElementById("list").innerHTML = html;
@@ -252,8 +304,10 @@ function edit(i){
 
     document.getElementById("title").value = p.title;
     document.getElementById("location").value = p.location;
+    document.getElementById("rent").value = p.rent;
+    document.getElementById("phone").value = p.phone;
+    document.getElementById("amenities").value = p.amenities;
     document.getElementById("description").value = p.description;
-    document.getElementById("editIndex").value = i;
 }
 
 // ===== DELETE =====
@@ -266,9 +320,16 @@ function del(i){
 
 // ===== CLEAR =====
 function clearForm(){
-    document.getElementById("title").value = "";
-    document.getElementById("location").value = "";
-    document.getElementById("description").value = "";
+    document.getElementById("title").value="";
+    document.getElementById("location").value="";
+    document.getElementById("rent").value="";
+    document.getElementById("phone").value="";
+    document.getElementById("amenities").value="";
+    document.getElementById("description").value="";
+    document.getElementById("images").value="";
+    lat=null;
+    lng=null;
+    imageData=[];
 }
 
 // ===== AUTO LOGIN =====
