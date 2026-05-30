@@ -21,7 +21,7 @@ border-radius:12px;
 box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-input,textarea,button{
+input,select,textarea,button{
 width:100%;
 padding:10px;
 margin-top:10px;
@@ -29,13 +29,7 @@ border-radius:8px;
 border:1px solid #ddd;
 }
 
-button{
-background:#2563eb;
-color:white;
-border:none;
-cursor:pointer;
-}
-
+button{background:#2563eb;color:white;border:none;cursor:pointer;}
 button:hover{background:#1d4ed8;}
 
 .hidden{display:none;}
@@ -53,12 +47,9 @@ font-size:12px;
 .rejected{background:red;}
 
 img.preview{
-width:100px;
-height:80px;
-object-fit:cover;
-margin:5px;
-border-radius:6px;
+width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6px;
 }
+small{color:gray;}
 </style>
 </head>
 
@@ -89,13 +80,44 @@ border-radius:6px;
 <div class="card">
 <h3>Upload Property</h3>
 
-<input id="type" placeholder="Type (Bedsitter, 1BR...)">
-<input id="locationText" placeholder="Area Name (Bomas, Chania...)">
-<input id="rent" type="number" placeholder="Rent">
-<input id="phone" placeholder="Phone">
+<label>Property Type</label>
+<select id="type">
+<option>Single Room</option>
+<option>Shared Single Room</option>
+<option>Bedsitter</option>
+<option>Shared Bedsitter</option>
+<option>1 Bedroom</option>
+<option>2 Bedroom</option>
+</select>
+
+<small>Examples: Bomas, Chania, Nyaribo, Embassy</small>
+<input id="locationText" placeholder="Area Name">
+
+<input id="rent" type="number" placeholder="Rent (KES)">
+<input id="deposit" type="number" placeholder="Deposit (KES)">
+
+<input id="phone" placeholder="Phone (must start with 254)">
+
 <textarea id="desc" placeholder="Description"></textarea>
 
+<small style="color:red;">
+⚠️ Stand inside the property before sharing location
+</small>
 <button onclick="getLocation()">📍 Share My Location</button>
+
+<h4>Amenities</h4>
+<label><input type="checkbox" value="Water"> Water</label>
+<label><input type="checkbox" value="Electricity"> Electricity</label>
+<label><input type="checkbox" value="WiFi"> WiFi</label>
+<label><input type="checkbox" value="Parking"> Parking</label>
+<label><input type="checkbox" value="Security"> Security</label>
+<label><input type="checkbox" value="Furnished"> Furnished</label>
+
+<select id="utilities">
+<option value="Yes">Utilities Included: Yes</option>
+<option value="No">No</option>
+<option value="Partial">Partial</option>
+</select>
 
 <input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
 
@@ -118,7 +140,7 @@ border-radius:6px;
 
 /* ================= FIREBASE ================= */
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing",
@@ -132,98 +154,115 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
+/* ================= DEKUT COORDINATES ================= */
+const DEKUT_LAT = -0.3976;
+const DEKUT_LNG = 36.9597;
+
 /* ================= STATE ================= */
-let currentUser = null;
-let imagesBase64 = [];
-let lat = null;
-let lng = null;
+let currentUser=null;
+let imagesBase64=[];
+let lat=null;
+let lng=null;
 
 /* ================= SIGNUP ================= */
 function signup(){
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
 
-let emailVal = document.getElementById("email").value;
-let passVal = document.getElementById("password").value;
-
-auth.createUserWithEmailAndPassword(emailVal, passVal)
-.then(res=>{
-currentUser = res.user;
-show();
-})
+auth.createUserWithEmailAndPassword(email,pass)
+.then(r=>{currentUser=r.user; show();})
 .catch(e=>alert(e.message));
 }
 
 /* ================= LOGIN ================= */
 function login(){
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
 
-let emailVal = document.getElementById("email").value;
-let passVal = document.getElementById("password").value;
-
-auth.signInWithEmailAndPassword(emailVal, passVal)
-.then(res=>{
-currentUser = res.user;
-show();
-})
+auth.signInWithEmailAndPassword(email,pass)
+.then(r=>{currentUser=r.user; show();})
 .catch(e=>alert(e.message));
 }
 
-/* ================= DASHBOARD ================= */
+/* ================= SHOW ================= */
 function show(){
 document.getElementById("authBox").classList.add("hidden");
 document.getElementById("dashboard").classList.remove("hidden");
-
-document.getElementById("user").innerText = currentUser.email;
-
+document.getElementById("user").innerText=currentUser.email;
 load();
 }
 
-/* ================= GPS ================= */
+/* ================= GPS + DISTANCE ================= */
 function getLocation(){
 navigator.geolocation.getCurrentPosition(pos=>{
-lat = pos.coords.latitude;
-lng = pos.coords.longitude;
-alert("Location captured!");
+lat=pos.coords.latitude;
+lng=pos.coords.longitude;
+
+let d=calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
+alert("Location captured! Distance to DeKUT: "+d.toFixed(2)+" km");
 });
 }
 
-/* ================= IMAGES BASE64 ================= */
+/* Haversine formula */
+function calculateDistance(lat1,lon1,lat2,lon2){
+const R=6371;
+const dLat=(lat2-lat1)*Math.PI/180;
+const dLon=(lon2-lon1)*Math.PI/180;
+const a=
+Math.sin(dLat/2)*Math.sin(dLat/2)+
+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+Math.sin(dLon/2)*Math.sin(dLon/2);
+const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+return R*c;
+}
+
+/* ================= IMAGES ================= */
 function convertImages(){
+let files=document.getElementById("images").files;
+imagesBase64=[]; document.getElementById("preview").innerHTML="";
 
-let files = document.getElementById("images").files;
-imagesBase64 = [];
-document.getElementById("preview").innerHTML = "";
-
-for(let file of files){
-
-let reader = new FileReader();
-
-reader.onload = function(e){
+for(let f of files){
+let reader=new FileReader();
+reader.onload=e=>{
 imagesBase64.push(e.target.result);
-
-document.getElementById("preview").innerHTML +=
+document.getElementById("preview").innerHTML+=
 `<img class="preview" src="${e.target.result}">`;
 };
-
-reader.readAsDataURL(file);
+reader.readAsDataURL(f);
 }
 }
 
-/* ================= SUBMIT PROPERTY ================= */
+/* ================= SUBMIT ================= */
 function submitProperty(){
 
-let data = {
-ownerUid: currentUser.uid,
-ownerEmail: currentUser.email,
-type: document.getElementById("type").value,
-location: document.getElementById("locationText").value,
-rent: document.getElementById("rent").value,
-phone: document.getElementById("phone").value,
-description: document.getElementById("desc").value,
-images: imagesBase64,
-lat: lat,
-lng: lng,
-status: "pending",
-approved: false,
-createdAt: Date.now()
+let phone=document.getElementById("phone").value;
+
+if(!phone.startsWith("254")){
+alert("Phone must start with 254");
+return;
+}
+
+let amenities=[];
+document.querySelectorAll("input[type=checkbox]:checked")
+.forEach(c=>amenities.push(c.value));
+
+let data={
+ownerUid:currentUser.uid,
+ownerEmail:currentUser.email,
+type:document.getElementById("type").value,
+location:document.getElementById("locationText").value,
+rent:document.getElementById("rent").value,
+deposit:document.getElementById("deposit").value,
+phone:phone,
+description:document.getElementById("desc").value,
+amenities:amenities,
+utilities:document.getElementById("utilities").value,
+images:imagesBase64,
+lat:lat,
+lng:lng,
+distanceToDekutKm: lat ? calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG):null,
+status:"pending",
+createdAt:Date.now()
 };
 
 db.ref("pendingProperties").push(data);
@@ -233,35 +272,33 @@ clearForm();
 load();
 }
 
-/* ================= LOAD PROPERTIES ================= */
+/* ================= LOAD ================= */
 function load(){
-
 db.ref("pendingProperties").on("value",snap=>{
-
-let data = snap.val() || {};
-let html = "";
+let data=snap.val()||{};
+let html="";
 
 for(let id in data){
+let p=data[id];
+if(p.ownerUid!==currentUser.uid)continue;
 
-let p = data[id];
-
-if(p.ownerUid !== currentUser.uid) continue;
-
-html += `
+html+=`
 <div class="card">
 
 <b>${p.type}</b>
-<span class="badge ${p.status || "pending"}">${p.status || "pending"}</span><br>
+<span class="badge ${p.status}">${p.status}</span><br>
 
 📍 ${p.location}<br>
-💰 ${p.rent}<br>
+💰 ${p.rent} | Deposit: ${p.deposit}<br>
+📞 ${p.phone}<br>
+📏 ${p.distanceToDekutKm? p.distanceToDekutKm.toFixed(2):"?"} km to DeKUT<br>
 
 <button onclick="del('${id}')">Delete</button>
-
-</div>`;
+</div>
+`;
 }
 
-document.getElementById("list").innerHTML = html;
+document.getElementById("list").innerHTML=html;
 });
 }
 
@@ -278,23 +315,20 @@ location.reload();
 
 /* ================= AUTO LOGIN ================= */
 auth.onAuthStateChanged(user=>{
-if(user){
-currentUser = user;
-show();
-}
+if(user){currentUser=user;show();}
 });
 
-/* ================= CLEAR FORM ================= */
+/* ================= CLEAR ================= */
 function clearForm(){
 document.getElementById("type").value="";
 document.getElementById("locationText").value="";
 document.getElementById("rent").value="";
+document.getElementById("deposit").value="";
 document.getElementById("phone").value="";
 document.getElementById("desc").value="";
 document.getElementById("images").value="";
 imagesBase64=[];
-lat=null;
-lng=null;
+lat=null;lng=null;
 document.getElementById("preview").innerHTML="";
 }
 
