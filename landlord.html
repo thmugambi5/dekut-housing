@@ -2,61 +2,277 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Portal</title>
+<title>Landlord System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0f172a;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-color:white;
+body { font-family: Arial; background:#f4f4f4; margin:0; }
+.container { max-width:900px; margin:auto; padding:20px; }
+
+.card {
+    background:white;
+    padding:20px;
+    margin-top:20px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
-.box{
-background:white;
-color:black;
-padding:20px;
-border-radius:12px;
-width:320px;
-text-align:center;
+input, textarea, button {
+    width:100%;
+    padding:10px;
+    margin-top:10px;
 }
 
-button{
-width:100%;
-padding:12px;
-margin-top:10px;
-border:none;
-border-radius:8px;
-font-weight:bold;
-cursor:pointer;
+button {
+    background:#2c7be5;
+    color:white;
+    border:none;
+    cursor:pointer;
 }
 
-.login{background:#2563eb;color:white;}
-.signup{background:#16a34a;color:white;}
+button:hover { background:#1a5dc9; }
+
+.hidden { display:none; }
+
+.property {
+    border:1px solid #ddd;
+    padding:10px;
+    margin-top:10px;
+}
+.switch {
+    margin-top:10px;
+    cursor:pointer;
+    color:blue;
+}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-<h2>🏠 Landlord Portal</h2>
+<div class="container">
 
-<button class="login" onclick="goLogin()">Login</button>
-<button class="signup" onclick="goSignup()">Create Account</button>
+<!-- AUTH SECTION -->
+<div id="authBox" class="card">
+    <h2 id="authTitle">Login</h2>
+
+    <input type="text" id="name" placeholder="Full Name (only signup)">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="handleAuth()">Login</button>
+
+    <div class="switch" onclick="toggleMode()">
+        Don't have an account? Create one
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+    <div class="card">
+        <h2>Welcome, <span id="userName"></span></h2>
+        <button onclick="logout()" style="background:red;">Logout</button>
+    </div>
+
+    <!-- PROPERTY FORM -->
+    <div class="card">
+        <h3>Add / Edit Property</h3>
+
+        <input type="hidden" id="editIndex">
+
+        <input type="text" id="title" placeholder="Property Title">
+        <input type="text" id="location" placeholder="Location">
+        <textarea id="description" placeholder="Description"></textarea>
+
+        <button onclick="saveProperty()">Save Property</button>
+    </div>
+
+    <!-- PROPERTY LIST -->
+    <div class="card">
+        <h3>Your Properties</h3>
+        <div id="list"></div>
+    </div>
+
+</div>
+
 </div>
 
 <script>
-function goLogin(){
-window.location.href="landlord-login.html";
+
+let mode = "login"; // login or signup
+
+// ===== AUTH TOGGLE =====
+function toggleMode(){
+    mode = (mode === "login") ? "signup" : "login";
+
+    document.getElementById("authTitle").innerText =
+        mode === "login" ? "Login" : "Create Account";
+
+    document.querySelector(".switch").innerText =
+        mode === "login"
+        ? "Don't have an account? Create one"
+        : "Already have an account? Login";
 }
-function goSignup(){
-window.location.href="landlord-signup.html";
+
+// ===== STORAGE =====
+function getUsers(){
+    return JSON.parse(localStorage.getItem("users") || "[]");
 }
+function saveUsers(u){
+    localStorage.setItem("users", JSON.stringify(u));
+}
+
+function getProperties(){
+    return JSON.parse(localStorage.getItem("properties") || "[]");
+}
+function saveProperties(p){
+    localStorage.setItem("properties", JSON.stringify(p));
+}
+
+// ===== AUTH HANDLER =====
+function handleAuth(){
+
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
+    let name = document.getElementById("name").value;
+
+    let users = getUsers();
+
+    if(mode === "signup"){
+
+        if(users.find(u => u.email === email)){
+            alert("User already exists");
+            return;
+        }
+
+        users.push({name, email, password});
+        saveUsers(users);
+
+        alert("Account created. Now login.");
+        toggleMode();
+        return;
+    }
+
+    // LOGIN
+    let user = users.find(u => u.email === email && u.password === password);
+
+    if(!user){
+        alert("Invalid login");
+        return;
+    }
+
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    showDashboard();
+}
+
+// ===== DASHBOARD =====
+function showDashboard(){
+    document.getElementById("authBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    let user = JSON.parse(localStorage.getItem("currentUser"));
+    document.getElementById("userName").innerText = user.name;
+
+    render();
+}
+
+// ===== LOGOUT =====
+function logout(){
+    localStorage.removeItem("currentUser");
+    location.reload();
+}
+
+// ===== SAVE PROPERTY =====
+function saveProperty(){
+
+    let user = JSON.parse(localStorage.getItem("currentUser"));
+
+    let title = document.getElementById("title").value;
+    let location = document.getElementById("location").value;
+    let description = document.getElementById("description").value;
+    let editIndex = document.getElementById("editIndex").value;
+
+    let props = getProperties();
+
+    let data = {
+        owner: user.email,
+        title,
+        location,
+        description
+    };
+
+    if(editIndex === ""){
+        props.push(data);
+    } else {
+        props[editIndex] = data;
+        document.getElementById("editIndex").value = "";
+    }
+
+    saveProperties(props);
+    clearForm();
+    render();
+}
+
+// ===== DISPLAY =====
+function render(){
+
+    let user = JSON.parse(localStorage.getItem("currentUser"));
+    let props = getProperties();
+
+    let html = "";
+
+    props.forEach((p, i) => {
+        if(p.owner === user.email){
+
+            html += `
+                <div class="property">
+                    <b>${p.title}</b><br>
+                    ${p.location}<br>
+                    <small>${p.description}</small><br><br>
+
+                    <button onclick="edit(${i})">Edit</button>
+                    <button onclick="del(${i})" style="background:red;">Delete</button>
+                </div>
+            `;
+        }
+    });
+
+    document.getElementById("list").innerHTML = html;
+}
+
+// ===== EDIT =====
+function edit(i){
+    let props = getProperties();
+    let p = props[i];
+
+    document.getElementById("title").value = p.title;
+    document.getElementById("location").value = p.location;
+    document.getElementById("description").value = p.description;
+    document.getElementById("editIndex").value = i;
+}
+
+// ===== DELETE =====
+function del(i){
+    let props = getProperties();
+    props.splice(i,1);
+    saveProperties(props);
+    render();
+}
+
+// ===== CLEAR =====
+function clearForm(){
+    document.getElementById("title").value = "";
+    document.getElementById("location").value = "";
+    document.getElementById("description").value = "";
+}
+
+// ===== AUTO LOGIN =====
+window.onload = function(){
+    if(localStorage.getItem("currentUser")){
+        showDashboard();
+    }
+}
+
 </script>
 
 </body>
