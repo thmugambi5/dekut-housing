@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard Phase 2</title>
+<title>Admin Phase 3</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;display:flex;background:#f4f6fb;}
+body{margin:0;font-family:Arial;display:flex;background:#f5f6fb;}
 
 .sidebar{
 width:240px;
@@ -45,8 +45,8 @@ width:100%;
 background:white;
 padding:15px;
 margin:10px 0;
-border-radius:10px;
-box-shadow:0 2px 10px rgba(0,0,0,0.08);
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
 .badge{
@@ -75,8 +75,8 @@ cursor:pointer;
 
 textarea{
 width:100%;
-margin-top:5px;
 padding:6px;
+margin-top:6px;
 }
 </style>
 </head>
@@ -127,7 +127,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentRef=null;
+let currentRef = null;
 
 /* LOGIN */
 function login(){
@@ -155,7 +155,7 @@ document.getElementById("title").innerText=view.toUpperCase();
 if(currentRef) currentRef.off();
 currentRef=null;
 
-/* ALL (MERGE LIVE) */
+/* ALL VIEW (LIVE MERGE) */
 if(view==="all"){
 Promise.all([
 db.ref("pendingProperties").once("value"),
@@ -163,16 +163,14 @@ db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
 
-let data={
+let merged = {
 ...(p.val()||{}),
 ...(a.val()||{}),
 ...(r.val()||{})
 };
 
-render(data);
-
+render(merged);
 });
-
 return;
 }
 
@@ -196,10 +194,10 @@ if(!p) continue;
 html+=`
 <div class="card">
 
-<h3>${p.propertyName || "No Name"}</h3>
+<h3>${p.name || p.propertyName}</h3>
 
-<span class="badge ${p.status || "pending"}">
-${p.status || "pending"}
+<span class="badge ${p.status}">
+${p.status}
 </span>
 
 <p>📍 ${p.location || ""}</p>
@@ -217,7 +215,7 @@ html+=`
 }
 
 html+=`
-<button class="delete" onclick="removeItem('${id}','${p.status}')">Delete</button>
+<button class="delete" onclick="remove('${id}')">DELETE</button>
 
 </div>
 `;
@@ -226,7 +224,7 @@ html+=`
 list.innerHTML=html;
 }
 
-/* APPROVE */
+/* APPROVE (MOVE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
@@ -244,7 +242,7 @@ db.ref().update(updates);
 });
 }
 
-/* REJECT */
+/* REJECT (MOVE) */
 function reject(id){
 
 let reason=document.getElementById("r_"+id).value||"";
@@ -265,10 +263,12 @@ db.ref().update(updates);
 });
 }
 
-/* DELETE */
-function removeItem(id,status){
+/* HARD DELETE (ALL NODES) */
+function remove(id){
 
-db.ref(status+"Properties/"+id).remove();
+db.ref("pendingProperties/"+id).remove();
+db.ref("approvedProperties/"+id).remove();
+db.ref("rejectedProperties/"+id).remove();
 
 }
 
