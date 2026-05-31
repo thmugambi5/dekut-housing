@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord System - Phase 1</title>
+<title>Landlord System - Phase 1 Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -73,7 +73,7 @@ font-size:12px;
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 
-<input id="bizName" placeholder="Business / Property Name">
+<input id="bizName" placeholder="Business Name">
 <input id="username" placeholder="Username">
 
 <button onclick="signup()">Signup</button>
@@ -88,7 +88,7 @@ font-size:12px;
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
-<!-- PROPERTY FORM -->
+<!-- FORM -->
 <div class="card">
 <h3>Upload Property</h3>
 
@@ -103,41 +103,42 @@ font-size:12px;
 <option>2 Bedroom</option>
 </select>
 
-<input id="location" placeholder="Area (e.g Bomas, Chania, Embassy)">
+<input id="location" placeholder="Area">
 <input id="rent" type="number" placeholder="Rent">
 <input id="deposit" type="number" placeholder="Deposit">
 <input id="phone" placeholder="Phone (254...)">
 
 <textarea id="desc" placeholder="Description"></textarea>
 
-<h4>Amenities (Included in Rent)</h4>
+<h4>Amenities</h4>
 <label><input type="checkbox" value="Water"> Water</label>
 <label><input type="checkbox" value="WiFi"> WiFi</label>
 <label><input type="checkbox" value="Electricity"> Electricity</label>
 <label><input type="checkbox" value="Parking"> Parking</label>
 <label><input type="checkbox" value="Security"> Security</label>
 
-<input id="extraAmenities" placeholder="Other amenities (comma separated)">
-
-<button onclick="getLocation()">📍 Capture GPS Location</button>
+<input id="extraAmenities" placeholder="Other amenities">
 
 <h4>Images (Max 10)</h4>
-<input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
+<input type="file" id="imagesInput" multiple onchange="convertImages()">
 <div id="preview"></div>
 
+<button onclick="getLocation()">📍 Capture GPS</button>
 <button onclick="submitProperty()">Submit Property</button>
 </div>
 
-<!-- PROPERTY LIST -->
+<!-- LIST -->
 <div class="card">
 <h3>My Properties</h3>
 <div id="list"></div>
 </div>
 
 </div>
+
 </div>
 
 <script>
+
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -167,9 +168,11 @@ load();
 }
 });
 
+/* FUNCTIONS */
 function signup(){
 auth.createUserWithEmailAndPassword(email.value,password.value)
-.then(()=>alert("Account created"));
+.then(()=>alert("Account created"))
+.catch(e=>alert(e.message));
 }
 
 function login(){
@@ -216,7 +219,7 @@ reader.readAsDataURL(f);
 function submitProperty(){
 
 if(!propertyName.value || !propertyType.value){
-alert("Property Name and Type are required");
+alert("Name and Type required");
 return;
 }
 
@@ -233,12 +236,11 @@ if(extraAmenities.value){
 amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
 }
 
-/* DISTANCE PLACEHOLDER (for later phase) */
 let data={
 ownerId:user.uid,
 ownerEmail:user.email,
-businessName:bizName.value || "",
-username:username.value || "",
+businessName:bizName.value,
+username:username.value,
 
 propertyName:propertyName.value,
 propertyType:propertyType.value,
@@ -254,17 +256,16 @@ images:images,
 lat:lat,
 lng:lng,
 
-distanceFromDeKUT:null,
-
 status:"pending",
 createdAt:Date.now()
 };
 
-/* SAVE ONLY TO PENDING */
-let ref=db.ref("pendingProperties").push(data);
+db.ref("pendingProperties").push(data)
+.then(()=>{
 alert("Submitted for approval");
 clearForm();
 load();
+});
 }
 
 /* LOAD */
@@ -279,46 +280,15 @@ if(p.ownerId!==user.uid) continue;
 
 html+=`
 <div class="card">
-
 <h3>${p.propertyName}</h3>
 <span class="badge pending">${p.status}</span><br>
-
-<b>${p.propertyType}</b><br>
 📍 ${p.location}<br>
 💰 ${p.rent}<br>
-
-<div class="row">
-<button onclick="edit('${id}')">Edit</button>
-<button onclick="del('${id}')">Delete</button>
-</div>
-
 </div>`;
 }
 
 list.innerHTML=html;
 });
-
-/* EDIT */
-window.edit=function(id){
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let p=s.val();
-if(!p)return;
-
-propertyName.value=p.propertyName;
-propertyType.value=p.propertyType;
-location.value=p.location;
-rent.value=p.rent;
-deposit.value=p.deposit;
-phone.value=p.phone;
-desc.value=p.description;
-
-editId=id;
-});
-}
-
-/* DELETE */
-window.del=function(id){
-db.ref("pendingProperties/"+id).remove();
 }
 
 /* CLEAR */
@@ -335,8 +305,16 @@ images=[];
 preview.innerHTML="";
 lat=null;
 lng=null;
-editId=null;
 }
+
+/* 🔥 FIX: MAKE FUNCTIONS GLOBAL */
+window.signup = signup;
+window.login = login;
+window.logout = logout;
+window.submitProperty = submitProperty;
+window.getLocation = getLocation;
+window.convertImages = convertImages;
+
 </script>
 
 </body>
