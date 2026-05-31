@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard - Production v1</title>
+<title>Landlord Dashboard v2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -40,8 +40,15 @@ button:hover{background:#1d4ed8;}
 
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
 gap:10px;
+}
+
+img{
+width:100%;
+height:120px;
+object-fit:cover;
+border-radius:8px;
 }
 
 .badge{
@@ -55,15 +62,7 @@ font-size:12px;
 .approved{background:green;}
 .rejected{background:red;}
 
-img{
-width:100%;
-height:120px;
-object-fit:cover;
-border-radius:8px;
-}
-
 .hidden{display:none;}
-.small{font-size:12px;color:gray;}
 </style>
 </head>
 
@@ -92,19 +91,20 @@ border-radius:8px;
 <div class="card">
 <h3>Upload Property</h3>
 
-<input id="name" placeholder="Property Name (required)">
+<input id="name" placeholder="Property Name" required>
+
 <select id="type">
 <option>Single Room</option>
-<option>Shared Single Room</option>
+<option>Shared Room (2 pax)</option>
 <option>Bedsitter</option>
 <option>1 Bedroom</option>
 <option>2 Bedroom</option>
 </select>
 
-<input id="location" placeholder="Area (e.g. Bomas, Chania)" required>
+<input id="location" placeholder="Area (Bomas, Chania, etc)" required>
 <input id="rent" type="number" placeholder="Rent">
 <input id="deposit" type="number" placeholder="Deposit">
-<input id="phone" placeholder="2547xxxxxxx">
+<input id="phone" placeholder="2547xxxxxxxx">
 
 <textarea id="desc" placeholder="Description"></textarea>
 
@@ -127,7 +127,7 @@ border-radius:8px;
 
 <!-- LIST -->
 <div class="card">
-<h3>My Properties</h3>
+<h3>My Property Lifecycle</h3>
 <div id="list"></div>
 </div>
 
@@ -152,7 +152,6 @@ const db = firebase.database();
 let user=null;
 let images=[];
 let lat=null,lng=null;
-let editingId=null;
 
 /* AUTH */
 auth.onAuthStateChanged(u=>{
@@ -176,33 +175,26 @@ location.reload();
 
 /* GPS */
 function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
+navigator.geolocation.getCurrentPosition(p=>{
+lat=p.coords.latitude;
+lng=p.coords.longitude;
 alert("GPS captured");
 });
 }
 
 /* IMAGES */
 function convertImages(){
-let files = imagesInput.files;
+let files=imagesInput.files;
+if(files.length>10){alert("Max 10 images");return;}
 images=[];
-
 preview.innerHTML="";
-
-if(files.length > 10){
-alert("Max 10 images allowed");
-return;
-}
-
 for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
+let r=new FileReader();
+r.onload=e=>{
 images.push(e.target.result);
-
-preview.innerHTML += `<img src="${e.target.result}">`;
+preview.innerHTML+=`<img src="${e.target.result}">`;
 };
-reader.readAsDataURL(f);
+r.readAsDataURL(f);
 }
 }
 
@@ -210,7 +202,7 @@ reader.readAsDataURL(f);
 function submit(){
 
 if(!name.value || !location.value){
-alert("Name and location required");
+alert("Name and Location required");
 return;
 }
 
@@ -222,18 +214,11 @@ if(extra.value){
 amenities.push(...extra.value.split(","));
 }
 
-/* DEKUT DIST */
-let dekut={lat:-0.3956,lng:36.9626};
-
-let dist = (lat && lng) ?
-(Math.sqrt((lat-dekut.lat)**2 + (lng-dekut.lng)**2)*111).toFixed(2)
-: null;
-
 let data={
 ownerId:user.uid,
-name:name.value,
+name:name.value.trim(),
 type:type.value,
-location:location.value,
+location:location.value.trim(),
 rent:Number(rent.value||0),
 deposit:Number(deposit.value||0),
 phone:phone.value,
@@ -242,29 +227,33 @@ amenities,
 images,
 lat,
 lng,
-distanceFromDekut:dist,
 status:"pending",
 createdAt:Date.now()
 };
 
-/* SINGLE WRITE ONLY */
 db.ref("pendingProperties").push(data).then(()=>{
 clear();
 load();
-alert("Submitted for approval");
 });
 }
 
-/* LOAD OWN PROPERTIES */
+/* LOAD ALL STATES */
 function load(){
 
-db.ref("pendingProperties").on("value",snap=>{
+db.ref().on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
-for(let id in data){
-let p=data[id];
-if(p.ownerId !== user.uid) continue;
+/* pending + approved + rejected for this landlord */
+let all = {
+...data.pendingProperties,
+...data.approvedProperties,
+...data.rejectedProperties
+};
+
+for(let id in all){
+let p=all[id];
+if(!p || p.ownerId!==user.uid) continue;
 
 html+=`
 <div class="card">
@@ -281,20 +270,14 @@ ${p.status==="rejected" ? `<p style="color:red;">Reason: ${p.reason||"None"}</p>
 ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 
-<button onclick="edit('${id}',${JSON.stringify(p)})">Edit</button>
-<button onclick="del('${id}')">Delete</button>
-
 </div>`;
 }
 
 list.innerHTML=html;
 });
-}
 
 /* EDIT */
-function edit(id,p){
-editingId=id;
-
+window.edit=function(id,p){
 name.value=p.name;
 location.value=p.location;
 rent.value=p.rent;
@@ -303,9 +286,11 @@ phone.value=p.phone;
 desc.value=p.description;
 }
 
-/* DELETE */
-function del(id){
+/* DELETE (SOFT) */
+window.del=function(id){
 db.ref("pendingProperties/"+id).remove();
+}
+
 }
 
 /* CLEAR */
@@ -321,7 +306,6 @@ images=[];
 preview.innerHTML="";
 lat=null;
 lng=null;
-editingId=null;
 }
 
 </script>
