@@ -45,8 +45,6 @@ cursor:pointer;
 
 .menuBtn:hover{background:#333;}
 
-.active{background:#2563eb !important;}
-
 /* CONTENT */
 .content{
 margin-left:260px;
@@ -63,7 +61,6 @@ border-radius:10px;
 box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* BADGES */
 .badge{
 padding:4px 8px;
 border-radius:6px;
@@ -75,7 +72,6 @@ font-size:12px;
 .approved{background:green;}
 .rejected{background:red;}
 
-/* IMAGES */
 img{
 width:70px;
 height:60px;
@@ -84,7 +80,6 @@ margin:3px;
 border-radius:5px;
 }
 
-/* TEXTAREA */
 textarea{
 width:100%;
 padding:6px;
@@ -93,35 +88,64 @@ border-radius:6px;
 border:1px solid #ccc;
 }
 
-/* MOBILE */
-@media(max-width:768px){
-.sidebar{
-transform:translateX(-100%);
-transition:0.3s;
-position:fixed;
-z-index:1000;
+/* LOGIN SCREEN */
+.loginBox{
+max-width:350px;
+margin:100px auto;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 2px 10px rgba(0,0,0,0.1);
+text-align:center;
 }
 
-.sidebar.open{transform:translateX(0);}
+input{
+width:100%;
+padding:10px;
+margin:8px 0;
+}
 
-.content{margin-left:0;}
-
-.hamburger{
-display:block;
+button{
+padding:10px;
+width:100%;
 background:#111;
 color:white;
-padding:10px;
 border:none;
-width:100%;
+border-radius:6px;
+cursor:pointer;
 }
+
+.error{
+color:red;
+font-size:13px;
 }
+
+.hidden{display:none;}
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div class="sidebar" id="sidebar">
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="loginBox">
+<h2>Admin Login</h2>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p class="error" id="err"></p>
+</div>
+
+<!-- ACCESS DENIED -->
+<div id="denied" class="loginBox hidden">
+<h2>Access Denied</h2>
+<p>Only admin@dekut.com is allowed.</p>
+<button onclick="logout()">Retry</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+<div class="sidebar">
 <h2>Admin</h2>
 
 <button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
@@ -134,19 +158,15 @@ Logout
 </button>
 </div>
 
-<!-- CONTENT -->
 <div class="content">
-
-<button class="hamburger" onclick="toggleMenu()">☰ Menu</button>
-
 <h2 id="title">Admin Panel</h2>
-<div id="list">Checking admin access...</div>
+<div id="list"></div>
+</div>
 
 </div>
 
 <script>
 
-/* FIREBASE */
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -159,41 +179,64 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentView="pending";
+let currentUser = null;
 
-/* 🔐 ADMIN PROTECTION */
+/* LOGIN */
+function login(){
+let email = document.getElementById("email").value;
+let pass = document.getElementById("password").value;
+
+auth.signInWithEmailAndPassword(email,pass)
+.catch(e=>{
+document.getElementById("err").innerText = e.message;
+});
+}
+
+/* AUTH STATE */
 auth.onAuthStateChanged(user=>{
 if(!user){
-window.location.href="login.html";
+showLogin();
 return;
 }
 
 if(user.email !== "admin@dekut.com"){
-alert("Access denied: Admin only");
+showDenied();
 auth.signOut();
-window.location.href="login.html";
 return;
 }
 
-// ADMIN OK
+currentUser = user;
+showDashboard();
 loadView("pending");
 });
 
-/* TOGGLE */
-function toggleMenu(){
-document.getElementById("sidebar").classList.toggle("open");
+/* UI STATES */
+function showLogin(){
+document.getElementById("loginScreen").classList.remove("hidden");
+document.getElementById("dashboard").classList.add("hidden");
+document.getElementById("denied").classList.add("hidden");
 }
 
-/* VIEW SWITCH */
+function showDenied(){
+document.getElementById("denied").classList.remove("hidden");
+document.getElementById("loginScreen").classList.add("hidden");
+document.getElementById("dashboard").classList.add("hidden");
+}
+
+function showDashboard(){
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("loginScreen").classList.add("hidden");
+document.getElementById("denied").classList.add("hidden");
+}
+
+/* VIEW */
 function loadView(view){
-currentView=view;
+document.getElementById("title").innerText=view.toUpperCase()+" PROPERTIES";
 
 if(view==="pending") loadPending();
 if(view==="approved") loadApproved();
 if(view==="rejected") loadRejected();
 if(view==="all") loadAll();
-
-document.getElementById("title").innerText=view.toUpperCase()+" PROPERTIES";
 }
 
 /* LOADERS */
@@ -217,7 +260,7 @@ renderRejected(snap.val()||{});
 
 function loadAll(){
 db.ref("allProperties").on("value",snap=>{
-render(snap.val()||{},"all",true);
+render(snap.val()||{},"all");
 });
 }
 
@@ -247,7 +290,6 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 if(type==="pending"){
 html+=`
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
-
 <button onclick="approve('${id}')">Approve</button>
 <button onclick="reject('${id}')">Reject</button>
 <button onclick="remove('${id}','pendingProperties')">Delete</button>
@@ -260,19 +302,14 @@ html+=`
 `;
 }
 
-if(type==="all"){
-html+=`<small>Master record</small>`;
-}
-
 html+=`</div>`;
 }
 
-document.getElementById("list").innerHTML=html;
+document.getElementById("list").innerHTML = html;
 }
 
-/* REJECT */
+/* REJECTED */
 function renderRejected(data){
-
 let html="";
 
 for(let id in data){
@@ -315,7 +352,6 @@ db.ref("allProperties/"+id).set(data);
 }
 
 function reject(id){
-
 let reason=document.getElementById("r_"+id).value||"";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
@@ -338,9 +374,6 @@ function logout(){
 auth.signOut();
 location.reload();
 }
-
-/* DEFAULT */
-loadView("pending");
 
 </script>
 
