@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord System</title>
+<title>Landlord Full System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -11,25 +11,66 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#f4f6fb;}
-.container{max-width:900px;margin:auto;padding:20px;}
-.card{background:white;padding:15px;margin-top:15px;border-radius:12px;}
+.container{max-width:950px;margin:auto;padding:20px;}
 
-input,select,textarea,button{
-width:100%;padding:10px;margin-top:10px;
-border-radius:8px;border:1px solid #ddd;
+.card{
+background:white;
+padding:15px;
+margin-top:15px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-button{background:#2563eb;color:white;border:none;cursor:pointer;}
+input,select,textarea,button{
+width:100%;
+padding:10px;
+margin-top:8px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+button{
+background:#2563eb;
+color:white;
+border:none;
+cursor:pointer;
+}
+
 button:hover{background:#1d4ed8;}
 
 .hidden{display:none;}
 
-.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
+.badge{
+display:inline-block;
+padding:4px 8px;
+border-radius:6px;
+color:white;
+font-size:12px;
+}
+
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
 
-img.preview{width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6px;}
+.preview{
+width:90px;
+height:70px;
+object-fit:cover;
+margin:5px;
+border-radius:6px;
+}
+
+.row{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.smallBtn{
+flex:1;
+padding:8px;
+font-size:12px;
+}
 </style>
 </head>
 
@@ -37,21 +78,25 @@ img.preview{width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6p
 
 <div class="container">
 
+<!-- AUTH -->
 <div id="authBox" class="card">
 <h2>Landlord Login</h2>
 <input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
+
+<button onclick="signup()">Signup</button>
 <button onclick="login()">Login</button>
-<button onclick="signup()" style="background:green;">Signup</button>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="card">
-<h2>Welcome <span id="user"></span></h2>
+<h2>Welcome <span id="userEmail"></span></h2>
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
+<!-- FORM -->
 <div class="card">
 <h3>Upload Property</h3>
 
@@ -64,18 +109,37 @@ img.preview{width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6p
 
 <input id="location" placeholder="Location">
 <input id="rent" type="number" placeholder="Rent">
+<input id="deposit" type="number" placeholder="Deposit">
 <input id="phone" placeholder="Phone (254...)">
+
 <textarea id="desc" placeholder="Description"></textarea>
 
-<input type="file" id="images" multiple onchange="convertImages()">
+<h4>Amenities</h4>
+
+<label><input type="checkbox" value="Water"> Water</label>
+<label><input type="checkbox" value="Electricity"> Electricity</label>
+<label><input type="checkbox" value="WiFi"> WiFi</label>
+<label><input type="checkbox" value="Parking"> Parking</label>
+<label><input type="checkbox" value="Security"> Security</label>
+
+<input id="extraAmenities" placeholder="Other amenities (comma separated)">
+
+<br>
+<button onclick="getLocation()">📍 Capture Location</button>
+
+<h4>Images</h4>
+<input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
 <div id="preview"></div>
 
-<button onclick="submitProperty()">Submit</button>
+<button onclick="submitProperty()">Submit Property</button>
 </div>
 
+<!-- LIST -->
 <div class="card">
-<h3>Your Properties</h3>
+<h3>My Properties</h3>
 <div id="list"></div>
+</div>
+
 </div>
 
 </div>
@@ -94,67 +158,154 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
+const DEKUT_LAT = -0.3976;
+const DEKUT_LNG = 36.9597;
+
 let currentUser=null;
-let images=[];
+let imagesBase64=[];
+let lat=null;
+let lng=null;
+let editingId=null;
+
+/* AUTH */
+auth.onAuthStateChanged(user=>{
+if(user){
+currentUser=user;
+show();
+}
+});
 
 function signup(){
 auth.createUserWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user; show();});
+.then(r=>{currentUser=r.user;show();});
 }
 
 function login(){
 auth.signInWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user; show();});
+.then(r=>{currentUser=r.user;show();});
+}
+
+function logout(){
+auth.signOut();
+location.reload();
 }
 
 function show(){
 authBox.classList.add("hidden");
 dashboard.classList.remove("hidden");
-user.innerText=currentUser.email;
+userEmail.innerText=currentUser.email;
 load();
 }
 
-function convertImages(){
-images=[];
-preview.innerHTML="";
-for(let f of images.files){}
+/* LOCATION */
+function getLocation(){
+navigator.geolocation.getCurrentPosition(pos=>{
+lat=pos.coords.latitude;
+lng=pos.coords.longitude;
+alert("Location captured");
+});
 }
 
+/* IMAGES */
+function convertImages(){
+let files=images.files;
+imagesBase64=[];
+preview.innerHTML="";
+
+for(let f of files){
+let reader=new FileReader();
+reader.onload=e=>{
+imagesBase64.push(e.target.result);
+preview.innerHTML+=`<img class="preview" src="${e.target.result}">`;
+};
+reader.readAsDataURL(f);
+}
+}
+
+/* SUBMIT */
 function submitProperty(){
 
-let id = db.ref("properties").push().key;
+let phoneVal=phone.value;
 
-db.ref("properties/"+id).set({
-owner:currentUser.uid,
+if(!phoneVal.startsWith("254")){
+alert("Phone must start with 254");
+return;
+}
+
+let amenities=[];
+document.querySelectorAll("input[type=checkbox]:checked")
+.forEach(c=>amenities.push(c.value));
+
+if(extraAmenities.value){
+amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
+}
+
+let data={
+ownerUid:currentUser.uid,
+ownerEmail:currentUser.email,
 type:type.value,
 location:location.value,
 rent:rent.value,
-phone:phone.value,
-desc:desc.value,
-images:images,
+deposit:deposit.value,
+phone:phoneVal,
+description:desc.value,
+amenities:amenities,
+images:imagesBase64,
+lat:lat,
+lng:lng,
 status:"pending",
 createdAt:Date.now()
-});
+};
 
-alert("Submitted");
+if(editingId){
+
+// UPDATE MODE
+db.ref("allProperties/"+editingId).update(data);
+db.ref("pendingProperties/"+editingId).update(data);
+
+editingId=null;
+alert("Updated successfully");
+
+}else{
+
+// NEW PROPERTY
+let ref=db.ref("pendingProperties").push(data);
+db.ref("allProperties/"+ref.key).set(data);
+
+alert("Submitted for approval");
+}
+
+clearForm();
 load();
 }
 
+/* LOAD */
 function load(){
-db.ref("properties").on("value",snap=>{
-let d=snap.val()||{};
+db.ref("allProperties").on("value",snap=>{
+let data=snap.val()||{};
 let html="";
 
-for(let id in d){
-let p=d[id];
-if(p.owner!==currentUser.uid) continue;
+for(let id in data){
+let p=data[id];
+if(p.ownerUid!==currentUser.uid) continue;
 
-html += `
+html+=`
 <div class="card">
+
 <b>${p.type}</b>
 <span class="badge ${p.status}">${p.status}</span><br>
+
 📍 ${p.location}<br>
 💰 ${p.rent}<br>
+📞 ${p.phone}<br>
+
+<div class="row">
+
+<button class="smallBtn" onclick="edit('${id}',${JSON.stringify(p)})">Edit</button>
+<button class="smallBtn" onclick="del('${id}')">Delete</button>
+
+</div>
+
 </div>`;
 }
 
@@ -162,11 +313,40 @@ list.innerHTML=html;
 });
 }
 
-auth.onAuthStateChanged(u=>{
-if(u){currentUser=u;show();}
-});
+/* EDIT */
+function edit(id,p){
+editingId=id;
 
-function logout(){auth.signOut();location.reload();}
+type.value=p.type;
+location.value=p.location;
+rent.value=p.rent;
+deposit.value=p.deposit;
+phone.value=p.phone;
+desc.value=p.description;
+}
+
+/* DELETE */
+function del(id){
+db.ref("pendingProperties/"+id).remove();
+db.ref("allProperties/"+id).remove();
+}
+
+/* CLEAR */
+function clearForm(){
+type.value="";
+location.value="";
+rent.value="";
+deposit.value="";
+phone.value="";
+desc.value="";
+extraAmenities.value="";
+imagesBase64=[];
+preview.innerHTML="";
+lat=null;
+lng=null;
+editingId=null;
+}
+
 </script>
 
 </body>
