@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard - Final Stable</title>
+<title>Admin Dashboard Phase 2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -72,6 +72,12 @@ cursor:pointer;
 .approve{background:green;color:white;}
 .reject{background:orange;color:white;}
 .delete{background:red;color:white;}
+
+textarea{
+width:100%;
+margin-top:5px;
+padding:6px;
+}
 </style>
 </head>
 
@@ -131,7 +137,7 @@ auth.signInWithEmailAndPassword(email.value,password.value)
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
-if(user){
+if(user && user.email==="admin@dekut.com"){
 loginBox.classList.add("hidden");
 dashboard.classList.remove("hidden");
 loadView("pending");
@@ -141,30 +147,29 @@ dashboard.classList.add("hidden");
 }
 });
 
-/* LOAD VIEWS */
+/* VIEW SWITCH */
 function loadView(view){
 
-document.getElementById("title").innerText = view.toUpperCase();
+document.getElementById("title").innerText=view.toUpperCase();
 
 if(currentRef) currentRef.off();
 currentRef=null;
 
-/* ALL VIEW (MERGED SAFE) */
+/* ALL (MERGE LIVE) */
 if(view==="all"){
-
 Promise.all([
 db.ref("pendingProperties").once("value"),
 db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
 
-let data = {
+let data={
 ...(p.val()||{}),
 ...(a.val()||{}),
 ...(r.val()||{})
 };
 
-render(data,true);
+render(data);
 
 });
 
@@ -172,15 +177,15 @@ return;
 }
 
 /* SINGLE NODE */
-currentRef = db.ref(view+"Properties");
+currentRef=db.ref(view+"Properties");
 
 currentRef.on("value",snap=>{
-render(snap.val()||{}, false, view);
+render(snap.val()||{});
 });
 }
 
 /* RENDER */
-function render(data,isAll,view){
+function render(data){
 
 let html="";
 
@@ -193,24 +198,26 @@ html+=`
 
 <h3>${p.propertyName || "No Name"}</h3>
 
-<span class="badge ${p.status || view}">
-${p.status || view}
+<span class="badge ${p.status || "pending"}">
+${p.status || "pending"}
 </span>
 
 <p>📍 ${p.location || ""}</p>
 <p>💰 ${p.rent || ""}</p>
 <p>📞 ${p.phone || ""}</p>
+
 `;
 
 if(p.status==="pending"){
 html+=`
+<textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 <button class="approve" onclick="approve('${id}')">Approve</button>
 <button class="reject" onclick="reject('${id}')">Reject</button>
 `;
 }
 
 html+=`
-<button class="delete" onclick="removeItem('${id}','${p.status || view}')">Delete</button>
+<button class="delete" onclick="removeItem('${id}','${p.status}')">Delete</button>
 
 </div>
 `;
@@ -219,7 +226,7 @@ html+=`
 list.innerHTML=html;
 }
 
-/* APPROVE (MOVE) */
+/* APPROVE */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
@@ -229,7 +236,7 @@ if(!data) return;
 data.status="approved";
 data.updatedAt=Date.now();
 
-const updates={};
+let updates={};
 updates["approvedProperties/"+id]=data;
 updates["pendingProperties/"+id]=null;
 
@@ -237,20 +244,20 @@ db.ref().update(updates);
 });
 }
 
-/* REJECT (MOVE) */
+/* REJECT */
 function reject(id){
 
-let reason = prompt("Enter rejection reason:");
+let reason=document.getElementById("r_"+id).value||"";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
 let data=s.val();
 if(!data) return;
 
 data.status="rejected";
-data.rejectionReason=reason || "";
+data.rejectionReason=reason;
 data.updatedAt=Date.now();
 
-const updates={};
+let updates={};
 updates["rejectedProperties/"+id]=data;
 updates["pendingProperties/"+id]=null;
 
@@ -259,8 +266,10 @@ db.ref().update(updates);
 }
 
 /* DELETE */
-function removeItem(id,node){
-db.ref(node+"Properties/"+id).remove();
+function removeItem(id,status){
+
+db.ref(status+"Properties/"+id).remove();
+
 }
 
 /* LOGOUT */
