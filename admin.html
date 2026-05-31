@@ -145,190 +145,94 @@ Logout
 
 <h2 id="title">Pending Properties</h2>
 <div id="list"></div>
+/* ================= APPROVE ================= */
+async function approve(id){
+try{
+let snap = await db.ref("pendingProperties/"+id).once("value");
+if(!snap.exists()) return;
 
-</div>
+let data = snap.val();
+data.status = "approved";
+data.approvedAt = Date.now();
 
-<script>
+/* move to approved */
+await db.ref("approvedProperties/"+id).set(data);
 
-/* FIREBASE */
-const firebaseConfig = {
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing",
-storageBucket:"dekut-housing.appspot.com",
-messagingSenderId:"784034754945",
-appId:"1:784034754945:web:198f5e3cf47777ab97f880"
-};
+/* also keep in master */
+await db.ref("allProperties/"+id).set(data);
 
-firebase.initializeApp(firebaseConfig);
+/* remove from pending */
+await db.ref("pendingProperties/"+id).remove();
 
-const auth = firebase.auth();
-const db = firebase.database();
+alert("Approved successfully");
 
-let currentView = "pending";
-
-/* SIDEBAR TOGGLE (MOBILE) */
-function toggleMenu(){
-document.getElementById("sidebar").classList.toggle("open");
+}catch(e){
+alert(e.message);
+}
 }
 
-/* LOAD VIEW */
-function loadView(view){
-currentView = view;
+/* ================= REJECT ================= */
+async function reject(id){
+try{
+let reason = document.getElementById("r_"+id)?.value || "";
 
-let titleMap = {
-pending:"Pending Properties",
-approved:"Approved Properties",
-rejected:"Rejected Properties",
-all:"All Properties"
-};
+let snap = await db.ref("pendingProperties/"+id).once("value");
+if(!snap.exists()) return;
 
-document.getElementById("title").innerText = titleMap[view];
+let data = snap.val();
+data.status = "rejected";
+data.rejectionReason = reason;
+data.rejectedAt = Date.now();
 
-if(view === "pending") loadPending();
-if(view === "approved") loadApproved();
-if(view === "rejected") loadRejected();
-if(view === "all") loadAll();
+/* move to rejected */
+await db.ref("rejectedProperties/"+id).set(data);
+
+/* keep in master */
+await db.ref("allProperties/"+id).set(data);
+
+/* remove from pending */
+await db.ref("pendingProperties/"+id).remove();
+
+alert("Rejected successfully");
+
+}catch(e){
+alert(e.message);
+}
 }
 
-/* ================= LOAD FUNCTIONS ================= */
-
-function loadPending(){
-db.ref("pendingProperties").on("value",snap=>{
-renderCards(snap.val()||{}, "pending");
-});
-}
-
-function loadApproved(){
-db.ref("approvedProperties").on("value",snap=>{
-renderCards(snap.val()||{}, "approved");
-});
-}
-
-function loadRejected(){
-db.ref("rejectedProperties").on("value",snap=>{
-renderRejected(snap.val()||{});
-});
-}
-
-function loadAll(){
-db.ref("allProperties").on("value",snap=>{
-renderCards(snap.val()||{}, "all", true);
-});
-}
-
-/* ================= RENDER ================= */
-
-function renderCards(data,type,isReadOnly=false){
-let html="";
-
-for(let id in data){
-let p=data[id];
-
-html += `
-<div class="card">
-
-<span class="badge ${type}">${type}</span><br>
-
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-💰 ${p.rent||""}<br>
-📞 ${p.phone||""}<br>
-
-<div>${(p.images||[]).map(i=>`<img src="${i}">`).join("")}</div>
-`;
-
-if(type==="pending"){
-html += `
-<textarea id="r_${id}" placeholder="Rejection reason..."></textarea>
-<button onclick="approve('${id}')">Approve</button>
-<button onclick="reject('${id}')">Reject</button>
-<button onclick="remove('${id}','pending')">Delete</button>
-`;
-}
-
-if(type==="approved"){
-html += `<button onclick="remove('${id}','approved')">Delete</button>`;
-}
-
-if(type==="all"){
-html += `<small>Master record</small>`;
-}
-
-html += `</div>`;
-}
-
-document.getElementById("list").innerHTML = html;
-}
-
-/* REJECT RENDER */
-function renderRejected(data){
-let html="";
-
-for(let id in data){
-let p=data[id];
-
-html += `
-<div class="card">
-
-<span class="badge rejected">rejected</span><br>
-
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-
-<p><b>Reason:</b> ${p.rejectionReason||""}</p>
-
-<div>${(p.images||[]).map(i=>`<img src="${i}">`).join("")}</div>
-
-<button onclick="remove('${id}','rejected')">Delete</button>
-
-</div>
-`;
-}
-
-document.getElementById("list").innerHTML = html;
-}
-
-/* ================= ACTIONS ================= */
-
-function approve(id){
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
-data.status="approved";
-
-db.ref("approvedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
-db.ref("allProperties/"+id).set(data);
-});
-}
-
-function reject(id){
-let reason=document.getElementById("r_"+id).value||"";
-
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
-data.status="rejected";
-data.rejectionReason=reason;
-
-db.ref("rejectedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
-db.ref("allProperties/"+id).set(data);
-});
-}
-
+/* ================= DELETE ================= */
 function remove(id,node){
+if(confirm("Delete this property permanently?")){
 db.ref(node+"/"+id).remove();
 }
-
-/* AUTH SIMPLE LOGOUT */
-function logout(){
-firebase.auth().signOut();
-location.reload();
 }
 
-/* DEFAULT */
+/* ================= MOBILE SIDEBAR CLOSE ON CLICK ================= */
+document.addEventListener("click",(e)=>{
+const sidebar = document.getElementById("sidebar");
+if(window.innerWidth <= 768 && sidebar.classList.contains("open")){
+if(!sidebar.contains(e.target)){
+sidebar.classList.remove("open");
+}
+}
+});
+
+/* ================= ACTIVE MENU HIGHLIGHT ================= */
+function setActive(btn){
+document.querySelectorAll(".menuBtn").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
+}
+
+/* hook active state */
+document.querySelectorAll(".menuBtn").forEach(btn=>{
+btn.addEventListener("click",()=>setActive(btn));
+});
+
+/* ================= SAFE INIT ================= */
+function init(){
 loadView("pending");
+}
+init();
 
 </script>
 
