@@ -63,7 +63,7 @@ border-radius:10px;
 box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* BADGE */
+/* BADGES */
 .badge{
 padding:4px 8px;
 border-radius:6px;
@@ -84,7 +84,7 @@ margin:3px;
 border-radius:5px;
 }
 
-/* INPUTS */
+/* TEXTAREA */
 textarea{
 width:100%;
 padding:6px;
@@ -140,7 +140,7 @@ Logout
 <button class="hamburger" onclick="toggleMenu()">☰ Menu</button>
 
 <h2 id="title">Admin Panel</h2>
-<div id="list"></div>
+<div id="list">Checking admin access...</div>
 
 </div>
 
@@ -161,16 +161,27 @@ const db = firebase.database();
 
 let currentView="pending";
 
-/* AUTH PROTECTION */
+/* 🔐 ADMIN PROTECTION */
 auth.onAuthStateChanged(user=>{
 if(!user){
 window.location.href="login.html";
+return;
 }
+
+if(user.email !== "admin@dekut.com"){
+alert("Access denied: Admin only");
+auth.signOut();
+window.location.href="login.html";
+return;
+}
+
+// ADMIN OK
+loadView("pending");
 });
 
 /* TOGGLE */
 function toggleMenu(){
-sidebar.classList.toggle("open");
+document.getElementById("sidebar").classList.toggle("open");
 }
 
 /* VIEW SWITCH */
@@ -211,7 +222,7 @@ render(snap.val()||{},"all",true);
 }
 
 /* RENDER */
-function render(data,type,isReadOnly=false){
+function render(data,type){
 
 let html="";
 
@@ -256,10 +267,10 @@ html+=`<small>Master record</small>`;
 html+=`</div>`;
 }
 
-list.innerHTML=html;
+document.getElementById("list").innerHTML=html;
 }
 
-/* REJECT VIEW */
+/* REJECT */
 function renderRejected(data){
 
 let html="";
@@ -287,7 +298,7 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 `;
 }
 
-list.innerHTML=html;
+document.getElementById("list").innerHTML=html;
 }
 
 /* ACTIONS */
