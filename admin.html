@@ -22,38 +22,33 @@ body{margin:0;font-family:Arial;display:flex;background:#f5f7fb;}
 .rejected{background:red;}
 img{width:70px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
 textarea{width:100%;padding:6px;margin-top:5px;border-radius:6px;border:1px solid #ccc;}
-.loginBox{max-width:350px;margin:100px auto;background:white;padding:20px;border-radius:10px;text-align:center;}
-input{width:100%;padding:10px;margin:8px 0;}
-button{padding:10px;width:100%;background:#111;color:white;border:none;border-radius:6px;cursor:pointer;}
 .hidden{display:none;}
-.error{color:red;font-size:13px;}
 </style>
 </head>
 
 <body>
 
-<div id="loginScreen" class="loginBox">
+<div id="loginBox" class="card" style="margin:auto;max-width:350px;">
 <h2>Admin Login</h2>
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+<input id="email" placeholder="Email" style="width:100%;padding:10px;margin:5px;">
+<input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin:5px;">
 <button onclick="login()">Login</button>
-<p class="error" id="err"></p>
-</div>
-
-<div id="denied" class="loginBox hidden">
-<h2>Access Denied</h2>
-<button onclick="logout()">Retry</button>
+<p id="err" style="color:red;"></p>
 </div>
 
 <div id="dashboard" class="hidden">
 
 <div class="sidebar">
 <h2>Admin</h2>
+
 <button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
 <button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
 <button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
 <button class="menuBtn" onclick="loadView('all')">⚫ All</button>
-<button class="menuBtn" onclick="logout()">Logout</button>
+
+<button class="menuBtn" onclick="logout()" style="margin-top:20px;background:red;">
+Logout
+</button>
 </div>
 
 <div class="content">
@@ -66,7 +61,7 @@ button{padding:10px;width:100%;background:#111;color:white;border:none;border-ra
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -81,90 +76,63 @@ let currentRef = null;
 
 /* LOGIN */
 function login(){
-let email=document.getElementById("email").value;
-let pass=document.getElementById("password").value;
-
-auth.signInWithEmailAndPassword(email,pass)
-.catch(e=>document.getElementById("err").innerText=e.message);
+auth.signInWithEmailAndPassword(email.value,password.value)
+.catch(e=>err.innerText=e.message);
 }
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
-if(!user){showLogin();return;}
-if(user.email!=="admin@dekut.com"){showDenied();auth.signOut();return;}
-showDashboard();
-loadView("pending");
-});
-
-/* UI */
-function showLogin(){
-loginScreen.classList.remove("hidden");
-dashboard.classList.add("hidden");
-denied.classList.add("hidden");
-}
-
-function showDenied(){
-denied.classList.remove("hidden");
-loginScreen.classList.add("hidden");
-dashboard.classList.add("hidden");
-}
-
-function showDashboard(){
+if(user){
+loginBox.classList.add("hidden");
 dashboard.classList.remove("hidden");
-loginScreen.classList.add("hidden");
-denied.classList.add("hidden");
+loadView("pending");
+}else{
+loginBox.classList.remove("hidden");
+dashboard.classList.add("hidden");
 }
+});
 
 /* SWITCH VIEW */
 function loadView(view){
 
-document.getElementById("title").innerText = view.toUpperCase()+" PROPERTIES";
+document.getElementById("title").innerText = view.toUpperCase();
 
-/* stop previous listener */
-if(currentRef){
-currentRef.off();
+if(currentRef) currentRef.off();
 currentRef = null;
-}
 
-/* ALL VIEW = LIVE MERGE */
-if(view==="all"){
-
-let renderAll = ()=>{
+/* ALL VIEW (MERGE) */
+if(view === "all"){
 Promise.all([
 db.ref("pendingProperties").once("value"),
 db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
 let merged = {
-...p.val()||{},
-...a.val()||{},
-...r.val()||{}
+...p.val(),
+...a.val(),
+...r.val()
 };
 render(merged,"all");
 });
-};
-
-renderAll();
-
-/* live refresh for ALL */
-currentRef = db.ref(".info/connected");
-currentRef.on("value", renderAll);
-
 return;
 }
 
-/* NORMAL LIVE VIEWS */
-currentRef = db.ref(view+"Properties");
+/* SINGLE NODE LISTENING */
+currentRef = db.ref(view + "Properties");
+
 currentRef.on("value",snap=>{
-if(view==="rejected") renderRejected(snap.val()||{});
-else render(snap.val()||{},view);
+if(view === "rejected"){
+renderRejected(snap.val() || {});
+}else{
+render(snap.val() || {}, view);
+}
 });
 }
 
 /* SAFE */
-function safe(v){return v??"";}
+function safe(v){return v ?? "";}
 
-/* RENDER */
+/* RENDER NORMAL */
 function render(data,type){
 
 let html="";
@@ -173,7 +141,7 @@ for(let id in data){
 let p=data[id];
 if(!p) continue;
 
-html+=`
+html += `
 <div class="card">
 
 <span class="badge ${type}">${type}</span><br>
@@ -188,21 +156,24 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 `;
 
-if(type==="pending"){
-html+=`
-<textarea id="r_${id}" placeholder="Reason"></textarea>
+if(type === "pending"){
+html += `
+<textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 <button onclick="approve('${id}')">Approve</button>
 <button onclick="reject('${id}')">Reject</button>
 `;
 }
 
-html+=`</div>`;
+html += `
+<button onclick="remove('${id}','${type}Properties')">Delete</button>
+</div>
+`;
 }
 
-list.innerHTML=html;
+list.innerHTML = html;
 }
 
-/* REJECTED */
+/* REJECTED RENDER */
 function renderRejected(data){
 
 let html="";
@@ -211,7 +182,7 @@ for(let id in data){
 let p=data[id];
 if(!p) continue;
 
-html+=`
+html += `
 <div class="card">
 
 <span class="badge rejected">rejected</span><br>
@@ -221,21 +192,24 @@ html+=`
 
 <p>${safe(p.rejectionReason)}</p>
 
+<button onclick="remove('${id}','rejectedProperties')">Delete</button>
+
 </div>
 `;
 }
 
-list.innerHTML=html;
+list.innerHTML = html;
 }
 
-/* 🔥 SAFE APPROVE (NO DATA LOSS) */
+/* APPROVE (MOVE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="approved";
+data.status = "approved";
+data.updatedAt = Date.now();
 
 const updates = {};
 updates["approvedProperties/"+id] = data;
@@ -245,17 +219,18 @@ db.ref().update(updates);
 });
 }
 
-/* 🔥 SAFE REJECT */
+/* REJECT (MOVE) */
 function reject(id){
 
-let reason=document.getElementById("r_"+id).value||"";
+let reason = document.getElementById("r_"+id).value || "";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="rejected";
-data.rejectionReason=reason;
+data.status = "rejected";
+data.rejectionReason = reason;
+data.updatedAt = Date.now();
 
 const updates = {};
 updates["rejectedProperties/"+id] = data;
@@ -263,6 +238,11 @@ updates["pendingProperties/"+id] = null;
 
 db.ref().update(updates);
 });
+}
+
+/* DELETE */
+function remove(id,node){
+db.ref(node+"/"+id).remove();
 }
 
 /* LOGOUT */
