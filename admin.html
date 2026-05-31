@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard - Phase 2</title>
+<title>Admin Dashboard v1</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,64 +10,107 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;display:flex;background:#f5f7fb;}
-.sidebar{width:250px;background:#111;color:white;height:100vh;padding:10px;position:fixed;}
-.menuBtn{width:100%;padding:12px;margin:6px 0;background:#222;border:none;color:white;text-align:left;border-radius:6px;cursor:pointer;}
-.menuBtn:hover{background:#333;}
+body{margin:0;font-family:Arial;background:#f5f7fb;display:flex;}
 
-.content{margin-left:260px;padding:20px;width:100%;}
-.card{background:white;padding:10px;margin:10px 0;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.sidebar{
+width:220px;
+background:#111;
+color:white;
+height:100vh;
+padding:10px;
+position:fixed;
+}
 
-.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
+.btn{
+width:100%;
+padding:10px;
+margin:5px 0;
+border:none;
+background:#222;
+color:white;
+cursor:pointer;
+border-radius:6px;
+}
+
+.btn:hover{background:#333;}
+
+.content{
+margin-left:230px;
+padding:20px;
+width:100%;
+}
+
+.card{
+background:white;
+padding:15px;
+margin:10px 0;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+img{
+width:70px;
+height:60px;
+object-fit:cover;
+margin:3px;
+border-radius:6px;
+}
+
+.badge{
+padding:4px 8px;
+border-radius:6px;
+color:white;
+font-size:12px;
+}
+
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
 
-img{width:70px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
-textarea{width:100%;padding:6px;margin-top:5px;border-radius:6px;}
+textarea,input{
+width:100%;
+padding:8px;
+margin-top:5px;
+border-radius:6px;
+border:1px solid #ccc;
+}
 
-.hidden{display:none;}
-button{margin-top:5px;padding:8px;width:100%;cursor:pointer;}
+button{
+padding:8px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin:3px;
+}
+
+.approve{background:green;color:white;}
+.reject{background:orange;color:white;}
+.del{background:red;color:white;}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div id="loginBox" class="card" style="margin:auto;max-width:350px;">
-<h2>Admin Login</h2>
-<input id="email" placeholder="Email" style="width:100%;padding:10px;">
-<input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-top:5px;">
-<button onclick="login()">Login</button>
-<p id="err" style="color:red;"></p>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
-
+<!-- SIDEBAR -->
 <div class="sidebar">
-<h2>Admin</h2>
+<h3>Admin Panel</h3>
 
-<button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
-<button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
-<button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
-<button class="menuBtn" onclick="loadView('all')">⚫ All</button>
+<button class="btn" onclick="loadView('pending')">Pending</button>
+<button class="btn" onclick="loadView('approved')">Approved</button>
+<button class="btn" onclick="loadView('rejected')">Rejected</button>
+<button class="btn" onclick="loadView('all')">All</button>
 
-<button class="menuBtn" onclick="logout()" style="background:red;margin-top:20px;">
-Logout
-</button>
+<button class="btn" onclick="logout()" style="background:red;">Logout</button>
 </div>
 
+<!-- CONTENT -->
 <div class="content">
-<h2 id="title">Admin Panel</h2>
+<h2 id="title">Admin</h2>
 <div id="list"></div>
-</div>
-
 </div>
 
 <script>
 
-/* ================= FIREBASE ================= */
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
@@ -80,77 +123,47 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let ref = null;
+let currentRef=null;
 
-/* ================= LOGIN ================= */
-function login(){
-auth.signInWithEmailAndPassword(email.value,password.value)
-.catch(e=>err.innerText=e.message);
-}
-
-/* ================= AUTH STATE ================= */
+/* AUTH (ONLY ADMIN EMAIL) */
 auth.onAuthStateChanged(user=>{
-if(user){
-loginBox.classList.add("hidden");
-dashboard.classList.remove("hidden");
-loadView("pending");
-}else{
-loginBox.classList.remove("hidden");
-dashboard.classList.add("hidden");
+if(!user){
+alert("Admin login required");
 }
 });
 
-/* ================= VIEW SWITCH ================= */
-function loadView(view){
-
-document.getElementById("title").innerText = view.toUpperCase();
-
-if(ref){
-ref.off();
-ref = null;
+/* LOGOUT */
+function logout(){
+auth.signOut();
+location.reload();
 }
 
-/* ALL VIEW (SAFE MERGE) */
-if(view === "all"){
+/* LOAD VIEW */
+function loadView(view){
 
+document.getElementById("title").innerText=view.toUpperCase();
+
+if(currentRef) currentRef.off();
+
+if(view==="all"){
 Promise.all([
 db.ref("pendingProperties").once("value"),
 db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
-
-let merged = {
-...(p.val() || {}),
-...(a.val() || {}),
-...(r.val() || {})
-};
-
-render(merged,"all");
+render({...p.val(),...a.val(),...r.val()});
 });
-
 return;
 }
 
-/* SINGLE NODE */
-ref = db.ref(view + "Properties");
+currentRef = db.ref(view+"Properties");
 
-ref.on("value",snap=>{
-let data = snap.val() || {};
-
-if(view === "rejected"){
-renderRejected(data);
-}else{
-render(data,view);
-}
+currentRef.on("value",snap=>{
+render(snap.val()||{},view);
 });
 }
 
-/* ================= SAFE ================= */
-function safe(v){
-return (v === undefined || v === null) ? "" : v;
-}
-
-/* ================= RENDER ================= */
+/* RENDER */
 function render(data,type){
 
 let html="";
@@ -159,120 +172,23 @@ for(let id in data){
 let p=data[id];
 if(!p) continue;
 
-html += `
+html+=`
 <div class="card">
 
-<span class="badge ${type}">${type}</span><br>
+<span class="badge ${p.status||type}">${p.status||type}</span>
 
-<b>${safe(p.name || p.type)}</b><br>
-📍 ${safe(p.location)}<br>
-💰 ${safe(p.rent)}<br>
-📞 ${safe(p.phone)}<br>
+<h3>${p.name}</h3>
+<p>${p.location}</p>
+<p>KES ${p.rent}</p>
 
 <div>
-${(p.images || []).map(i=>`<img src="${i}">`).join("")}
+${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 `;
 
-if(type === "pending"){
-html += `
+if((p.status||type)==="pending"){
+html+=`
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 
-<button onclick="approve('${id}')">Approve</button>
-<button onclick="reject('${id}')">Reject</button>
-`;
-}
-
-html += `
-<button onclick="removeProperty('${id}')">Delete</button>
-
-</div>
-`;
-}
-
-list.innerHTML = html;
-}
-
-/* ================= REJECTED ================= */
-function renderRejected(data){
-
-let html="";
-
-for(let id in data){
-let p=data[id];
-if(!p) continue;
-
-html += `
-<div class="card">
-
-<span class="badge rejected">rejected</span><br>
-
-<b>${safe(p.name || p.type)}</b><br>
-📍 ${safe(p.location)}<br>
-
-<p><b>Reason:</b> ${safe(p.rejectionReason)}</p>
-
-<button onclick="removeProperty('${id}')">Delete</button>
-
-</div>
-`;
-}
-
-list.innerHTML = html;
-}
-
-/* ================= APPROVE ================= */
-function approve(id){
-
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
-if(!data) return;
-
-data.status = "approved";
-data.updatedAt = Date.now();
-
-/* MOVE */
-db.ref("approvedProperties/"+id).set(data).then(()=>{
-db.ref("pendingProperties/"+id).remove();
-});
-});
-}
-
-/* ================= REJECT ================= */
-function reject(id){
-
-let reason = document.getElementById("r_"+id).value || "";
-
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
-if(!data) return;
-
-data.status = "rejected";
-data.rejectionReason = reason;
-data.updatedAt = Date.now();
-
-/* MOVE */
-db.ref("rejectedProperties/"+id).set(data).then(()=>{
-db.ref("pendingProperties/"+id).remove();
-});
-});
-}
-
-/* ================= HARD DELETE ================= */
-function removeProperty(id){
-
-db.ref("pendingProperties/"+id).remove();
-db.ref("approvedProperties/"+id).remove();
-db.ref("rejectedProperties/"+id).remove();
-}
-
-/* ================= LOGOUT ================= */
-function logout(){
-auth.signOut();
-location.reload();
-}
-
-</script>
-
-</body>
-</html>
+<button class="approve" onclick="approve('${id}')">Approve</button>
+<button class="
