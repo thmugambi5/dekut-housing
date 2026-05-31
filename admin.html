@@ -118,7 +118,6 @@ cursor:pointer;
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen" class="loginBox">
 <h2>Admin Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -127,14 +126,12 @@ cursor:pointer;
 <p class="error" id="err"></p>
 </div>
 
-<!-- DENIED -->
 <div id="denied" class="loginBox hidden">
 <h2>Access Denied</h2>
 <p>Only admin@dekut.com is allowed.</p>
 <button onclick="logout()">Retry</button>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="sidebar">
@@ -170,8 +167,6 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.database();
-
-let currentUser=null;
 
 /* LOGIN */
 function login(){
@@ -218,7 +213,7 @@ loginScreen.classList.add("hidden");
 denied.classList.add("hidden");
 }
 
-/* VIEW SWITCH (IMPORTANT FIX: clear old listeners) */
+/* IMPORTANT: CLEAN LISTENERS */
 function loadView(view){
 
 db.ref("pendingProperties").off();
@@ -226,7 +221,7 @@ db.ref("approvedProperties").off();
 db.ref("rejectedProperties").off();
 db.ref("allProperties").off();
 
-document.getElementById("title").innerText=view.toUpperCase()+" PROPERTIES";
+document.getElementById("title").innerText = view.toUpperCase()+" PROPERTIES";
 
 if(view==="pending") loadPending();
 if(view==="approved") loadApproved();
@@ -234,7 +229,7 @@ if(view==="rejected") loadRejected();
 if(view==="all") loadAll();
 }
 
-/* LOADERS */
+/* LOADERS (AUTO REFRESH ENABLED) */
 function loadPending(){
 db.ref("pendingProperties").on("value",snap=>{
 render(snap.val()||{},"pending");
@@ -259,9 +254,10 @@ renderRejected(snap.val()||{});
 });
 }
 
-/* SAFE RENDER */
-function safe(v){ return v===undefined ? "" : v; }
+/* SAFE */
+function safe(v){ return v ?? ""; }
 
+/* RENDER */
 function render(data,type){
 
 let html="";
@@ -306,7 +302,7 @@ html+=`</div>`;
 list.innerHTML=html;
 }
 
-/* REJECTED */
+/* REJECT */
 function renderRejected(data){
 
 let html="";
@@ -338,21 +334,22 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 list.innerHTML=html;
 }
 
-/* FIXED APPROVE (CRITICAL) */
+/* FIXED APPROVE (ATOMIC & SAFE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="approved";
-data.approvedAt=Date.now();
+data.status = "approved";
+data.updatedAt = Date.now();
 
-/* ensure BOTH nodes ALWAYS match */
-db.ref("approvedProperties/"+id).set(data);
-db.ref("allProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
+const updates = {};
+updates["/approvedProperties/"+id] = data;
+updates["/allProperties/"+id] = data;
+updates["/pendingProperties/"+id] = null;
 
+db.ref().update(updates);
 });
 }
 
@@ -362,16 +359,19 @@ function reject(id){
 let reason=document.getElementById("r_"+id).value||"";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="rejected";
-data.rejectionReason=reason;
-data.rejectedAt=Date.now();
+data.status = "rejected";
+data.rejectionReason = reason;
+data.updatedAt = Date.now();
 
-db.ref("rejectedProperties/"+id).set(data);
-db.ref("allProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
+const updates = {};
+updates["/rejectedProperties/"+id] = data;
+updates["/allProperties/"+id] = data;
+updates["/pendingProperties/"+id] = null;
+
+db.ref().update(updates);
 });
 }
 
