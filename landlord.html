@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Full System</title>
+<title>Landlord Full System (Single Node)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -59,18 +59,6 @@ object-fit:cover;
 margin:5px;
 border-radius:6px;
 }
-
-.row{
-display:flex;
-gap:10px;
-flex-wrap:wrap;
-}
-
-.smallBtn{
-flex:1;
-padding:8px;
-font-size:12px;
-}
 </style>
 </head>
 
@@ -78,6 +66,7 @@ font-size:12px;
 
 <div class="container">
 
+<!-- AUTH -->
 <div id="authBox" class="card">
 <h2>Landlord Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -87,6 +76,7 @@ font-size:12px;
 <button onclick="login()">Login</button>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="card">
@@ -94,6 +84,7 @@ font-size:12px;
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
+<!-- UPLOAD -->
 <div class="card">
 <h3>Upload Property</h3>
 
@@ -116,20 +107,17 @@ font-size:12px;
 <label><input type="checkbox" value="Electricity"> Electricity</label>
 <label><input type="checkbox" value="WiFi"> WiFi</label>
 <label><input type="checkbox" value="Parking"> Parking</label>
-<label><input type="checkbox" value="Security"> Security</label>
 
-<input id="extraAmenities" placeholder="Other amenities (comma separated)">
-
-<br>
-<button onclick="getLocation()">📍 Capture Location</button>
+<input id="extraAmenities" placeholder="Other amenities">
 
 <h4>Images</h4>
-<input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
+<input type="file" id="images" multiple onchange="convertImages()">
 <div id="preview"></div>
 
 <button onclick="submitProperty()">Submit Property</button>
 </div>
 
+<!-- MY PROPERTIES -->
 <div class="card">
 <h3>My Properties</h3>
 <div id="list"></div>
@@ -142,7 +130,7 @@ font-size:12px;
 <script>
 
 const firebaseConfig = {
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -153,27 +141,24 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser=null;
+let user=null;
 let imagesBase64=[];
-let lat=null;
-let lng=null;
+let lat=null,lng=null;
 
 /* AUTH */
-auth.onAuthStateChanged(user=>{
-if(user){
-currentUser=user;
+auth.onAuthStateChanged(u=>{
+if(u){
+user=u;
 show();
 }
 });
 
 function signup(){
-auth.createUserWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user;show();});
+auth.createUserWithEmailAndPassword(email.value,password.value);
 }
 
 function login(){
-auth.signInWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user;show();});
+auth.signInWithEmailAndPassword(email.value,password.value);
 }
 
 function logout(){
@@ -184,39 +169,28 @@ location.reload();
 function show(){
 authBox.classList.add("hidden");
 dashboard.classList.remove("hidden");
-userEmail.innerText=currentUser.email;
+userEmail.innerText=user.email;
 load();
-}
-
-/* LOCATION */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-alert("Location captured");
-});
 }
 
 /* IMAGES */
 function convertImages(){
-let files=images.files;
 imagesBase64=[];
 preview.innerHTML="";
-
-for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
+for(let f of images.files){
+let r=new FileReader();
+r.onload=e=>{
 imagesBase64.push(e.target.result);
 preview.innerHTML+=`<img class="preview" src="${e.target.result}">`;
 };
-reader.readAsDataURL(f);
+r.readAsDataURL(f);
 }
 }
 
-/* ✅ FIXED: ONLY SAVE TO PENDING */
+/* ================= SINGLE NODE SAVE ================= */
 function submitProperty(){
 
-let phoneVal = (phone.value || "").trim();
+let phoneVal = phone.value.trim();
 if(!phoneVal.startsWith("254")){
 alert("Phone must start with 254");
 return;
@@ -227,75 +201,66 @@ document.querySelectorAll("input[type=checkbox]:checked")
 .forEach(c=>amenities.push(c.value));
 
 if(extraAmenities.value){
-amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()).filter(a=>a));
+amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
 }
 
+/* ONLY ONE NODE */
 let data={
-ownerUid: currentUser.uid || "",
-ownerEmail: currentUser.email || "",
-type: type.value || "",
-location: location.value || "",
-rent: Number(rent.value || 0),
-deposit: Number(deposit.value || 0),
-phone: phoneVal,
-description: desc.value || "",
-amenities: amenities,
-images: imagesBase64 || [],
-lat: lat ?? null,
-lng: lng ?? null,
-status: "pending",
-createdAt: Date.now()
+ownerUid:user.uid,
+ownerEmail:user.email,
+type:type.value,
+location:location.value,
+rent:Number(rent.value),
+deposit:Number(deposit.value),
+phone:phoneVal,
+description:desc.value,
+amenities,
+images:imagesBase64,
+status:"pending",
+createdAt:Date.now()
 };
 
-db.ref("pendingProperties").push(data)
+db.ref("properties").push(data)
 .then(()=>{
-alert("Submitted for approval");
+alert("Submitted successfully");
 clearForm();
-load();
 })
 .catch(err=>{
 console.error(err);
-alert("Upload failed");
+alert("Failed");
 });
 }
 
-/* LOAD (OWNER ONLY FROM ALL PENDING DATA IS WRONG — FIXED TO FILTER PENDING ONLY) */
+/* LIVE LIST (FILTER BY OWNER) */
 function load(){
-db.ref("pendingProperties").on("value",snap=>{
+db.ref("properties").on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
 for(let id in data){
 let p=data[id];
-if(!p || p.ownerUid !== currentUser.uid) continue;
+if(p.ownerUid !== user.uid) continue;
 
 html+=`
 <div class="card">
 
-<b>${p.type}</b>
-<span class="badge pending">pending</span><br>
-
+<b>${p.type}</b><br>
 📍 ${p.location}<br>
 💰 ${p.rent}<br>
-📞 ${p.phone}<br>
+
+<span class="badge ${p.status}">${p.status}</span><br>
+
+<div>
+${(p.images||[]).map(i=>`<img class="preview" src="${i}">`).join("")}
+</div>
 
 </div>`;
 }
 
 list.innerHTML=html;
 });
-
-/* EDIT */
-window.edit = function(id,p){
-alert("Editing coming next step (safe mode enabled)");
 }
 
-/* DELETE */
-window.del = function(id){
-db.ref("pendingProperties/"+id).remove();
-}
-
-/* CLEAR */
 function clearForm(){
 type.value="";
 location.value="";
