@@ -27,6 +27,7 @@ padding:10px;
 margin-top:10px;
 border-radius:8px;
 border:1px solid #ddd;
+box-sizing:border-box;
 }
 
 button{background:#2563eb;color:white;border:none;cursor:pointer;}
@@ -46,9 +47,31 @@ font-size:12px;
 .approved{background:green;}
 .rejected{background:red;}
 
-img.preview{
-width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6px;
+.amenitiesGrid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:8px;
+margin-top:10px;
 }
+
+.amenitiesGrid label{
+display:flex;
+align-items:center;
+gap:6px;
+font-size:14px;
+background:#f8f9fb;
+padding:6px;
+border-radius:6px;
+}
+
+img.preview{
+width:100px;
+height:80px;
+object-fit:cover;
+margin:5px;
+border-radius:6px;
+}
+
 small{color:gray;}
 </style>
 </head>
@@ -90,7 +113,7 @@ small{color:gray;}
 <option>2 Bedroom</option>
 </select>
 
-<small>Examples: Bomas, Chania, Nyaribo, Embassy</small>
+<small>Example areas: Bomas, Chania, Nyeri Town, etc</small>
 <input id="locationText" placeholder="Area Name">
 
 <input id="rent" type="number" placeholder="Rent (KES)">
@@ -103,15 +126,22 @@ small{color:gray;}
 <small style="color:red;">
 ⚠️ Stand inside the property before sharing location
 </small>
+
 <button onclick="getLocation()">📍 Share My Location</button>
 
 <h4>Amenities</h4>
-<label><input type="checkbox" value="Water"> Water</label>
-<label><input type="checkbox" value="Electricity"> Electricity</label>
-<label><input type="checkbox" value="WiFi"> WiFi</label>
-<label><input type="checkbox" value="Parking"> Parking</label>
-<label><input type="checkbox" value="Security"> Security</label>
-<label><input type="checkbox" value="Furnished"> Furnished</label>
+
+<div class="amenitiesGrid">
+<label><input class="amenity" type="checkbox" value="Water"> Water</label>
+<label><input class="amenity" type="checkbox" value="Electricity"> Electricity</label>
+<label><input class="amenity" type="checkbox" value="WiFi"> WiFi</label>
+<label><input class="amenity" type="checkbox" value="Parking"> Parking</label>
+<label><input class="amenity" type="checkbox" value="Security"> Security</label>
+<label><input class="amenity" type="checkbox" value="Furnished"> Furnished</label>
+</div>
+
+<!-- EXTRA AMENITIES INPUT -->
+<textarea id="extraAmenities" placeholder="Other amenities (comma separated e.g. CCTV, Borehole, Balcony)"></textarea>
 
 <select id="utilities">
 <option value="Yes">Utilities Included: Yes</option>
@@ -159,12 +189,12 @@ const DEKUT_LAT = -0.3976;
 const DEKUT_LNG = 36.9597;
 
 /* ================= STATE ================= */
-let currentUser=null;
-let imagesBase64=[];
-let lat=null;
-let lng=null;
+let currentUser = null;
+let imagesBase64 = [];
+let lat = null;
+let lng = null;
 
-/* ================= SIGNUP ================= */
+/* ================= AUTH ================= */
 function signup(){
 let email=document.getElementById("email").value;
 let pass=document.getElementById("password").value;
@@ -174,7 +204,6 @@ auth.createUserWithEmailAndPassword(email,pass)
 .catch(e=>alert(e.message));
 }
 
-/* ================= LOGIN ================= */
 function login(){
 let email=document.getElementById("email").value;
 let pass=document.getElementById("password").value;
@@ -184,15 +213,14 @@ auth.signInWithEmailAndPassword(email,pass)
 .catch(e=>alert(e.message));
 }
 
-/* ================= SHOW ================= */
 function show(){
 document.getElementById("authBox").classList.add("hidden");
 document.getElementById("dashboard").classList.remove("hidden");
 document.getElementById("user").innerText=currentUser.email;
-load();
+loadProperties();
 }
 
-/* ================= GPS + DISTANCE ================= */
+/* ================= GPS ================= */
 function getLocation(){
 navigator.geolocation.getCurrentPosition(pos=>{
 lat=pos.coords.latitude;
@@ -203,15 +231,16 @@ alert("Location captured! Distance to DeKUT: "+d.toFixed(2)+" km");
 });
 }
 
-/* Haversine formula */
 function calculateDistance(lat1,lon1,lat2,lon2){
 const R=6371;
 const dLat=(lat2-lat1)*Math.PI/180;
 const dLon=(lon2-lon1)*Math.PI/180;
+
 const a=
 Math.sin(dLat/2)*Math.sin(dLat/2)+
 Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
 Math.sin(dLon/2)*Math.sin(dLon/2);
+
 const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 return R*c;
 }
@@ -219,7 +248,9 @@ return R*c;
 /* ================= IMAGES ================= */
 function convertImages(){
 let files=document.getElementById("images").files;
-imagesBase64=[]; document.getElementById("preview").innerHTML="";
+imagesBase64=[];
+
+document.getElementById("preview").innerHTML="";
 
 for(let f of files){
 let reader=new FileReader();
@@ -243,8 +274,11 @@ return;
 }
 
 let amenities=[];
-document.querySelectorAll("input[type=checkbox]:checked")
+document.querySelectorAll(".amenity:checked")
 .forEach(c=>amenities.push(c.value));
+
+let extra=document.getElementById("extraAmenities").value
+.split(",").map(a=>a.trim()).filter(a=>a);
 
 let data={
 ownerUid:currentUser.uid,
@@ -255,12 +289,12 @@ rent:document.getElementById("rent").value,
 deposit:document.getElementById("deposit").value,
 phone:phone,
 description:document.getElementById("desc").value,
-amenities:amenities,
+amenities:[...amenities,...extra],
 utilities:document.getElementById("utilities").value,
 images:imagesBase64,
 lat:lat,
 lng:lng,
-distanceToDekutKm: lat ? calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG):null,
+distanceToDekutKm: lat?calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG):null,
 status:"pending",
 createdAt:Date.now()
 };
@@ -269,56 +303,68 @@ db.ref("pendingProperties").push(data);
 
 alert("Sent for approval");
 clearForm();
-load();
+loadProperties();
 }
 
-/* ================= LOAD ================= */
-function load(){
-db.ref("pendingProperties").on("value",snap=>{
+/* ================= LOAD PROPERTIES ================= */
+
+function loadProperties(){
+
+db.ref("allProperties").on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
 for(let id in data){
-let p=data[id];
-if(p.ownerUid!==currentUser.uid)continue;
 
-html+=`
+let p=data[id];
+
+if(p.ownerUid !== currentUser.uid) continue;
+
+let badgeClass = p.status || "pending";
+let reason = p.rejectionReason ? `<br><small style="color:red;"><b>Reason:</b> ${p.rejectionReason}</small>` : "";
+
+html += `
 <div class="card">
 
-<b>${p.type}</b>
-<span class="badge ${p.status}">${p.status}</span><br>
+<b>${p.type || ""}</b>
+<span class="badge ${badgeClass}">${p.status || "pending"}</span><br>
 
-📍 ${p.location}<br>
-💰 ${p.rent} | Deposit: ${p.deposit}<br>
-📞 ${p.phone}<br>
-📏 ${p.distanceToDekutKm? p.distanceToDekutKm.toFixed(2):"?"} km to DeKUT<br>
+📍 ${p.location || ""}<br>
+💰 KES ${p.rent || ""} | Deposit: ${p.deposit || ""}<br>
+📞 ${p.phone || ""}<br>
+📏 ${p.distanceToDekutKm ? p.distanceToDekutKm.toFixed(2) : "?"} km to DeKUT
 
-<button onclick="del('${id}')">Delete</button>
+${reason}
+
+<div>
+${(p.images || []).map(i => `<img class="preview" src="${i}">`).join("")}
+</div>
+
+<button onclick="deleteProperty('${id}')"
+style="background:red;margin-top:10px;">
+Delete
+</button>
+
 </div>
 `;
 }
 
-document.getElementById("list").innerHTML=html;
+document.getElementById("list").innerHTML = html;
 });
 }
 
-/* ================= DELETE ================= */
-function del(id){
+/* ================= DELETE (OPTION A SYNCED) ================= */
+function deleteProperty(id){
+
 db.ref("pendingProperties/"+id).remove();
+db.ref("approvedProperties/"+id).remove();
+db.ref("rejectedProperties/"+id).remove();
+db.ref("allProperties/"+id).remove();
+
+alert("Property deleted from system");
 }
 
-/* ================= LOGOUT ================= */
-function logout(){
-auth.signOut();
-location.reload();
-}
-
-/* ================= AUTO LOGIN ================= */
-auth.onAuthStateChanged(user=>{
-if(user){currentUser=user;show();}
-});
-
-/* ================= CLEAR ================= */
+/* ================= CLEAR FORM ================= */
 function clearForm(){
 document.getElementById("type").value="";
 document.getElementById("locationText").value="";
@@ -327,10 +373,30 @@ document.getElementById("deposit").value="";
 document.getElementById("phone").value="";
 document.getElementById("desc").value="";
 document.getElementById("images").value="";
+document.getElementById("extraAmenities").value="";
 imagesBase64=[];
-lat=null;lng=null;
+lat=null;
+lng=null;
 document.getElementById("preview").innerHTML="";
 }
+
+/* ================= LOGOUT ================= */
+function logout(){
+auth.signOut().then(()=>{
+location.reload();
+});
+}
+
+/* ================= AUTO LOGIN ================= */
+auth.onAuthStateChanged(user=>{
+if(user){
+currentUser = user;
+document.getElementById("authBox").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("user").innerText = user.email;
+loadProperties();
+}
+});
 
 </script>
 
