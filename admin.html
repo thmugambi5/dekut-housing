@@ -49,12 +49,10 @@ button{padding:10px;width:100%;background:#111;color:white;border:none;border-ra
 
 <div class="sidebar">
 <h2>Admin</h2>
-
 <button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
 <button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
 <button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
 <button class="menuBtn" onclick="loadView('all')">⚫ All</button>
-
 <button class="menuBtn" onclick="logout()">Logout</button>
 </div>
 
@@ -79,7 +77,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentViewRef = null;
+let currentRef = null;
 
 /* LOGIN */
 function login(){
@@ -117,39 +115,54 @@ loginScreen.classList.add("hidden");
 denied.classList.add("hidden");
 }
 
-/* VIEW SWITCH */
+/* SWITCH VIEW */
 function loadView(view){
 
 document.getElementById("title").innerText = view.toUpperCase()+" PROPERTIES";
 
-/* stop previous listener safely */
-if(currentViewRef){
-currentViewRef.off();
-currentViewRef = null;
+/* stop previous listener */
+if(currentRef){
+currentRef.off();
+currentRef = null;
 }
 
-/* ALL VIEW (MERGED SAFE) */
+/* ALL VIEW = LIVE MERGE */
 if(view==="all"){
+
+let renderAll = ()=>{
 Promise.all([
 db.ref("pendingProperties").once("value"),
 db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
-let merged = Object.assign({}, p.val()||{}, a.val()||{}, r.val()||{});
+let merged = {
+...p.val()||{},
+...a.val()||{},
+...r.val()||{}
+};
 render(merged,"all");
 });
+};
+
+renderAll();
+
+/* live refresh for ALL */
+currentRef = db.ref(".info/connected");
+currentRef.on("value", renderAll);
+
 return;
 }
 
-currentViewRef = db.ref(view+"Properties");
-currentViewRef.on("value",snap=>{
+/* NORMAL LIVE VIEWS */
+currentRef = db.ref(view+"Properties");
+currentRef.on("value",snap=>{
 if(view==="rejected") renderRejected(snap.val()||{});
 else render(snap.val()||{},view);
 });
 }
 
 /* SAFE */
-function safe(v){return (v===undefined||v===null)?"":v;}
+function safe(v){return v??"";}
 
 /* RENDER */
 function render(data,type){
@@ -215,7 +228,7 @@ html+=`
 list.innerHTML=html;
 }
 
-/* APPROVE */
+/* 🔥 SAFE APPROVE (NO DATA LOSS) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
@@ -224,12 +237,15 @@ if(!data) return;
 
 data.status="approved";
 
-db.ref("approvedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
+const updates = {};
+updates["approvedProperties/"+id] = data;
+updates["pendingProperties/"+id] = null;
+
+db.ref().update(updates);
 });
 }
 
-/* REJECT */
+/* 🔥 SAFE REJECT */
 function reject(id){
 
 let reason=document.getElementById("r_"+id).value||"";
@@ -241,8 +257,11 @@ if(!data) return;
 data.status="rejected";
 data.rejectionReason=reason;
 
-db.ref("rejectedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
+const updates = {};
+updates["rejectedProperties/"+id] = data;
+updates["pendingProperties/"+id] = null;
+
+db.ref().update(updates);
 });
 }
 
