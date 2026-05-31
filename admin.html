@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Phase 3</title>
+<title>Admin Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -10,80 +10,23 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;display:flex;background:#f5f6fb;}
-
-.sidebar{
-width:240px;
-background:#111;
-color:white;
-height:100vh;
-padding:10px;
-position:fixed;
-}
-
-.menuBtn{
-width:100%;
-padding:12px;
-margin:6px 0;
-background:#222;
-border:none;
-color:white;
-text-align:left;
-border-radius:6px;
-cursor:pointer;
-}
-
+body{margin:0;font-family:Arial;display:flex;background:#f5f7fb;}
+.sidebar{width:250px;background:#111;color:white;height:100vh;padding:10px;position:fixed;}
+.menuBtn{width:100%;padding:12px;margin:6px 0;background:#222;border:none;color:white;text-align:left;border-radius:6px;cursor:pointer;}
 .menuBtn:hover{background:#333;}
-
-.content{
-margin-left:260px;
-padding:20px;
-width:100%;
-}
-
-.card{
-background:white;
-padding:15px;
-margin:10px 0;
-border-radius:12px;
-box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-.badge{
-padding:4px 8px;
-border-radius:6px;
-color:white;
-font-size:12px;
-}
-
+.content{margin-left:260px;padding:20px;width:100%;}
+.card{background:white;padding:10px;margin:10px 0;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
-
-button{
-padding:8px;
-margin-top:6px;
-width:100%;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-
-.approve{background:green;color:white;}
-.reject{background:orange;color:white;}
-.delete{background:red;color:white;}
-
-textarea{
-width:100%;
-padding:6px;
-margin-top:6px;
-}
+img{width:70px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
+textarea{width:100%;padding:6px;margin-top:5px;border-radius:6px;border:1px solid #ccc;}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginBox" class="card" style="margin:auto;max-width:350px;">
 <h2>Admin Login</h2>
 <input id="email" placeholder="Email">
@@ -92,7 +35,6 @@ margin-top:6px;
 <p id="err" style="color:red;"></p>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="sidebar">
@@ -127,7 +69,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentRef = null;
+let ref = null;
 
 /* LOGIN */
 function login(){
@@ -137,53 +79,51 @@ auth.signInWithEmailAndPassword(email.value,password.value)
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
-if(user && user.email==="admin@dekut.com"){
+if(user){
 loginBox.classList.add("hidden");
 dashboard.classList.remove("hidden");
 loadView("pending");
-}else{
-loginBox.classList.remove("hidden");
-dashboard.classList.add("hidden");
 }
 });
 
 /* VIEW SWITCH */
 function loadView(view){
 
-document.getElementById("title").innerText=view.toUpperCase();
+document.getElementById("title").innerText = view.toUpperCase();
 
-if(currentRef) currentRef.off();
-currentRef=null;
+if(ref) ref.off();
+ref = null;
 
-/* ALL VIEW (LIVE MERGE) */
-if(view==="all"){
+/* ALL */
+if(view === "all"){
 Promise.all([
 db.ref("pendingProperties").once("value"),
 db.ref("approvedProperties").once("value"),
 db.ref("rejectedProperties").once("value")
 ]).then(([p,a,r])=>{
-
-let merged = {
-...(p.val()||{}),
-...(a.val()||{}),
-...(r.val()||{})
-};
-
-render(merged);
+let data = {...p.val(), ...a.val(), ...r.val()};
+render(data,"all");
 });
 return;
 }
 
 /* SINGLE NODE */
-currentRef=db.ref(view+"Properties");
+ref = db.ref(view + "Properties");
 
-currentRef.on("value",snap=>{
-render(snap.val()||{});
+ref.on("value",snap=>{
+if(view === "rejected"){
+renderRejected(snap.val() || {});
+}else{
+render(snap.val() || {}, view);
+}
 });
 }
 
+/* SAFE */
+function safe(v){return v ?? "";}
+
 /* RENDER */
-function render(data){
+function render(data,type){
 
 let html="";
 
@@ -191,52 +131,77 @@ for(let id in data){
 let p=data[id];
 if(!p) continue;
 
-html+=`
+html += `
 <div class="card">
 
-<h3>${p.name || p.propertyName}</h3>
+<span class="badge ${type}">${type}</span><br>
 
-<span class="badge ${p.status}">
-${p.status}
-</span>
+<b>${safe(p.type)}</b><br>
+📍 ${safe(p.location)}<br>
+💰 ${safe(p.rent)}<br>
+📞 ${safe(p.phone)}<br>
 
-<p>📍 ${p.location || ""}</p>
-<p>💰 ${p.rent || ""}</p>
-<p>📞 ${p.phone || ""}</p>
-
-`;
-
-if(p.status==="pending"){
-html+=`
-<textarea id="r_${id}" placeholder="Rejection reason"></textarea>
-<button class="approve" onclick="approve('${id}')">Approve</button>
-<button class="reject" onclick="reject('${id}')">Reject</button>
-`;
-}
-
-html+=`
-<button class="delete" onclick="remove('${id}')">DELETE</button>
-
+<div>
+${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 `;
+
+if(type === "pending"){
+html += `
+<textarea id="r_${id}" placeholder="Reason"></textarea>
+<button onclick="approve('${id}')">Approve</button>
+<button onclick="reject('${id}')">Reject</button>
+`;
 }
 
-list.innerHTML=html;
+html += `
+<button onclick="remove('${id}','${type}Properties')">Delete</button>
+</div>`;
+}
+
+list.innerHTML = html;
+}
+
+/* REJECTED */
+function renderRejected(data){
+
+let html="";
+
+for(let id in data){
+let p=data[id];
+if(!p) continue;
+
+html += `
+<div class="card">
+
+<span class="badge rejected">rejected</span><br>
+
+<b>${safe(p.type)}</b><br>
+📍 ${safe(p.location)}<br>
+
+<p>${safe(p.rejectionReason)}</p>
+
+<button onclick="remove('${id}','rejectedProperties')">Delete</button>
+
+</div>`;
+}
+
+list.innerHTML = html;
 }
 
 /* APPROVE (MOVE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="approved";
-data.updatedAt=Date.now();
+data.status = "approved";
+data.updatedAt = Date.now();
 
-let updates={};
-updates["approvedProperties/"+id]=data;
-updates["pendingProperties/"+id]=null;
+const updates = {};
+updates["approvedProperties/"+id] = data;
+updates["pendingProperties/"+id] = null;
 
 db.ref().update(updates);
 });
@@ -245,31 +210,27 @@ db.ref().update(updates);
 /* REJECT (MOVE) */
 function reject(id){
 
-let reason=document.getElementById("r_"+id).value||"";
+let reason = document.getElementById("r_"+id).value || "";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data=s.val();
+let data = s.val();
 if(!data) return;
 
-data.status="rejected";
-data.rejectionReason=reason;
-data.updatedAt=Date.now();
+data.status = "rejected";
+data.rejectionReason = reason;
+data.updatedAt = Date.now();
 
-let updates={};
-updates["rejectedProperties/"+id]=data;
-updates["pendingProperties/"+id]=null;
+const updates = {};
+updates["rejectedProperties/"+id] = data;
+updates["pendingProperties/"+id] = null;
 
 db.ref().update(updates);
 });
 }
 
-/* HARD DELETE (ALL NODES) */
-function remove(id){
-
-db.ref("pendingProperties/"+id).remove();
-db.ref("approvedProperties/"+id).remove();
-db.ref("rejectedProperties/"+id).remove();
-
+/* DELETE HARD */
+function remove(id,node){
+db.ref(node+"/"+id).remove();
 }
 
 /* LOGOUT */
