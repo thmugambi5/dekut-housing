@@ -158,9 +158,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const DEKUT_LAT = -0.3976;
-const DEKUT_LNG = 36.9597;
-
 let currentUser=null;
 let imagesBase64=[];
 let lat=null;
@@ -222,10 +219,10 @@ reader.readAsDataURL(f);
 }
 }
 
-/* SUBMIT */
+/* ================= FIXED SAFE SUBMIT ================= */
 function submitProperty(){
 
-let phoneVal=phone.value;
+let phoneVal = (phone.value || "").trim();
 
 if(!phoneVal.startsWith("254")){
 alert("Phone must start with 254");
@@ -237,29 +234,36 @@ document.querySelectorAll("input[type=checkbox]:checked")
 .forEach(c=>amenities.push(c.value));
 
 if(extraAmenities.value){
-amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
+amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()).filter(a=>a));
 }
 
+/* CLEAN SAFE DATA */
 let data={
-ownerUid:currentUser.uid,
-ownerEmail:currentUser.email,
-type:type.value,
-location:location.value,
-rent:rent.value,
-deposit:deposit.value,
-phone:phoneVal,
-description:desc.value,
-amenities:amenities,
-images:imagesBase64,
-lat:lat,
-lng:lng,
-status:"pending",
-createdAt:Date.now()
+ownerUid: currentUser.uid || "",
+ownerEmail: currentUser.email || "",
+type: type.value || "",
+location: location.value || "",
+rent: Number(rent.value || 0),
+deposit: Number(deposit.value || 0),
+phone: phoneVal,
+description: desc.value || "",
+amenities: amenities,
+images: imagesBase64 || [],
+lat: lat ?? null,
+lng: lng ?? null,
+status: "pending",
+createdAt: Date.now()
 };
+
+/* FINAL SANITIZER */
+Object.keys(data).forEach(k=>{
+if(data[k] === undefined){
+data[k] = null;
+}
+});
 
 if(editingId){
 
-// UPDATE MODE
 db.ref("allProperties/"+editingId).update(data);
 db.ref("pendingProperties/"+editingId).update(data);
 
@@ -268,7 +272,6 @@ alert("Updated successfully");
 
 }else{
 
-// NEW PROPERTY
 let ref=db.ref("pendingProperties").push(data);
 db.ref("allProperties/"+ref.key).set(data);
 
@@ -300,10 +303,8 @@ html+=`
 📞 ${p.phone}<br>
 
 <div class="row">
-
-<button class="smallBtn" onclick="edit('${id}',${JSON.stringify(p)})">Edit</button>
+<button class="smallBtn" onclick='edit("${id}", ${JSON.stringify(p)})'>Edit</button>
 <button class="smallBtn" onclick="del('${id}')">Delete</button>
-
 </div>
 
 </div>`;
