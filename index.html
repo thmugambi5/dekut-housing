@@ -15,7 +15,6 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#f6f6f6;}
 
-/* HEADER */
 header{
 padding:14px;
 background:#fff;
@@ -28,7 +27,6 @@ z-index:1000;
 box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* FILTERS */
 .filters{
 display:flex;
 gap:8px;
@@ -45,7 +43,6 @@ border-radius:8px;
 width:160px;
 }
 
-/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -53,7 +50,6 @@ gap:14px;
 padding:14px;
 }
 
-/* CARD */
 .card{
 background:#fff;
 border-radius:14px;
@@ -61,94 +57,7 @@ overflow:hidden;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-/* IMAGE */
-.card img{
-width:100%;
-height:220px;
-object-fit:cover;
-cursor:pointer;
-}
-
-/* CONTENT */
-.cardContent{padding:12px;}
-
-/* BUTTON ROW */
-.btnRow{
-display:flex;
-flex-wrap:wrap;
-gap:6px;
-margin-top:10px;
-}
-
-.btn{
-flex:1;
-padding:8px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-size:12px;
-}
-
-/* BUTTON COLORS */
-.detailsbtn{background:#111;color:#fff;}
-.callBtn{background:#16a34a;color:#fff;}
-.waBtn{background:#25D366;color:#fff;}
-.mapBtn{background:#2563eb;color:#fff;}
-
-/* BADGE */
-.badge{
-display:inline-block;
-padding:4px 8px;
-border-radius:6px;
-font-size:12px;
-color:white;
-background:green;
-margin-top:5px;
-}
-
-/* MODALS */
-.modal,.photoModal,.mapModal{
-display:none;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:black;
-z-index:9999;
-}
-
-/* DETAILS */
-.detailsContent{
-background:white;
-width:100%;
-height:100%;
-overflow:auto;
-}
-
-.detailsBody{padding:15px;line-height:1.8;}
-
-.detailsImage{
-width:100%;
-height:300px;
-object-fit:cover;
-}
-
-/* BACK */
-.backBtn{
-position:absolute;
-top:10px;left:10px;
-background:white;
-padding:8px 12px;
-border-radius:8px;
-z-index:10000;
-cursor:pointer;
-}
-
-/* MAP */
-#map{width:100%;height:100%;}
-
-/* ===================== */
-/* 🔥 AIRBNB STYLE GALLERY */
-/* ===================== */
+/* ================= GALLERY ================= */
 .gallery{
 position:relative;
 width:100%;
@@ -160,7 +69,7 @@ background:#000;
 .galleryTrack{
 display:flex;
 height:100%;
-transition:transform .5s ease;
+transition:transform .4s ease;
 }
 
 .gallery img{
@@ -171,7 +80,7 @@ flex-shrink:0;
 cursor:zoom-in;
 }
 
-/* ARROWS */
+/* arrows */
 .arrow{
 position:absolute;
 top:50%;
@@ -179,7 +88,7 @@ transform:translateY(-50%);
 background:rgba(0,0,0,0.5);
 color:#fff;
 border:none;
-padding:8px 10px;
+padding:8px;
 cursor:pointer;
 z-index:2;
 }
@@ -187,7 +96,7 @@ z-index:2;
 .arrow.left{left:8px;}
 .arrow.right{right:8px;}
 
-/* DOTS */
+/* dots */
 .dots{
 position:absolute;
 bottom:8px;
@@ -206,14 +115,36 @@ cursor:pointer;
 
 .dot.active{background:#fff;}
 
-/* ZOOM */
+/* buttons */
+.btnRow{
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+margin-top:10px;
+}
+
+.btn{
+flex:1;
+padding:8px;
+border:none;
+border-radius:8px;
+font-size:12px;
+cursor:pointer;
+}
+
+.detailsbtn{background:#111;color:#fff;}
+.waBtn{background:#25D366;color:#fff;}
+.callBtn{background:#16a34a;color:#fff;}
+.mapBtn{background:#2563eb;color:#fff;}
+
+/* zoom */
 .zoomModal{
 display:none;
 position:fixed;
 top:0;left:0;
 width:100%;height:100%;
 background:rgba(0,0,0,0.95);
-z-index:10000;
+z-index:9999;
 align-items:center;
 justify-content:center;
 }
@@ -224,6 +155,27 @@ max-height:95%;
 object-fit:contain;
 }
 
+/* map */
+.mapModal{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:#000;
+z-index:9999;
+}
+
+#map{width:100%;height:100%;}
+
+.backBtn{
+position:absolute;
+top:10px;left:10px;
+background:white;
+padding:8px 12px;
+border-radius:8px;
+z-index:10000;
+cursor:pointer;
+}
 </style>
 </head>
 
@@ -235,9 +187,7 @@ object-fit:contain;
 <input id="searchBox" placeholder="Search..." oninput="applyFilters()">
 <input id="minRent" type="number" placeholder="Min Rent">
 <input id="maxRent" type="number" placeholder="Max Rent">
-<input id="maxDist" type="number" placeholder="Max Distance KM">
 <button onclick="applyFilters()">Filter</button>
-<button onclick="resetFilters()">Reset</button>
 </div>
 
 <div class="grid" id="list"></div>
@@ -256,7 +206,7 @@ object-fit:contain;
 <script>
 
 const firebaseConfig = {
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0zOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -265,184 +215,154 @@ projectId:"dekut-housing"
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let data={}, filtered=[], page=0;
-const SIZE=6;
+let data = {};
+let filtered = [];
+let page = 0;
 
-const DEKUT=[-0.4167,36.9511];
+const DEKUT = [-0.3976, 36.9597];
 let map;
 
-/* LOAD */
+/* ================= LOAD ================= */
 db.ref("properties").on("value",snap=>{
-data=snap.val()||{};
+data = snap.val() || {};
 applyFilters();
 });
 
 /* ONLY APPROVED */
 function isApproved(p){
-return p.status==="approved";
+return p.status === "approved";
 }
 
-/* FILTER */
+/* ================= FILTER ================= */
 function applyFilters(){
-let search=document.getElementById("searchBox").value.toLowerCase();
-let min=+document.getElementById("minRent").value||0;
-let max=+document.getElementById("maxRent").value||999999;
-let dist=+document.getElementById("maxDist").value||999;
 
-filtered=[];
+let search = document.getElementById("searchBox").value.toLowerCase();
+let min = +document.getElementById("minRent").value || 0;
+let max = +document.getElementById("maxRent").value || 999999;
+
+filtered = [];
 
 for(let id in data){
-let p=data[id];
+let p = data[id];
 if(!isApproved(p)) continue;
 
-let rent=+p.rent||0;
-let text=(p.type+" "+p.location).toLowerCase();
-let d=+p.distance||999;
+let rent = +p.rent || 0;
+let text = (p.type + " " + p.location).toLowerCase();
 
-if(rent>=min && rent<=max && d<=dist && (search===""||text.includes(search))){
+if(rent >= min && rent <= max && (search === "" || text.includes(search))){
 filtered.push({...p,id});
 }
 }
 
-page=0;
-document.getElementById("list").innerHTML="";
+page = 0;
+document.getElementById("list").innerHTML = "";
 renderMore();
 }
 
-/* RENDER */
+/* ================= RENDER ================= */
 function renderMore(){
-let list=document.getElementById("list");
-let next=filtered.slice(page*SIZE,(page+1)*SIZE);
+let list = document.getElementById("list");
+let next = filtered.slice(page*6,(page+1)*6);
 
 next.forEach(p=>{
-list.innerHTML+=`
+let galleryId = Math.random().toString(36).substr(2,9);
+
+list.innerHTML += `
 <div class="card">
 
-${renderGallery(p.images||[])}
+<div class="gallery" data-id="${galleryId}">
+<button class="arrow left" onclick="move('${galleryId}',-1)">‹</button>
 
-<div class="cardContent">
+<div class="galleryTrack" id="track-${galleryId}">
+${(p.images||[]).map(img=>`
+<img src="${img}" onclick="zoom('${img}')">
+`).join("")}
+</div>
 
+<button class="arrow right" onclick="move('${galleryId}',1)">›</button>
+
+<div class="dots" id="dots-${galleryId}">
+${(p.images||[]).map((_,i)=>`<div class="dot" onclick="goTo('${galleryId}',${i})"></div>`).join("")}
+</div>
+</div>
+
+<div style="padding:12px;">
 <b>${p.type}</b><br>
 📍 ${p.location}<br>
-💰 KSh ${p.rent}<br>
+💰 KSh ${p.rent}
 
 <div class="btnRow">
-
-<button class="btn detailsbtn" onclick='openDetails(${JSON.stringify(p)})'>Details</button>
+<button class="btn detailsbtn">Details</button>
 <button class="btn waBtn" onclick="wa('${p.phone||""}')">WhatsApp</button>
 <button class="btn callBtn" onclick="call('${p.phone||""}')">Call</button>
 <button class="btn mapBtn" onclick='openMap(${JSON.stringify(p)})'>Map</button>
-
+</div>
 </div>
 
-</div>
 </div>`;
 });
 
 page++;
 }
 
-/* GALLERY STATE */
-let galleryState={};
+/* ================= GALLERY STATE ================= */
+let state = {};
+let timers = {};
 
-/* RENDER GALLERY */
-function renderGallery(images){
-let id=Math.random().toString(36).substr(2,9);
-galleryState[id]=0;
+/* init auto */
+setInterval(()=>{},1000);
 
-setTimeout(()=>initGallery(id),0);
-
-return `
-<div class="gallery" data-id="${id}">
-<button class="arrow left" onclick="move('${id}',-1)">‹</button>
-
-<div class="galleryTrack" id="track-${id}">
-${images.map(img=>`
-<img src="${img}" onclick="zoom('${img}')">
-`).join("")}
-</div>
-
-<button class="arrow right" onclick="move('${id}',1)">›</button>
-
-<div class="dots" id="dots-${id}">
-${images.map((_,i)=>`<div class="dot" onclick="goTo('${id}',${i})"></div>`).join("")}
-</div>
-</div>`;
-}
-
-/* INIT */
-function initGallery(id){
-updateDots(id);
-autoSlide(id);
-}
-
-/* MOVE */
+/* move */
 function move(id,dir){
-let track=document.getElementById("track-"+id);
-let count=track.children.length;
+let track = document.getElementById("track-"+id);
+if(!track) return;
 
-galleryState[id]=(galleryState[id]+dir+count)%count;
-track.style.transform=`translateX(-${galleryState[id]*100}%)`;
+let count = track.children.length;
+state[id] = (state[id] || 0) + dir;
+
+if(state[id] < 0) state[id] = count-1;
+if(state[id] >= count) state[id] = 0;
+
+track.style.transform = `translateX(-${state[id]*100}%)`;
 updateDots(id);
 }
 
-/* DOT */
+/* dot */
 function goTo(id,i){
-galleryState[id]=i;
+state[id] = i;
 move(id,0);
 }
 
-/* DOT UPDATE */
+/* dots */
 function updateDots(id){
-let dots=document.querySelectorAll("#dots-"+id+" .dot");
+let dots = document.querySelectorAll("#dots-"+id+" .dot");
 dots.forEach((d,i)=>{
-d.classList.toggle("active",i===galleryState[id]);
+d.classList.toggle("active", i === state[id]);
 });
 }
 
-/* AUTO SLIDE */
-function autoSlide(id){
-setInterval(()=>{
-move(id,1);
-},5000);
-}
-
-/* ZOOM */
+/* zoom */
 function zoom(src){
-document.getElementById("zoomImg").src=src;
+document.getElementById("zoomImg").src = src;
 document.getElementById("zoomModal").style.display="flex";
 }
 function closeZoom(){
 document.getElementById("zoomModal").style.display="none";
 }
 
-/* CALL / WA */
+/* whatsapp */
 function wa(p){
 if(!p) return;
 window.open(`https://wa.me/${p}`,"_blank");
 }
 
+/* call */
 function call(p){
 if(!p) return;
 window.location.href=`tel:${p}`;
 }
 
-/* MAP */
-function openMap(p){
-document.getElementById("mapModal").style.display="block";
-
-setTimeout(()=>{
-if(map) map.remove();
-
-map=L.map("map").setView(DEKUT,13);
-
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-
-let prop=[p.lat,p.lng];
-
-L.marker(prop).addTo(map).bindPopup("Property");
-L.marker(DEKUT).addTo(map).bindPopup("DeKUT");
-
+/* ================= MAP (REAL ROADS) ================= */
 async function openMap(p){
 
 document.getElementById("mapModal").style.display="block";
@@ -453,58 +373,38 @@ if(map) map.remove();
 
 map = L.map("map").setView(DEKUT, 13);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-attribution: "&copy; OpenStreetMap"
-}).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 const start = DEKUT;
 const end = [p.lat, p.lng];
 
-// markers
 L.marker(start).addTo(map).bindPopup("DeKUT");
 L.marker(end).addTo(map).bindPopup("Property");
 
-// 🚗 REAL ROAD ROUTING (OSRM)
 const url =
 `https://router.project-osrm.org/route/v1/driving/` +
 `${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
 
-try {
+try{
 const res = await fetch(url);
 const data = await res.json();
 
-if(data.routes && data.routes.length > 0){
+if(data.routes?.length){
+const coords = data.routes[0].geometry.coordinates;
+const path = coords.map(c => [c[1],c[0]]);
 
-const route = data.routes[0].geometry.coordinates;
-
-// convert [lng,lat] → [lat,lng]
-const latlngs = route.map(c => [c[1], c[0]]);
-
-const routeLine = L.polyline(latlngs, {
-color: "blue",
-weight: 5
-}).addTo(map);
-
-map.fitBounds(routeLine.getBounds());
-
-} else {
-alert("Route not found, showing straight line fallback.");
-L.polyline([start, end], {color:"red"}).addTo(map);
-map.fitBounds([start, end]);
+L.polyline(path,{color:"blue",weight:5}).addTo(map);
+map.fitBounds(path);
+}else{
+L.polyline([start,end],{color:"red"}).addTo(map);
+map.fitBounds([start,end]);
 }
 
-} catch (e) {
-console.log(e);
-alert("Routing failed, using fallback line.");
-
-L.polyline([start, end], {color:"red"}).addTo(map);
-map.fitBounds([start, end]);
+}catch(e){
+L.polyline([start,end],{color:"red"}).addTo(map);
+map.fitBounds([start,end]);
 }
 
-}, 300);
-}
-
-map.fitBounds([DEKUT,prop]);
 },300);
 }
 
@@ -512,34 +412,10 @@ function closeMap(){
 document.getElementById("mapModal").style.display="none";
 }
 
-/* DETAILS */
-function openDetails(p){
-alert("You can extend this modal if needed");
-}
-
-/* FILTER RESET */
-function resetFilters(){
-document.getElementById("searchBox").value="";
-document.getElementById("minRent").value="";
-document.getElementById("maxRent").value="";
-document.getElementById("maxDist").value="";
-applyFilters();
-}
-
-/* KEYBOARD NAVIGATION */
-document.addEventListener("keydown",e=>{
-if(e.key==="ArrowRight"){
-document.querySelectorAll(".gallery").forEach(g=>{
-let id=g.dataset.id;
-move(id,1);
-});
-}
-if(e.key==="ArrowLeft"){
-document.querySelectorAll(".gallery").forEach(g=>{
-let id=g.dataset.id;
-move(id,-1);
-});
-}
+/* keyboard support */
+document.addEventListener("keydown",(e)=>{
+if(e.key==="ArrowRight") document.querySelectorAll(".gallery").forEach(g=>move(g.dataset.id,1));
+if(e.key==="ArrowLeft") document.querySelectorAll(".gallery").forEach(g=>move(g.dataset.id,-1));
 });
 
 </script>
