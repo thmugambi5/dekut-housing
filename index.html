@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Student Portal - Phase 5 Chat</title>
+<title>DeKUT Housing - Marketplace</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -14,19 +14,27 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#f5f7fb;}
-.container{max-width:1100px;margin:auto;padding:20px;}
+
+.container{max-width:1200px;margin:auto;padding:20px;}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:10px;
+}
 
 .card{
 background:white;
 padding:15px;
-margin:15px 0;
+margin:10px 0;
 border-radius:12px;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
 gap:15px;
 }
 
@@ -37,51 +45,35 @@ object-fit:cover;
 border-radius:10px;
 }
 
-.badge{
-padding:4px 8px;
-border-radius:6px;
-color:white;
-font-size:12px;
-background:green;
-}
-
 button{
 padding:10px;
 border:none;
-background:#2563eb;
-color:white;
 border-radius:8px;
 cursor:pointer;
-margin:5px 0;
+background:#2563eb;
+color:white;
+margin-top:5px;
 }
 
 button:hover{background:#1d4ed8;}
 
-#map{height:250px;border-radius:10px;margin-top:10px;}
-
-.chatBox{
-height:300px;
-overflow-y:auto;
-background:#f1f5f9;
-padding:10px;
-border-radius:10px;
-margin-top:10px;
+.badge{
+padding:4px 8px;
+border-radius:6px;
+background:green;
+color:white;
+font-size:12px;
 }
-
-.msg{
-padding:8px;
-margin:5px 0;
-border-radius:8px;
-background:white;
-}
-
-.me{background:#dbeafe;}
 
 input{
-width:100%;
 padding:10px;
-margin-top:5px;
+width:100%;
+margin:5px 0;
 }
+
+.hidden{display:none;}
+
+#map{height:300px;border-radius:10px;margin-top:10px;}
 </style>
 </head>
 
@@ -89,8 +81,31 @@ margin-top:5px;
 
 <div class="container">
 
-<h2>Properties</h2>
+<!-- TOP BAR -->
+<div class="topbar">
+<h2>🏠 Available Housing</h2>
+<div>
+<button onclick="toggleAuth()">Login</button>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
 
+<!-- AUTH -->
+<div id="authBox" class="card hidden">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="msg"></p>
+</div>
+
+<!-- FILTERS -->
+<div class="card">
+<input id="search" placeholder="Search location..." oninput="load()">
+<input id="maxRent" type="number" placeholder="Max Rent" oninput="load()">
+</div>
+
+<!-- LIST -->
 <div id="list" class="grid"></div>
 
 </div>
@@ -110,12 +125,41 @@ const auth = firebase.auth();
 const db = firebase.database();
 
 let currentUser = null;
-let activePropertyId = null;
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
 currentUser = user;
 });
+
+/* LOGIN */
+function toggleAuth(){
+document.getElementById("authBox").classList.toggle("hidden");
+}
+
+function login(){
+auth.signInWithEmailAndPassword(email.value,password.value)
+.catch(e=>msg.innerText=e.message);
+}
+
+function logout(){
+auth.signOut();
+}
+
+/* DEKUT */
+const dekut = {lat:-0.3956,lng:36.9626};
+
+function distance(lat,lng){
+let R=6371;
+let dLat=(dekut.lat-lat)*Math.PI/180;
+let dLng=(dekut.lng-lng)*Math.PI/180;
+
+let a=
+Math.sin(dLat/2)**2 +
+Math.cos(lat*Math.PI/180)*Math.cos(dekut.lat*Math.PI/180)*
+Math.sin(dLng/2)**2;
+
+return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
+}
 
 /* LOAD PROPERTIES */
 function load(){
@@ -124,21 +168,32 @@ db.ref("approvedProperties").once("value").then(s=>{
 let data = s.val() || {};
 let html="";
 
+let search = search.value?.toLowerCase() || "";
+let max = Number(maxRent.value || 999999);
+
 for(let id in data){
-let p=data[id];
+let p = data[id];
 if(!p) continue;
+
+if(search && !p.location.toLowerCase().includes(search)) continue;
+if(p.rent > max) continue;
+
+let dist = (p.lat && p.lng) ? distance(p.lat,p.lng) : "N/A";
 
 html += `
 <div class="card">
 
 <img src="${(p.images||[])[0] || ''}">
 
-<h3>${p.name || p.type}</h3>
+<h3>${p.name}</h3>
 
 <p>${p.location}</p>
 <p>KES ${p.rent}</p>
+<p>${dist} km from DeKUT</p>
 
-<button onclick="openChat('${id}')">💬 Chat with Landlord</button>
+<button onclick='view("${id}", JSON.stringify(p))'>View</button>
+<button onclick='wishlist("${id}")'>⭐ Wishlist</button>
+<button onclick='chat("${id}")'>💬 Chat</button>
 
 </div>`;
 }
@@ -147,71 +202,56 @@ list.innerHTML = html;
 });
 }
 
-/* OPEN CHAT */
-function openChat(propertyId){
+/* VIEW DETAILS */
+function view(id,p){
 
-if(!currentUser){
-alert("Login required to chat");
-return;
-}
-
-activePropertyId = propertyId;
+p = JSON.parse(p);
 
 document.body.innerHTML = `
 <div class="container">
 
 <button onclick="location.reload()">⬅ Back</button>
 
-<h2>Property Chat</h2>
+<div class="card">
 
-<div id="chatBox" class="chatBox"></div>
+<h2>${p.name}</h2>
 
-<input id="msg" placeholder="Type message...">
-<button onclick="sendMsg()">Send</button>
+${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
+
+<p>${p.location}</p>
+<p>KES ${p.rent}</p>
+<p>${p.phone}</p>
+
+<div id="map"></div>
+
+</div>
 
 </div>
 `;
 
-listenChat(propertyId);
+let map = L.map('map').setView([p.lat||dekut.lat,p.lng||dekut.lng],14);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+L.marker([p.lat,p.lng]).addTo(map);
+L.marker([dekut.lat,dekut.lng]).addTo(map);
 }
 
-/* SEND MESSAGE */
-function sendMsg(){
-
-let text = msg.value.trim();
-if(!text) return;
-
-db.ref("chats/"+activePropertyId).push({
-senderId: currentUser.uid,
-senderEmail: currentUser.email,
-text: text,
-timestamp: Date.now()
-});
-
-msg.value="";
+/* PLACEHOLDERS FOR NEXT PHASES */
+function wishlist(id){
+if(!currentUser){
+alert("Login required");
+return;
+}
+alert("Phase 2 will store wishlist in Firebase");
 }
 
-/* LISTEN CHAT */
-function listenChat(propertyId){
-
-db.ref("chats/"+propertyId).on("value",snap=>{
-let data = snap.val() || {};
-let html="";
-
-for(let id in data){
-let m = data[id];
-
-let cls = m.senderId === currentUser.uid ? "msg me" : "msg";
-
-html += `
-<div class="${cls}">
-<b>${m.senderEmail}</b><br>
-${m.text}
-</div>`;
+function chat(id){
+if(!currentUser){
+alert("Login required");
+return;
 }
-
-document.getElementById("chatBox").innerHTML = html;
-});
+alert("Phase 5 chat will open here");
 }
 
 /* INIT */
