@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord System Phase 4</title>
+<title>Landlord System Phase 2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -11,17 +11,10 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#f4f6fb;}
-.container{max-width:1000px;margin:auto;padding:20px;}
+.container{max-width:900px;margin:auto;padding:20px;}
 
-.card{
-background:white;padding:15px;margin-top:15px;
-border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);
-}
-
-input,select,textarea,button{
-width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ddd;
-}
-
+.card{background:#fff;padding:15px;margin-top:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+input,select,button,textarea{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ddd;}
 button{background:#2563eb;color:white;border:none;cursor:pointer;}
 button:hover{background:#1d4ed8;}
 
@@ -32,8 +25,7 @@ button:hover{background:#1d4ed8;}
 .approved{background:green;}
 .rejected{background:red;}
 
-.preview{width:80px;height:60px;object-fit:cover;margin:5px;border-radius:6px;}
-
+.preview{width:80px;height:60px;object-fit:cover;margin:4px;border-radius:6px;}
 .row{display:flex;gap:10px;flex-wrap:wrap;}
 .smallBtn{flex:1;padding:8px;font-size:12px;}
 </style>
@@ -51,15 +43,13 @@ button:hover{background:#1d4ed8;}
 
 <button onclick="signup()">Signup</button>
 <button onclick="login()">Login</button>
-
-<p id="err" style="color:red;"></p>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
+<div id="dash" class="hidden">
 
 <div class="card">
-<h2>Welcome <span id="userEmail"></span></h2>
+<h3>Welcome</h3>
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
@@ -67,46 +57,30 @@ button:hover{background:#1d4ed8;}
 <div class="card">
 <h3>Upload Property</h3>
 
-<input id="propertyName" placeholder="Property Name (required)">
+<input id="name" placeholder="Property Name *">
 <select id="type">
 <option>Single Room</option>
 <option>Bedsitter</option>
+<option>Shared (2 people)</option>
+<option>Shared (3+ people)</option>
 <option>1 Bedroom</option>
-<option>2 Bedroom</option>
-<option>Shared Room</option>
 </select>
 
 <input id="location" placeholder="Area (e.g. Bomas, Chania)">
 <input id="rent" type="number" placeholder="Rent">
 <input id="deposit" type="number" placeholder="Deposit">
-<input id="phone" placeholder="2547XXXXXXX">
+<input id="phone" placeholder="Phone (254...)">
 
 <textarea id="desc" placeholder="Description"></textarea>
 
-<h4>Shared Rules (if applicable)</h4>
-<select id="sharedMode">
-<option value="none">Not Shared</option>
-<option value="perHead">Per Head</option>
-<option value="wholeUnit">Whole Unit</option>
-</select>
-
-<input id="maxOccupants" type="number" placeholder="Max occupants (if shared)">
-
-<h4>Amenities</h4>
-<label><input type="checkbox" value="Water"> Water</label>
-<label><input type="checkbox" value="WiFi"> WiFi</label>
-<label><input type="checkbox" value="Electricity"> Electricity</label>
-<label><input type="checkbox" value="Parking"> Parking</label>
-
-<input id="extraAmenities" placeholder="Other amenities">
-
-<button onclick="getLocation()">📍 Capture GPS</button>
+<h4>GPS</h4>
+<button onclick="getGPS()">Capture Location</button>
 
 <h4>Images (max 10)</h4>
-<input type="file" id="images" multiple onchange="convertImages()">
+<input type="file" id="images" multiple accept="image/*" onchange="handleImages()">
 <div id="preview"></div>
 
-<button onclick="submitProperty()">Submit Property</button>
+<button onclick="submitProperty()">Submit</button>
 </div>
 
 <!-- LIST -->
@@ -116,10 +90,11 @@ button:hover{background:#1d4ed8;}
 </div>
 
 </div>
+
 </div>
 
 <script>
-const firebaseConfig = {
+const firebaseConfig={
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
@@ -127,145 +102,122 @@ projectId:"dekut-housing"
 };
 
 firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
 let user=null;
-let images=[];
+let imgs=[];
+let lat=null,lng=null;
 
-let lat=null;
-let lng=null;
-
-/* FIX: PREVENT "login not defined" */
-window.login = function(){
-auth.signInWithEmailAndPassword(email.value,password.value)
-.catch(e=>err.innerText=e.message);
+/* AUTH FIXED */
+window.signup=function(){
+auth.createUserWithEmailAndPassword(email.value,password.value);
 }
 
-window.signup = function(){
-auth.createUserWithEmailAndPassword(email.value,password.value)
-.catch(e=>err.innerText=e.message);
+window.login=function(){
+auth.signInWithEmailAndPassword(email.value,password.value);
 }
 
-window.logout = function(){
-auth.signOut();
-location.reload();
-}
-
-/* AUTH */
 auth.onAuthStateChanged(u=>{
 if(u){
 user=u;
 authBox.classList.add("hidden");
-dashboard.classList.remove("hidden");
-userEmail.innerText=u.email;
+dash.classList.remove("hidden");
 load();
+}else{
+authBox.classList.remove("hidden");
+dash.classList.add("hidden");
 }
 });
 
+window.logout=function(){
+auth.signOut();
+location.reload();
+}
+
 /* GPS */
-window.getLocation=function(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-alert("GPS captured");
+window.getGPS=function(){
+navigator.geolocation.getCurrentPosition(p=>{
+lat=p.coords.latitude;
+lng=p.coords.longitude;
+alert("GPS saved");
 });
 }
 
 /* IMAGES */
-window.convertImages=function(){
+window.handleImages=function(){
 let files=images.files;
-images=[];
+imgs=[];
 preview.innerHTML="";
-
-if(files.length>10){
-alert("Max 10 images");
-return;
-}
-
-for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
-images.push(e.target.result);
+for(let i=0;i<files.length && i<10;i++){
+let r=new FileReader();
+r.onload=e=>{
+imgs.push(e.target.result);
 preview.innerHTML+=`<img class="preview" src="${e.target.result}">`;
 };
-reader.readAsDataURL(f);
+r.readAsDataURL(files[i]);
 }
+}
+
+/* DISTANCE (simple approx) */
+function distanceFromDekut(lat2,lng2){
+const dekutLat=-0.4216;
+const dekutLng=36.9476;
+return Math.sqrt((dekutLat-lat2)**2+(dekutLng-lng2)**2).toFixed(3);
 }
 
 /* SUBMIT ONLY TO PENDING */
 window.submitProperty=function(){
 
-if(!propertyName.value || !type.value){
-alert("Property name and type required");
+if(!name.value || !type.value){
+alert("Name and Type required");
 return;
 }
 
 let data={
-ownerUid:user.uid,
-ownerEmail:user.email,
-propertyName:propertyName.value,
+owner:user.uid,
+name:name.value,
 type:type.value,
 location:location.value,
-rent:Number(rent.value||0),
-deposit:Number(deposit.value||0),
+rent:Number(rent.value),
+deposit:Number(deposit.value),
 phone:phone.value,
 description:desc.value,
-sharedMode:sharedMode.value,
-maxOccupants:Number(maxOccupants.value||0),
-amenities:[],
-images:images,
+images:imgs,
 lat:lat,
 lng:lng,
+distance:(lat && lng)?distanceFromDekut(lat,lng):null,
 status:"pending",
 createdAt:Date.now()
 };
 
-document.querySelectorAll("input[type=checkbox]:checked")
-.forEach(c=>data.amenities.push(c.value));
+db.ref("pendingProperties").push(data);
 
-if(extraAmenities.value)
-data.amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
-
-db.ref("pendingProperties").push(data)
-.then(()=>{
-alert("Submitted for approval");
 clearForm();
 load();
-});
 }
 
-/* LOAD LANDLORD VIEW */
+/* LOAD OWN PROPERTIES */
 function load(){
 db.ref("pendingProperties").on("value",snap=>{
-let data=snap.val()||{};
+let d=snap.val()||{};
 let html="";
-
-for(let id in data){
-let p=data[id];
-if(p.ownerUid !== user.uid) continue;
+for(let id in d){
+let p=d[id];
+if(p.owner!==user.uid) continue;
 
 html+=`
 <div class="card">
-<b>${p.propertyName}</b> <span class="badge ${p.status}">${p.status}</span><br>
-${p.type} - ${p.location}<br>
+<b>${p.name}</b>
+<span class="badge pending">${p.status}</span><br>
+${p.type}<br>
+${p.location}<br>
 Rent: ${p.rent}<br>
-
-<div class="row">
-<button class="smallBtn" onclick="edit('${id}')">Edit</button>
-<button class="smallBtn" onclick="del('${id}')">Delete</button>
-</div>
+<button onclick="del('${id}')">Delete</button>
 </div>`;
 }
-
 list.innerHTML=html;
 });
-}
-
-/* EDIT (simple reload version for now) */
-window.edit=function(id){
-alert("Edit phase will come next (safe mode)");
 }
 
 /* DELETE */
@@ -275,21 +227,17 @@ db.ref("pendingProperties/"+id).remove();
 
 /* CLEAR */
 function clearForm(){
-propertyName.value="";
+name.value="";
 type.value="";
 location.value="";
 rent.value="";
 deposit.value="";
 phone.value="";
 desc.value="";
-sharedMode.value="none";
-maxOccupants.value="";
-images=[];
+imgs=[];
 preview.innerHTML="";
-lat=null;
-lng=null;
+lat=null;lng=null;
 }
-
 </script>
 
 </body>
