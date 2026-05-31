@@ -10,105 +10,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-display:flex;
-background:#f5f7fb;
-}
-
-.sidebar{
-width:250px;
-background:#111;
-color:white;
-height:100vh;
-padding:10px;
-position:fixed;
-left:0;
-top:0;
-}
-
-.menuBtn{
-width:100%;
-padding:12px;
-margin:6px 0;
-background:#222;
-border:none;
-color:white;
-text-align:left;
-border-radius:6px;
-cursor:pointer;
-}
-
+body{margin:0;font-family:Arial;display:flex;background:#f5f7fb;}
+.sidebar{width:250px;background:#111;color:white;height:100vh;padding:10px;position:fixed;left:0;top:0;}
+.menuBtn{width:100%;padding:12px;margin:6px 0;background:#222;border:none;color:white;text-align:left;border-radius:6px;cursor:pointer;}
 .menuBtn:hover{background:#333;}
-
-.content{
-margin-left:260px;
-padding:20px;
-width:100%;
-}
-
-.card{
-background:white;
-padding:10px;
-margin:10px 0;
-border-radius:10px;
-box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-.badge{
-padding:4px 8px;
-border-radius:6px;
-color:white;
-font-size:12px;
-}
-
+.content{margin-left:260px;padding:20px;width:100%;}
+.card{background:white;padding:10px;margin:10px 0;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
-
-img{
-width:70px;
-height:60px;
-object-fit:cover;
-margin:3px;
-border-radius:5px;
-}
-
-textarea{
-width:100%;
-padding:6px;
-margin-top:5px;
-border-radius:6px;
-border:1px solid #ccc;
-}
-
-.loginBox{
-max-width:350px;
-margin:100px auto;
-background:white;
-padding:20px;
-border-radius:10px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1);
-text-align:center;
-}
-
-input{
-width:100%;
-padding:10px;
-margin:8px 0;
-}
-
-button{
-padding:10px;
-width:100%;
-background:#111;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-
+img{width:70px;height:60px;object-fit:cover;margin:3px;border-radius:5px;}
+textarea{width:100%;padding:6px;margin-top:5px;border-radius:6px;border:1px solid #ccc;}
+.loginBox{max-width:350px;margin:100px auto;background:white;padding:20px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center;}
+input{width:100%;padding:10px;margin:8px 0;}
+button{padding:10px;width:100%;background:#111;color:white;border:none;border-radius:6px;cursor:pointer;}
 .hidden{display:none;}
 .error{color:red;font-size:13px;}
 </style>
@@ -134,15 +50,11 @@ cursor:pointer;
 
 <div class="sidebar">
 <h2>Admin</h2>
-
 <button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
 <button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
 <button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
 <button class="menuBtn" onclick="loadView('all')">⚫ All</button>
-
-<button class="menuBtn" onclick="logout()" style="margin-top:20px;background:red;">
-Logout
-</button>
+<button class="menuBtn" onclick="logout()" style="margin-top:20px;background:red;">Logout</button>
 </div>
 
 <div class="content">
@@ -179,17 +91,8 @@ auth.signInWithEmailAndPassword(email,pass)
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
-if(!user){
-showLogin();
-return;
-}
-
-if(user.email!=="admin@dekut.com"){
-showDenied();
-auth.signOut();
-return;
-}
-
+if(!user){showLogin();return;}
+if(user.email!=="admin@dekut.com"){showDenied();auth.signOut();return;}
 showDashboard();
 loadView("pending");
 });
@@ -213,54 +116,52 @@ loginScreen.classList.add("hidden");
 denied.classList.add("hidden");
 }
 
-/* 🔥 FIX: CLEAN OLD LISTENERS PROPERLY */
+/* 🔥 CLEAN SWITCH */
 function loadView(view){
 
-if(currentRef){
-currentRef.off();
-}
+if(currentRef) currentRef.off();
 
+document.getElementById("title") = document.getElementById("title") || null;
 document.getElementById("title").innerText = view.toUpperCase()+" PROPERTIES";
 
-if(view==="pending") loadPending();
-if(view==="approved") loadApproved();
-if(view==="rejected") loadRejected();
-if(view==="all") loadAll();
+/* ALL = MERGED VIEW (FIXED) */
+if(view==="all"){
+let mergedRef = db.ref();
+currentRef = mergedRef;
+
+let result = {};
+
+Promise.all([
+db.ref("pendingProperties").once("value"),
+db.ref("approvedProperties").once("value"),
+db.ref("rejectedProperties").once("value")
+]).then(([p,a,r])=>{
+
+Object.assign(result, p.val()||{}, a.val()||{}, r.val()||{});
+render(result,"all");
+
+});
+return;
 }
 
-/* LOADERS */
-function loadPending(){
+if(view==="pending"){
 currentRef = db.ref("pendingProperties");
-currentRef.on("value",snap=>{
-render(snap.val()||{},"pending");
-});
+currentRef.on("value",s=>render(s.val()||{},"pending"));
 }
 
-function loadApproved(){
+if(view==="approved"){
 currentRef = db.ref("approvedProperties");
-currentRef.on("value",snap=>{
-render(snap.val()||{},"approved");
-});
+currentRef.on("value",s=>render(s.val()||{},"approved"));
 }
 
-function loadAll(){
-currentRef = db.ref("allProperties");
-currentRef.on("value",snap=>{
-render(snap.val()||{},"all");
-});
-}
-
-function loadRejected(){
+if(view==="rejected"){
 currentRef = db.ref("rejectedProperties");
-currentRef.on("value",snap=>{
-renderRejected(snap.val()||{});
-});
+currentRef.on("value",s=>renderRejected(s.val()||{}));
+}
 }
 
 /* SAFE */
-function safe(v){
-return (v===undefined || v===null) ? "" : v;
-}
+function safe(v){return v??"";}
 
 /* RENDER */
 function render(data,type){
@@ -291,13 +192,6 @@ html+=`
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 <button onclick="approve('${id}')">Approve</button>
 <button onclick="reject('${id}')">Reject</button>
-<button onclick="remove('${id}','pendingProperties')">Delete</button>
-`;
-}
-
-if(type==="approved"){
-html+=`
-<button onclick="remove('${id}','approvedProperties')">Delete</button>
 `;
 }
 
@@ -324,13 +218,7 @@ html+=`
 <b>${safe(p.type)}</b><br>
 📍 ${safe(p.location)}<br>
 
-<p><b>Reason:</b> ${safe(p.rejectionReason)}</p>
-
-<div>
-${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
-</div>
-
-<button onclick="remove('${id}','rejectedProperties')">Delete</button>
+<p>${safe(p.rejectionReason)}</p>
 
 </div>
 `;
@@ -339,47 +227,35 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 list.innerHTML=html;
 }
 
-/* 🔥 FIXED APPROVE (NO PERMISSION ERRORS FROM MULTI-UPDATE) */
+/* FIXED APPROVE (MOVE ONLY ONCE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
+let data=s.val();
 if(!data) return;
 
 data.status="approved";
-data.updatedAt=Date.now();
 
-/* SAFE WRITE (NO ROOT UPDATE = NO RULE ISSUES) */
 db.ref("approvedProperties/"+id).set(data);
-db.ref("allProperties/"+id).set(data);
 db.ref("pendingProperties/"+id).remove();
-
 });
 }
 
-/* 🔥 FIXED REJECT */
+/* FIXED REJECT */
 function reject(id){
 
 let reason=document.getElementById("r_"+id).value||"";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
+let data=s.val();
 if(!data) return;
 
 data.status="rejected";
 data.rejectionReason=reason;
-data.updatedAt=Date.now();
 
 db.ref("rejectedProperties/"+id).set(data);
-db.ref("allProperties/"+id).set(data);
 db.ref("pendingProperties/"+id).remove();
-
 });
-}
-
-/* REMOVE */
-function remove(id,node){
-db.ref(node+"/"+id).remove();
 }
 
 /* LOGOUT */
