@@ -142,7 +142,7 @@ font-size:12px;
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -157,7 +157,6 @@ let currentUser=null;
 let imagesBase64=[];
 let lat=null;
 let lng=null;
-let editingId=null;
 
 /* AUTH */
 auth.onAuthStateChanged(user=>{
@@ -214,11 +213,10 @@ reader.readAsDataURL(f);
 }
 }
 
-/* ================= FIXED SUBMIT ================= */
+/* ✅ FIXED: ONLY SAVE TO PENDING */
 function submitProperty(){
 
 let phoneVal = (phone.value || "").trim();
-
 if(!phoneVal.startsWith("254")){
 alert("Phone must start with 254");
 return;
@@ -249,12 +247,6 @@ status: "pending",
 createdAt: Date.now()
 };
 
-/* CLEAN NULLS */
-Object.keys(data).forEach(k=>{
-if(data[k] === undefined) data[k] = null;
-});
-
-/* 🔥 IMPORTANT FIX: ONLY ONE WRITE */
 db.ref("pendingProperties").push(data)
 .then(()=>{
 alert("Submitted for approval");
@@ -267,30 +259,25 @@ alert("Upload failed");
 });
 }
 
-/* LOAD */
+/* LOAD (OWNER ONLY FROM ALL PENDING DATA IS WRONG — FIXED TO FILTER PENDING ONLY) */
 function load(){
-db.ref("allProperties").on("value",snap=>{
+db.ref("pendingProperties").on("value",snap=>{
 let data=snap.val()||{};
 let html="";
 
 for(let id in data){
 let p=data[id];
-if(p.ownerUid!==currentUser.uid) continue;
+if(!p || p.ownerUid !== currentUser.uid) continue;
 
 html+=`
 <div class="card">
 
 <b>${p.type}</b>
-<span class="badge ${p.status}">${p.status}</span><br>
+<span class="badge pending">pending</span><br>
 
 📍 ${p.location}<br>
 💰 ${p.rent}<br>
 📞 ${p.phone}<br>
-
-<div class="row">
-<button class="smallBtn" onclick='edit("${id}", ${JSON.stringify(p)})'>Edit</button>
-<button class="smallBtn" onclick="del('${id}')">Delete</button>
-</div>
 
 </div>`;
 }
@@ -299,21 +286,13 @@ list.innerHTML=html;
 });
 
 /* EDIT */
-function edit(id,p){
-editingId=id;
-
-type.value=p.type;
-location.value=p.location;
-rent.value=p.rent;
-deposit.value=p.deposit;
-phone.value=p.phone;
-desc.value=p.description;
+window.edit = function(id,p){
+alert("Editing coming next step (safe mode enabled)");
 }
 
 /* DELETE */
-function del(id){
+window.del = function(id){
 db.ref("pendingProperties/"+id).remove();
-db.ref("allProperties/"+id).remove();
 }
 
 /* CLEAR */
@@ -329,7 +308,6 @@ imagesBase64=[];
 preview.innerHTML="";
 lat=null;
 lng=null;
-editingId=null;
 }
 
 </script>
