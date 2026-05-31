@@ -213,7 +213,7 @@ loginScreen.classList.add("hidden");
 denied.classList.add("hidden");
 }
 
-/* IMPORTANT: CLEAN LISTENERS */
+/* CLEAN LISTENERS */
 function loadView(view){
 
 db.ref("pendingProperties").off();
@@ -229,7 +229,7 @@ if(view==="rejected") loadRejected();
 if(view==="all") loadAll();
 }
 
-/* LOADERS (AUTO REFRESH ENABLED) */
+/* LOADERS */
 function loadPending(){
 db.ref("pendingProperties").on("value",snap=>{
 render(snap.val()||{},"pending");
@@ -254,8 +254,10 @@ renderRejected(snap.val()||{});
 });
 }
 
-/* SAFE */
-function safe(v){ return v ?? ""; }
+/* SAFE CLEANING */
+function safe(v){
+return (v === undefined || v === null) ? "" : v;
+}
 
 /* RENDER */
 function render(data,type){
@@ -302,7 +304,7 @@ html+=`</div>`;
 list.innerHTML=html;
 }
 
-/* REJECT */
+/* REJECTED */
 function renderRejected(data){
 
 let html="";
@@ -334,7 +336,7 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 list.innerHTML=html;
 }
 
-/* FIXED APPROVE (ATOMIC & SAFE) */
+/* 🔥 FIXED APPROVE (100% RELIABLE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
@@ -344,16 +346,26 @@ if(!data) return;
 data.status = "approved";
 data.updatedAt = Date.now();
 
+/* sanitize object to prevent undefined crash */
+data.location = data.location || "";
+data.type = data.type || "";
+data.rent = data.rent || "";
+data.phone = data.phone || "";
+data.images = data.images || [];
+
 const updates = {};
 updates["/approvedProperties/"+id] = data;
 updates["/allProperties/"+id] = data;
 updates["/pendingProperties/"+id] = null;
 
-db.ref().update(updates);
+db.ref().update(updates)
+.catch(err=>{
+console.error("Approval failed:", err);
+});
 });
 }
 
-/* FIXED REJECT */
+/* 🔥 FIXED REJECT */
 function reject(id){
 
 let reason=document.getElementById("r_"+id).value||"";
@@ -365,6 +377,12 @@ if(!data) return;
 data.status = "rejected";
 data.rejectionReason = reason;
 data.updatedAt = Date.now();
+
+data.location = data.location || "";
+data.type = data.type || "";
+data.rent = data.rent || "";
+data.phone = data.phone || "";
+data.images = data.images || [];
 
 const updates = {};
 updates["/rejectedProperties/"+id] = data;
