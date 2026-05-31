@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard v1</title>
+<title>Admin Control Panel v2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -28,8 +28,8 @@ margin:5px 0;
 border:none;
 background:#222;
 color:white;
-cursor:pointer;
 border-radius:6px;
+cursor:pointer;
 }
 
 .btn:hover{background:#333;}
@@ -86,6 +86,7 @@ margin:3px;
 .approve{background:green;color:white;}
 .reject{background:orange;color:white;}
 .del{background:red;color:white;}
+.edit{background:#2563eb;color:white;}
 </style>
 </head>
 
@@ -105,7 +106,7 @@ margin:3px;
 
 <!-- CONTENT -->
 <div class="content">
-<h2 id="title">Admin</h2>
+<h2 id="title">Admin Dashboard</h2>
 <div id="list"></div>
 </div>
 
@@ -125,7 +126,7 @@ const db = firebase.database();
 
 let currentRef=null;
 
-/* AUTH (ONLY ADMIN EMAIL) */
+/* AUTH */
 auth.onAuthStateChanged(user=>{
 if(!user){
 alert("Admin login required");
@@ -191,4 +192,80 @@ html+=`
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 
 <button class="approve" onclick="approve('${id}')">Approve</button>
-<button class="
+<button class="reject" onclick="reject('${id}')">Reject</button>
+`;
+}
+
+html+=`
+<button class="edit" onclick='edit("${id}",JSON.stringify(p))'>Edit</button>
+<button class="del" onclick="remove('${id}')">Delete</button>
+
+</div>`;
+}
+
+list.innerHTML=html;
+}
+
+/* APPROVE */
+function approve(id){
+
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+if(!data) return;
+
+data.status="approved";
+
+db.ref("approvedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+});
+}
+
+/* REJECT */
+function reject(id){
+
+let reason=document.getElementById("r_"+id).value||"No reason";
+
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+if(!data) return;
+
+data.status="rejected";
+data.reason=reason;
+
+db.ref("rejectedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+});
+}
+
+/* DELETE (HARD DELETE ALL NODES) */
+function remove(id){
+
+db.ref("pendingProperties/"+id).remove();
+db.ref("approvedProperties/"+id).remove();
+db.ref("rejectedProperties/"+id).remove();
+}
+
+/* EDIT (ADMIN OVERRIDE) */
+function edit(id,p){
+
+p=JSON.parse(p);
+
+let newName=prompt("Edit Name",p.name);
+let newRent=prompt("Edit Rent",p.rent);
+let newLocation=prompt("Edit Location",p.location);
+
+if(newName){
+p.name=newName;
+p.rent=Number(newRent);
+p.location=newLocation;
+
+let node = p.status+"Properties";
+db.ref(node+"/"+id).set(p);
+}
+
+}
+
+</script>
+
+</body>
+</html>
