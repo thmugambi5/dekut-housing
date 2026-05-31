@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing - Marketplace</title>
+<title>DeKUT Housing Marketplace - Final</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -13,7 +13,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f5f7fb;}
+body{margin:0;font-family:Arial;background:#f5f7fb;}
 
 .container{max-width:1200px;margin:auto;padding:20px;}
 
@@ -21,11 +21,10 @@ body{font-family:Arial;margin:0;background:#f5f7fb;}
 display:flex;
 justify-content:space-between;
 align-items:center;
-margin-bottom:10px;
 }
 
 .card{
-background:white;
+background:#fff;
 padding:15px;
 margin:10px 0;
 border-radius:12px;
@@ -51,29 +50,36 @@ border:none;
 border-radius:8px;
 cursor:pointer;
 background:#2563eb;
-color:white;
+color:#fff;
 margin-top:5px;
 }
 
 button:hover{background:#1d4ed8;}
 
+input{
+width:100%;
+padding:10px;
+margin:5px 0;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
 .badge{
 padding:4px 8px;
 border-radius:6px;
 background:green;
-color:white;
+color:#fff;
 font-size:12px;
 }
 
-input{
-padding:10px;
-width:100%;
-margin:5px 0;
+#map{
+height:300px;
+border-radius:10px;
+margin-top:10px;
 }
 
 .hidden{display:none;}
-
-#map{height:300px;border-radius:10px;margin-top:10px;}
+.small{font-size:12px;color:gray;}
 </style>
 </head>
 
@@ -83,15 +89,15 @@ margin:5px 0;
 
 <!-- TOP BAR -->
 <div class="topbar">
-<h2>🏠 Available Housing</h2>
+<h2>🏠 Approved Properties</h2>
 <div>
-<button onclick="toggleAuth()">Login</button>
+<button onclick="toggleLogin()">Login</button>
 <button onclick="logout()">Logout</button>
 </div>
 </div>
 
-<!-- AUTH -->
-<div id="authBox" class="card hidden">
+<!-- LOGIN -->
+<div id="loginBox" class="card hidden">
 <h3>Login</h3>
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
@@ -112,8 +118,8 @@ margin:5px 0;
 
 <script>
 
-const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+const firebaseConfig={
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -121,19 +127,19 @@ projectId:"dekut-housing"
 
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
-let currentUser = null;
+let currentUser=null;
 
 /* AUTH */
-auth.onAuthStateChanged(user=>{
-currentUser = user;
+auth.onAuthStateChanged(u=>{
+currentUser=u;
 });
 
 /* LOGIN */
-function toggleAuth(){
-document.getElementById("authBox").classList.toggle("hidden");
+function toggleLogin(){
+loginBox.classList.toggle("hidden");
 }
 
 function login(){
@@ -145,17 +151,19 @@ function logout(){
 auth.signOut();
 }
 
-/* DEKUT */
-const dekut = {lat:-0.3956,lng:36.9626};
+/* DEKUT LOCATION */
+const dekut={lat:-0.3956,lng:36.9626};
 
+/* DISTANCE CALC */
 function distance(lat,lng){
 let R=6371;
-let dLat=(dekut.lat-lat)*Math.PI/180;
-let dLng=(dekut.lng-lng)*Math.PI/180;
+let dLat=(lat-dekut.lat)*Math.PI/180;
+let dLng=(lng-dekut.lng)*Math.PI/180;
 
 let a=
 Math.sin(dLat/2)**2 +
-Math.cos(lat*Math.PI/180)*Math.cos(dekut.lat*Math.PI/180)*
+Math.cos(lat*Math.PI/180) *
+Math.cos(dekut.lat*Math.PI/180) *
 Math.sin(dLng/2)**2;
 
 return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
@@ -165,25 +173,25 @@ return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
 function load(){
 
 db.ref("approvedProperties").once("value").then(s=>{
-let data = s.val() || {};
+let data=s.val()||{};
 let html="";
 
-let search = search.value?.toLowerCase() || "";
-let max = Number(maxRent.value || 999999);
+let search=(search.value||"").toLowerCase();
+let max=Number(maxRent.value||999999);
 
 for(let id in data){
-let p = data[id];
+let p=data[id];
 if(!p) continue;
 
 if(search && !p.location.toLowerCase().includes(search)) continue;
 if(p.rent > max) continue;
 
-let dist = (p.lat && p.lng) ? distance(p.lat,p.lng) : "N/A";
+let dist=(p.lat && p.lng) ? distance(p.lat,p.lng) : "N/A";
 
-html += `
+html+=`
 <div class="card">
 
-<img src="${(p.images||[])[0] || ''}">
+<img src="${(p.images||[])[0]||''}">
 
 <h3>${p.name}</h3>
 
@@ -191,23 +199,24 @@ html += `
 <p>KES ${p.rent}</p>
 <p>${dist} km from DeKUT</p>
 
-<button onclick='view("${id}", JSON.stringify(p))'>View</button>
-<button onclick='wishlist("${id}")'>⭐ Wishlist</button>
+<button onclick='viewProperty("${id}",JSON.stringify(p))'>View</button>
 <button onclick='chat("${id}")'>💬 Chat</button>
+<button onclick='wishlist("${id}")'>⭐ Wishlist</button>
+<button onclick='rate("${id}")'>⭐ Rate</button>
 
 </div>`;
 }
 
-list.innerHTML = html;
+list.innerHTML=html;
 });
 }
 
-/* VIEW DETAILS */
-function view(id,p){
+/* VIEW PROPERTY FULL PAGE */
+function viewProperty(id,p){
 
-p = JSON.parse(p);
+p=JSON.parse(p);
 
-document.body.innerHTML = `
+document.body.innerHTML=`
 <div class="container">
 
 <button onclick="location.reload()">⬅ Back</button>
@@ -216,11 +225,14 @@ document.body.innerHTML = `
 
 <h2>${p.name}</h2>
 
+<div class="grid">
 ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
+</div>
 
-<p>${p.location}</p>
-<p>KES ${p.rent}</p>
-<p>${p.phone}</p>
+<p><b>Location:</b> ${p.location}</p>
+<p><b>Rent:</b> KES ${p.rent}</p>
+<p><b>Phone:</b> ${p.phone}</p>
+<p><b>Description:</b> ${p.description||""}</p>
 
 <div id="map"></div>
 
@@ -229,7 +241,7 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 `;
 
-let map = L.map('map').setView([p.lat||dekut.lat,p.lng||dekut.lng],14);
+let map=L.map('map').setView([p.lat||dekut.lat,p.lng||dekut.lng],14);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -237,21 +249,58 @@ L.marker([p.lat,p.lng]).addTo(map);
 L.marker([dekut.lat,dekut.lng]).addTo(map);
 }
 
-/* PLACEHOLDERS FOR NEXT PHASES */
-function wishlist(id){
+/* CHAT (LOGIN REQUIRED, PROPERTY SPECIFIC) */
+function chat(propertyId){
+
 if(!currentUser){
-alert("Login required");
+alert("Login required to chat");
 return;
-}
-alert("Phase 2 will store wishlist in Firebase");
 }
 
-function chat(id){
+let msg=prompt("Enter message to landlord:");
+if(!msg) return;
+
+db.ref("chats/"+propertyId).push({
+userId:currentUser.uid,
+message:msg,
+time:Date.now()
+});
+
+alert("Message sent");
+}
+
+/* WISHLIST */
+function wishlist(propertyId){
+
 if(!currentUser){
-alert("Login required");
+alert("Login required for wishlist");
 return;
 }
-alert("Phase 5 chat will open here");
+
+db.ref("wishlists/"+currentUser.uid+"/"+propertyId).set(true);
+
+alert("Saved to wishlist");
+}
+
+/* RATING (1 PER USER PER PROPERTY) */
+function rate(propertyId){
+
+if(!currentUser){
+alert("Login required to rate");
+return;
+}
+
+let rating=prompt("Rate property (1-5)");
+rating=Number(rating);
+
+if(rating<1||rating>5) return;
+
+db.ref("ratings/"+propertyId+"/"+currentUser.uid).set({
+rating:rating,
+time:Date.now()
+});
+
+alert("Rating submitted");
 }
 
 /* INIT */
