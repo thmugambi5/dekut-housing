@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Control Panel v2</title>
+<title>Admin Control Panel - Final</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -15,24 +15,24 @@ body{margin:0;font-family:Arial;background:#f5f7fb;display:flex;}
 .sidebar{
 width:220px;
 background:#111;
-color:white;
+color:#fff;
 height:100vh;
-padding:10px;
 position:fixed;
+padding:10px;
 }
 
-.btn{
+.sidebar button{
 width:100%;
 padding:10px;
 margin:5px 0;
-border:none;
 background:#222;
-color:white;
+border:none;
+color:#fff;
 border-radius:6px;
 cursor:pointer;
 }
 
-.btn:hover{background:#333;}
+.sidebar button:hover{background:#333;}
 
 .content{
 margin-left:230px;
@@ -41,7 +41,7 @@ width:100%;
 }
 
 .card{
-background:white;
+background:#fff;
 padding:15px;
 margin:10px 0;
 border-radius:12px;
@@ -59,7 +59,7 @@ border-radius:6px;
 .badge{
 padding:4px 8px;
 border-radius:6px;
-color:white;
+color:#fff;
 font-size:12px;
 }
 
@@ -67,7 +67,7 @@ font-size:12px;
 .approved{background:green;}
 .rejected{background:red;}
 
-textarea,input{
+textarea{
 width:100%;
 padding:8px;
 margin-top:5px;
@@ -75,18 +75,19 @@ border-radius:6px;
 border:1px solid #ccc;
 }
 
-button{
+button.action{
 padding:8px;
+margin:3px;
 border:none;
 border-radius:6px;
 cursor:pointer;
-margin:3px;
+color:#fff;
 }
 
-.approve{background:green;color:white;}
-.reject{background:orange;color:white;}
-.del{background:red;color:white;}
-.edit{background:#2563eb;color:white;}
+.approve{background:green;}
+.reject{background:orange;}
+.delete{background:red;}
+.edit{background:#2563eb;}
 </style>
 </head>
 
@@ -96,12 +97,12 @@ margin:3px;
 <div class="sidebar">
 <h3>Admin Panel</h3>
 
-<button class="btn" onclick="loadView('pending')">Pending</button>
-<button class="btn" onclick="loadView('approved')">Approved</button>
-<button class="btn" onclick="loadView('rejected')">Rejected</button>
-<button class="btn" onclick="loadView('all')">All</button>
+<button onclick="loadView('pending')">Pending</button>
+<button onclick="loadView('approved')">Approved</button>
+<button onclick="loadView('rejected')">Rejected</button>
+<button onclick="loadView('all')">All</button>
 
-<button class="btn" onclick="logout()" style="background:red;">Logout</button>
+<button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
 <!-- CONTENT -->
@@ -112,8 +113,8 @@ margin:3px;
 
 <script>
 
-const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+const firebaseConfig={
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -121,12 +122,12 @@ projectId:"dekut-housing"
 
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
 let currentRef=null;
 
-/* AUTH */
+/* AUTH (ADMIN ONLY EMAIL CONTROL) */
 auth.onAuthStateChanged(user=>{
 if(!user){
 alert("Admin login required");
@@ -157,7 +158,7 @@ render({...p.val(),...a.val(),...r.val()});
 return;
 }
 
-currentRef = db.ref(view+"Properties");
+currentRef=db.ref(view+"Properties");
 
 currentRef.on("value",snap=>{
 render(snap.val()||{},view);
@@ -173,10 +174,12 @@ for(let id in data){
 let p=data[id];
 if(!p) continue;
 
+let status=p.status||type;
+
 html+=`
 <div class="card">
 
-<span class="badge ${p.status||type}">${p.status||type}</span>
+<span class="badge ${status}">${status}</span>
 
 <h3>${p.name}</h3>
 <p>${p.location}</p>
@@ -187,18 +190,18 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
 `;
 
-if((p.status||type)==="pending"){
+if(status==="pending"){
 html+=`
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 
-<button class="approve" onclick="approve('${id}')">Approve</button>
-<button class="reject" onclick="reject('${id}')">Reject</button>
+<button class="action approve" onclick="approve('${id}')">Approve</button>
+<button class="action reject" onclick="reject('${id}')">Reject</button>
 `;
 }
 
 html+=`
-<button class="edit" onclick='edit("${id}",JSON.stringify(p))'>Edit</button>
-<button class="del" onclick="remove('${id}')">Delete</button>
+<button class="action edit" onclick='edit("${id}",JSON.stringify(p))'>Edit</button>
+<button class="action delete" onclick="removeProperty('${id}')">Delete</button>
 
 </div>`;
 }
@@ -237,15 +240,15 @@ db.ref("pendingProperties/"+id).remove();
 });
 }
 
-/* DELETE (HARD DELETE ALL NODES) */
-function remove(id){
+/* HARD DELETE (ALL NODES CLEAN) */
+function removeProperty(id){
 
 db.ref("pendingProperties/"+id).remove();
 db.ref("approvedProperties/"+id).remove();
 db.ref("rejectedProperties/"+id).remove();
 }
 
-/* EDIT (ADMIN OVERRIDE) */
+/* EDIT (ADMIN OVERRIDE CONTROL) */
 function edit(id,p){
 
 p=JSON.parse(p);
@@ -259,10 +262,9 @@ p.name=newName;
 p.rent=Number(newRent);
 p.location=newLocation;
 
-let node = p.status+"Properties";
+let node=p.status+"Properties";
 db.ref(node+"/"+id).set(p);
 }
-
 }
 
 </script>
