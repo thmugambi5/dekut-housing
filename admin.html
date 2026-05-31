@@ -13,8 +13,8 @@
 body{
 margin:0;
 font-family:Arial;
-background:#f5f7fb;
 display:flex;
+background:#f5f7fb;
 }
 
 /* SIDEBAR */
@@ -27,19 +27,17 @@ padding:10px;
 position:fixed;
 left:0;
 top:0;
-transition:0.3s;
 }
 
 .sidebar h2{color:white;}
 
 .menuBtn{
-display:block;
+width:100%;
 padding:12px;
-margin:8px 0;
+margin:6px 0;
 background:#222;
 border:none;
 color:white;
-width:100%;
 text-align:left;
 border-radius:6px;
 cursor:pointer;
@@ -56,14 +54,16 @@ padding:20px;
 width:100%;
 }
 
-/* CARDS */
+/* CARD */
 .card{
 background:white;
 padding:10px;
 margin:10px 0;
 border-radius:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
+/* BADGE */
 .badge{
 padding:4px 8px;
 border-radius:6px;
@@ -75,6 +75,7 @@ font-size:12px;
 .approved{background:green;}
 .rejected{background:red;}
 
+/* IMAGES */
 img{
 width:70px;
 height:60px;
@@ -83,10 +84,11 @@ margin:3px;
 border-radius:5px;
 }
 
+/* INPUTS */
 textarea{
 width:100%;
-margin-top:5px;
 padding:6px;
+margin-top:5px;
 border-radius:6px;
 border:1px solid #ccc;
 }
@@ -95,17 +97,14 @@ border:1px solid #ccc;
 @media(max-width:768px){
 .sidebar{
 transform:translateX(-100%);
+transition:0.3s;
 position:fixed;
 z-index:1000;
 }
 
-.sidebar.open{
-transform:translateX(0);
-}
+.sidebar.open{transform:translateX(0);}
 
-.content{
-margin-left:0;
-}
+.content{margin-left:0;}
 
 .hamburger{
 display:block;
@@ -114,7 +113,6 @@ color:white;
 padding:10px;
 border:none;
 width:100%;
-text-align:left;
 }
 }
 </style>
@@ -124,18 +122,16 @@ text-align:left;
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-
 <h2>Admin</h2>
 
 <button class="menuBtn" onclick="loadView('pending')">🟡 Pending</button>
 <button class="menuBtn" onclick="loadView('approved')">🟢 Approved</button>
 <button class="menuBtn" onclick="loadView('rejected')">🔴 Rejected</button>
-<button class="menuBtn" onclick="loadView('all')">⚫ All Properties</button>
+<button class="menuBtn" onclick="loadView('all')">⚫ All</button>
 
 <button class="menuBtn" onclick="logout()" style="margin-top:20px;background:red;">
 Logout
 </button>
-
 </div>
 
 <!-- CONTENT -->
@@ -143,96 +139,197 @@ Logout
 
 <button class="hamburger" onclick="toggleMenu()">☰ Menu</button>
 
-<h2 id="title">Pending Properties</h2>
+<h2 id="title">Admin Panel</h2>
 <div id="list"></div>
-/* ================= APPROVE ================= */
-async function approve(id){
-try{
-let snap = await db.ref("pendingProperties/"+id).once("value");
-if(!snap.exists()) return;
 
-let data = snap.val();
-data.status = "approved";
-data.approvedAt = Date.now();
+</div>
 
-/* move to approved */
-await db.ref("approvedProperties/"+id).set(data);
+<script>
 
-/* also keep in master */
-await db.ref("allProperties/"+id).set(data);
+/* FIREBASE */
+const firebaseConfig = {
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing"
+};
 
-/* remove from pending */
-await db.ref("pendingProperties/"+id).remove();
+firebase.initializeApp(firebaseConfig);
 
-alert("Approved successfully");
+const auth = firebase.auth();
+const db = firebase.database();
 
-}catch(e){
-alert(e.message);
+let currentView="pending";
+
+/* AUTH PROTECTION */
+auth.onAuthStateChanged(user=>{
+if(!user){
+window.location.href="login.html";
 }
-}
+});
 
-/* ================= REJECT ================= */
-async function reject(id){
-try{
-let reason = document.getElementById("r_"+id)?.value || "";
-
-let snap = await db.ref("pendingProperties/"+id).once("value");
-if(!snap.exists()) return;
-
-let data = snap.val();
-data.status = "rejected";
-data.rejectionReason = reason;
-data.rejectedAt = Date.now();
-
-/* move to rejected */
-await db.ref("rejectedProperties/"+id).set(data);
-
-/* keep in master */
-await db.ref("allProperties/"+id).set(data);
-
-/* remove from pending */
-await db.ref("pendingProperties/"+id).remove();
-
-alert("Rejected successfully");
-
-}catch(e){
-alert(e.message);
-}
+/* TOGGLE */
+function toggleMenu(){
+sidebar.classList.toggle("open");
 }
 
-/* ================= DELETE ================= */
+/* VIEW SWITCH */
+function loadView(view){
+currentView=view;
+
+if(view==="pending") loadPending();
+if(view==="approved") loadApproved();
+if(view==="rejected") loadRejected();
+if(view==="all") loadAll();
+
+document.getElementById("title").innerText=view.toUpperCase()+" PROPERTIES";
+}
+
+/* LOADERS */
+function loadPending(){
+db.ref("pendingProperties").on("value",snap=>{
+render(snap.val()||{},"pending");
+});
+}
+
+function loadApproved(){
+db.ref("approvedProperties").on("value",snap=>{
+render(snap.val()||{},"approved");
+});
+}
+
+function loadRejected(){
+db.ref("rejectedProperties").on("value",snap=>{
+renderRejected(snap.val()||{});
+});
+}
+
+function loadAll(){
+db.ref("allProperties").on("value",snap=>{
+render(snap.val()||{},"all",true);
+});
+}
+
+/* RENDER */
+function render(data,type,isReadOnly=false){
+
+let html="";
+
+for(let id in data){
+let p=data[id];
+
+html+=`
+<div class="card">
+
+<span class="badge ${type}">${type}</span><br>
+
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+💰 ${p.rent||""}<br>
+📞 ${p.phone||""}<br>
+
+<div>
+${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
+</div>
+`;
+
+if(type==="pending"){
+html+=`
+<textarea id="r_${id}" placeholder="Rejection reason"></textarea>
+
+<button onclick="approve('${id}')">Approve</button>
+<button onclick="reject('${id}')">Reject</button>
+<button onclick="remove('${id}','pendingProperties')">Delete</button>
+`;
+}
+
+if(type==="approved"){
+html+=`
+<button onclick="remove('${id}','approvedProperties')">Delete</button>
+`;
+}
+
+if(type==="all"){
+html+=`<small>Master record</small>`;
+}
+
+html+=`</div>`;
+}
+
+list.innerHTML=html;
+}
+
+/* REJECT VIEW */
+function renderRejected(data){
+
+let html="";
+
+for(let id in data){
+let p=data[id];
+
+html+=`
+<div class="card">
+
+<span class="badge rejected">rejected</span><br>
+
+<b>${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+
+<p><b>Reason:</b> ${p.rejectionReason||""}</p>
+
+<div>
+${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
+</div>
+
+<button onclick="remove('${id}','rejectedProperties')">Delete</button>
+
+</div>
+`;
+}
+
+list.innerHTML=html;
+}
+
+/* ACTIONS */
+function approve(id){
+
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+data.status="approved";
+
+db.ref("approvedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+db.ref("allProperties/"+id).set(data);
+});
+}
+
+function reject(id){
+
+let reason=document.getElementById("r_"+id).value||"";
+
+db.ref("pendingProperties/"+id).once("value").then(s=>{
+let data=s.val();
+data.status="rejected";
+data.rejectionReason=reason;
+
+db.ref("rejectedProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+db.ref("allProperties/"+id).set(data);
+});
+}
+
 function remove(id,node){
-if(confirm("Delete this property permanently?")){
 db.ref(node+"/"+id).remove();
 }
+
+/* LOGOUT */
+function logout(){
+auth.signOut();
+location.reload();
 }
 
-/* ================= MOBILE SIDEBAR CLOSE ON CLICK ================= */
-document.addEventListener("click",(e)=>{
-const sidebar = document.getElementById("sidebar");
-if(window.innerWidth <= 768 && sidebar.classList.contains("open")){
-if(!sidebar.contains(e.target)){
-sidebar.classList.remove("open");
-}
-}
-});
-
-/* ================= ACTIVE MENU HIGHLIGHT ================= */
-function setActive(btn){
-document.querySelectorAll(".menuBtn").forEach(b=>b.classList.remove("active"));
-btn.classList.add("active");
-}
-
-/* hook active state */
-document.querySelectorAll(".menuBtn").forEach(btn=>{
-btn.addEventListener("click",()=>setActive(btn));
-});
-
-/* ================= SAFE INIT ================= */
-function init(){
+/* DEFAULT */
 loadView("pending");
-}
-init();
 
 </script>
 
