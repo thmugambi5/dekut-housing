@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Portal - Final Production</title>
+<title>Landlord Portal Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -11,14 +11,13 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#f5f7fb;}
-.container{max-width:1000px;margin:auto;padding:20px;}
-.card{background:#fff;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
-input,select,textarea,button{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #ddd;}
+.container{max-width:900px;margin:auto;padding:20px;}
+.card{background:#fff;padding:15px;margin:10px 0;border-radius:10px;}
+input,select,textarea,button{width:100%;padding:10px;margin:5px 0;}
 button{background:#2563eb;color:#fff;border:none;cursor:pointer;}
-button:hover{background:#1d4ed8;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
-img{width:100%;height:120px;object-fit:cover;border-radius:8px;}
-.badge{padding:4px 8px;border-radius:6px;color:#fff;font-size:12px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px;}
+img{width:100%;height:100px;object-fit:cover;}
+.badge{padding:4px 6px;border-radius:5px;color:#fff;}
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
@@ -30,62 +29,40 @@ img{width:100%;height:120px;object-fit:cover;border-radius:8px;}
 
 <div class="container">
 
-<!-- LOGIN -->
 <div id="loginBox" class="card">
-<h2>Landlord Login</h2>
+<h3>Landlord Login</h3>
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 <p id="msg"></p>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dash" class="hidden">
 
 <div class="card">
-<h2>Landlord Dashboard</h2>
-<button onclick="logout()" style="background:red;">Logout</button>
-</div>
-
-<!-- PROPERTY FORM -->
-<div class="card">
 <h3>Upload Property</h3>
 
-<input id="name" placeholder="Property Name (required)">
+<input id="name" placeholder="Property Name">
 <select id="type">
 <option>Single Room</option>
-<option>Shared Room (2 persons max)</option>
+<option>Shared Room</option>
 <option>Bedsitter</option>
-<option>1 Bedroom</option>
-<option>2 Bedroom</option>
 </select>
 
-<input id="location" placeholder="Location (required)">
+<input id="location" placeholder="Location">
 <input id="rent" type="number" placeholder="Rent">
 <input id="deposit" type="number" placeholder="Deposit">
-<input id="phone" placeholder="2547xxxxxxxx">
+<input id="phone" placeholder="Phone">
 
 <textarea id="desc" placeholder="Description"></textarea>
 
-<h4>Amenities</h4>
-<label><input type="checkbox" value="Water"> Water</label>
-<label><input type="checkbox" value="WiFi"> WiFi</label>
-<label><input type="checkbox" value="Electricity"> Electricity</label>
-<label><input type="checkbox" value="Parking"> Parking</label>
+<button onclick="captureGPS()">Capture GPS</button>
 
-<input id="extra" placeholder="Other amenities (comma separated)">
+<input type="file" id="imgInput" multiple accept="image/*" onchange="loadImages()">
 
-<h4>GPS</h4>
-<button onclick="getLocation()">Capture Location</button>
-
-<h4>Images (max 10)</h4>
-<input type="file" id="images" multiple accept="image/*" onchange="handleImages()">
-<div id="preview" class="grid"></div>
-
-<button onclick="submitProperty()">Submit Property</button>
+<button onclick="submit()">Submit</button>
 </div>
 
-<!-- LIST -->
 <div class="card">
 <h3>My Properties</h3>
 <div id="list"></div>
@@ -97,12 +74,7 @@ img{width:100%;height:120px;object-fit:cover;border-radius:8px;}
 
 <script>
 
-const firebaseConfig={
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
-};
+const firebaseConfig={apiKey:" "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",",authDomain:"dekut-housing.firebaseapp.com",databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",projectId:"dekut-housing"};
 
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
@@ -127,70 +99,48 @@ auth.signInWithEmailAndPassword(email.value,password.value)
 .catch(e=>msg.innerText=e.message);
 }
 
-function logout(){
-auth.signOut();
-location.reload();
-}
-
 /* GPS */
-function getLocation(){
+function captureGPS(){
 navigator.geolocation.getCurrentPosition(p=>{
 lat=p.coords.latitude;
 lng=p.coords.longitude;
-alert("Location captured");
+alert("GPS saved");
 });
 }
 
 /* IMAGES */
-function handleImages(){
-let files=imagesInput.files;
-if(files.length>10){alert("Max 10 images");return;}
+function loadImages(){
+const files=document.getElementById("imgInput").files;
 images=[];
-preview.innerHTML="";
 for(let f of files){
-let r=new FileReader();
-r.onload=e=>{
-images.push(e.target.result);
-preview.innerHTML+=`<img src="${e.target.result}">`;
-};
+const r=new FileReader();
+r.onload=e=>images.push(e.target.result);
 r.readAsDataURL(f);
 }
 }
 
 /* SUBMIT */
-function submitProperty(){
+function submit(){
 
-if(!name.value.trim() || !location.value.trim()){
-alert("Name and Location required");
-return;
-}
+if(!name.value || !location.value) return alert("Fill required fields");
 
-let amenities=[];
-document.querySelectorAll("input[type=checkbox]:checked")
-.forEach(c=>amenities.push(c.value));
-
-if(extra.value) amenities.push(...extra.value.split(","));
-
-let data={
+db.ref("pendingProperties").push({
 ownerId:user.uid,
-name:name.value.trim(),
+name:name.value,
 type:type.value,
-location:location.value.trim(),
-rent:Number(rent.value||0),
-deposit:Number(deposit.value||0),
+location:location.value,
+rent:rent.value,
+deposit:deposit.value,
 phone:phone.value,
 description:desc.value,
-amenities,
 images,
 lat,
 lng,
 status:"pending",
-createdAt:Date.now()
-};
+time:Date.now()
+});
 
-db.ref("pendingProperties").push(data);
-clearForm();
-load();
+alert("Submitted");
 }
 
 /* LOAD */
@@ -201,41 +151,18 @@ let html="";
 
 for(let id in data){
 let p=data[id];
-if(!p || p.ownerId!==user.uid) continue;
+if(p.ownerId!==user.uid) continue;
 
 html+=`
 <div class="card">
 <h3>${p.name}</h3>
 <span class="badge ${p.status}">${p.status}</span>
 <p>${p.location}</p>
-<p>KES ${p.rent}</p>
-
-${p.status==="rejected"?`<p style="color:red;">Reason: ${p.reason||"N/A"}</p>`:""}
-
-<div class="grid">
-${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
-</div>
-
 </div>`;
 }
 
 list.innerHTML=html;
 });
-}
-
-/* CLEAR */
-function clearForm(){
-name.value="";
-location.value="";
-rent.value="";
-deposit.value="";
-phone.value="";
-desc.value="";
-extra.value="";
-images=[];
-preview.innerHTML="";
-lat=null;
-lng=null;
 }
 
 </script>
