@@ -2,28 +2,79 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Full System</title>
+<title>Student Portal - Phase 4</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f4f6fb;}
-.container{max-width:950px;margin:auto;padding:20px;}
-.card{background:white;padding:15px;margin-top:15px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
-input,select,textarea,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ddd;}
-button{background:#2563eb;color:white;border:none;cursor:pointer;}
+body{font-family:Arial;margin:0;background:#f5f7fb;}
+.container{max-width:1100px;margin:auto;padding:20px;}
+
+.card{
+background:white;
+padding:15px;
+margin:15px 0;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+gap:15px;
+}
+
+img{
+width:100%;
+height:180px;
+object-fit:cover;
+border-radius:10px;
+}
+
+.badge{
+padding:4px 8px;
+border-radius:6px;
+color:white;
+font-size:12px;
+background:green;
+}
+
+button{
+padding:10px;
+border:none;
+background:#2563eb;
+color:white;
+border-radius:8px;
+cursor:pointer;
+margin-top:5px;
+}
+
 button:hover{background:#1d4ed8;}
-.hidden{display:none;}
-.badge{display:inline-block;padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
-.pending{background:orange;}
-.approved{background:green;}
-.rejected{background:red;}
-.preview{width:90px;height:70px;object-fit:cover;margin:5px;border-radius:6px;}
-.row{display:flex;gap:10px;flex-wrap:wrap;}
-.smallBtn{flex:1;padding:8px;font-size:12px;}
+
+#map{height:300px;border-radius:10px;margin-top:10px;}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:15px;
+}
+
+.authBox input{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+
+.smallBtn{
+background:#111;
+}
 </style>
 </head>
 
@@ -31,61 +82,36 @@ button:hover{background:#1d4ed8;}
 
 <div class="container">
 
-<div id="authBox" class="card">
-<h2>Landlord Login</h2>
-<input id="email" type="email" placeholder="Email">
+<!-- TOP BAR -->
+<div class="topbar">
+<h2>Available Properties</h2>
+<div>
+<button onclick="openLogin()">Login</button>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
+
+<!-- AUTH -->
+<div id="authModal" class="card hidden">
+<h3>Login / Signup</h3>
+
+<input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
-<button onclick="signup()">Signup</button>
+
+<button onclick="signup()">Sign Up</button>
 <button onclick="login()">Login</button>
+
+<p id="authMsg"></p>
 </div>
 
-<div id="dashboard" class="hidden">
-
+<!-- FILTERS -->
 <div class="card">
-<h2>Welcome <span id="userEmail"></span></h2>
-<button onclick="logout()" style="background:red;">Logout</button>
+<input id="search" placeholder="Search location..." oninput="load()">
+<input id="maxRent" type="number" placeholder="Max Rent" oninput="load()">
 </div>
 
-<div class="card">
-<h3>Upload Property</h3>
-
-<select id="type">
-<option>Single Room</option>
-<option>Bedsitter</option>
-<option>1 Bedroom</option>
-<option>2 Bedroom</option>
-</select>
-
-<input id="location" placeholder="Location">
-<input id="rent" type="number" placeholder="Rent">
-<input id="deposit" type="number" placeholder="Deposit">
-<input id="phone" placeholder="Phone (254...)">
-<textarea id="desc" placeholder="Description"></textarea>
-
-<h4>Amenities</h4>
-<label><input type="checkbox" value="Water"> Water</label>
-<label><input type="checkbox" value="Electricity"> Electricity</label>
-<label><input type="checkbox" value="WiFi"> WiFi</label>
-<label><input type="checkbox" value="Parking"> Parking</label>
-<label><input type="checkbox" value="Security"> Security</label>
-
-<input id="extraAmenities" placeholder="Other amenities">
-
-<button onclick="getLocation()">📍 Capture Location</button>
-
-<h4>Images</h4>
-<input type="file" id="images" multiple onchange="convertImages()">
-<div id="preview"></div>
-
-<button onclick="submitProperty()">Submit Property</button>
-</div>
-
-<div class="card">
-<h3>My Properties</h3>
-<div id="list"></div>
-</div>
-
-</div>
+<!-- LIST -->
+<div id="list" class="grid"></div>
 
 </div>
 
@@ -103,186 +129,159 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser=null;
-let imagesBase64=[];
-let lat=null;
-let lng=null;
+let currentUser = null;
 
-/* AUTH */
+/* ================= AUTH ================= */
+
 auth.onAuthStateChanged(user=>{
-if(user){
-currentUser=user;
-show();
-}
+currentUser = user || null;
 });
+
+function openLogin(){
+document.getElementById("authModal").classList.toggle("hidden");
+}
 
 function signup(){
 auth.createUserWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user;show();});
+.then(()=>authMsg.innerText="Account created")
+.catch(e=>authMsg.innerText=e.message);
 }
 
 function login(){
 auth.signInWithEmailAndPassword(email.value,password.value)
-.then(r=>{currentUser=r.user;show();});
+.catch(e=>authMsg.innerText=e.message);
 }
 
 function logout(){
 auth.signOut();
-location.reload();
 }
 
-function show(){
-authBox.classList.add("hidden");
-dashboard.classList.remove("hidden");
-userEmail.innerText=currentUser.email;
-load();
+/* ================= DEKUT ================= */
+
+const dekut = { lat:-0.3956, lng:36.9626 };
+
+function distance(lat,lng){
+let R=6371;
+let dLat=(dekut.lat-lat)*Math.PI/180;
+let dLng=(dekut.lng-lng)*Math.PI/180;
+
+let a =
+Math.sin(dLat/2)**2 +
+Math.cos(lat*Math.PI/180)*Math.cos(dekut.lat*Math.PI/180)*
+Math.sin(dLng/2)**2;
+
+return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
 }
 
-/* LOCATION */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-alert("Location captured");
-});
-}
+/* ================= WISHLIST ================= */
 
-/* IMAGES */
-function convertImages(){
-let files=images.files;
-imagesBase64=[];
-preview.innerHTML="";
-for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
-imagesBase64.push(e.target.result);
-preview.innerHTML+=`<img class="preview" src="${e.target.result}">`;
-};
-reader.readAsDataURL(f);
-}
-}
+function toggleWishlist(id){
 
-/* SUBMIT ONLY TO PENDING */
-function submitProperty(){
-
-let phoneVal = (phone.value || "").trim();
-if(!phoneVal.startsWith("254")){
-alert("Phone must start with 254");
+if(!currentUser){
+alert("Login required for wishlist");
 return;
 }
 
-let amenities=[];
-document.querySelectorAll("input[type=checkbox]:checked")
-.forEach(c=>amenities.push(c.value));
+const ref = db.ref("wishlists/"+currentUser.uid+"/"+id);
 
-if(extraAmenities.value){
-amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()).filter(a=>a));
+ref.once("value").then(s=>{
+if(s.exists()){
+ref.remove();
+alert("Removed from wishlist");
+}else{
+ref.set(true);
+alert("Added to wishlist");
 }
-
-let data={
-ownerUid:currentUser.uid,
-ownerEmail:currentUser.email,
-type:type.value,
-location:location.value,
-rent:Number(rent.value),
-deposit:Number(deposit.value),
-phone:phoneVal,
-description:desc.value,
-amenities:amenities,
-images:imagesBase64,
-lat:lat,
-lng:lng,
-status:"pending",
-createdAt:Date.now()
-};
-
-db.ref("pendingProperties").push(data).then(()=>{
-alert("Submitted for approval");
-clearForm();
-load();
 });
 }
 
-/* LOAD OWN PROPERTIES */
+/* ================= LOAD PROPERTIES ================= */
+
 function load(){
-db.ref("pendingProperties").on("value",snap=>{
-let data=snap.val()||{};
+
+db.ref("approvedProperties").once("value").then(s=>{
+let data = s.val() || {};
 let html="";
 
-for(let id in data){
-let p=data[id];
-if(p.ownerUid!==currentUser.uid) continue;
+let search = (search.value || "").toLowerCase();
+let max = Number(maxRent.value || 999999);
 
-html+=`
+for(let id in data){
+let p = data[id];
+if(!p) continue;
+
+if(search && !p.location.toLowerCase().includes(search)) continue;
+if(p.rent > max) continue;
+
+let dist = (p.lat && p.lng) ? distance(p.lat,p.lng) : "N/A";
+
+html += `
 <div class="card">
 
-<b>${p.type}</b>
-<span class="badge pending">${p.status}</span><br>
+<img src="${(p.images||[])[0] || ''}">
+
+<h3>${p.name || p.type}</h3>
+
+<span class="badge">Approved</span><br>
 
 📍 ${p.location}<br>
-💰 ${p.rent}<br>
-📞 ${p.phone}<br>
+💰 KES ${p.rent}<br>
+📏 ${dist} km from DeKUT<br>
 
-<button onclick="openChat('${id}')">Chat Admin</button>
+<button onclick="toggleWishlist('${id}')">⭐ Wishlist</button>
+<button onclick="view('${id}', JSON.stringify(p))">View</button>
+<button class="smallBtn" onclick="openLogin()">Chat (login)</button>
 
 </div>`;
 }
 
-list.innerHTML=html;
+list.innerHTML = html;
 });
 }
 
-/* CHAT */
-function openChat(propertyId){
+/* ================= VIEW DETAILS ================= */
 
-let chatUI=`
+function view(id,p){
+
+p = JSON.parse(p);
+
+let images = (p.images||[]).map(i=>`<img src="${i}" style="margin-top:10px;">`).join("");
+
+document.body.innerHTML = `
+<div class="container">
+
+<button onclick="location.reload()">⬅ Back</button>
+
 <div class="card">
-<h3>Property Chat</h3>
 
-<div id="chatBox"></div>
+<h2>${p.name}</h2>
 
-<input id="msg" placeholder="message">
-<button onclick="sendMsg('${propertyId}')">Send</button>
-</div>`;
+${images}
 
-document.getElementById("dashboard").innerHTML+=chatUI;
+<p><b>Location:</b> ${p.location}</p>
+<p><b>Rent:</b> ${p.rent}</p>
+<p><b>Deposit:</b> ${p.deposit}</p>
+<p><b>Phone:</b> ${p.phone}</p>
 
-db.ref("chats/"+propertyId).on("child_added",snap=>{
-let m=snap.val();
-let div=document.createElement("div");
-div.innerHTML="<b>"+m.senderEmail+":</b> "+m.text;
-document.getElementById("chatBox").appendChild(div);
-});
+<div id="map"></div>
+
+</div>
+
+</div>
+`;
+
+let map = L.map('map').setView([p.lat||dekut.lat,p.lng||dekut.lng], 14);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'OSM'
+}).addTo(map);
+
+L.marker([p.lat,p.lng]).addTo(map);
+L.marker([dekut.lat,dekut.lng]).addTo(map);
 }
 
-function sendMsg(propertyId){
-
-let text=document.getElementById("msg").value;
-
-db.ref("chats/"+propertyId).push({
-senderId:currentUser.uid,
-senderEmail:currentUser.email,
-text:text,
-role:"landlord",
-timestamp:Date.now()
-});
-
-document.getElementById("msg").value="";
-}
-
-function clearForm(){
-type.value="";
-location.value="";
-rent.value="";
-deposit.value="";
-phone.value="";
-desc.value="";
-extraAmenities.value="";
-imagesBase64=[];
-preview.innerHTML="";
-lat=null;
-lng=null;
-}
+/* INIT */
+load();
 
 </script>
 
