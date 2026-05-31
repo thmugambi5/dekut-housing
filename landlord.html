@@ -78,7 +78,6 @@ font-size:12px;
 
 <div class="container">
 
-<!-- AUTH -->
 <div id="authBox" class="card">
 <h2>Landlord Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -88,7 +87,6 @@ font-size:12px;
 <button onclick="login()">Login</button>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="card">
@@ -96,7 +94,6 @@ font-size:12px;
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
-<!-- FORM -->
 <div class="card">
 <h3>Upload Property</h3>
 
@@ -115,7 +112,6 @@ font-size:12px;
 <textarea id="desc" placeholder="Description"></textarea>
 
 <h4>Amenities</h4>
-
 <label><input type="checkbox" value="Water"> Water</label>
 <label><input type="checkbox" value="Electricity"> Electricity</label>
 <label><input type="checkbox" value="WiFi"> WiFi</label>
@@ -134,7 +130,6 @@ font-size:12px;
 <button onclick="submitProperty()">Submit Property</button>
 </div>
 
-<!-- LIST -->
 <div class="card">
 <h3>My Properties</h3>
 <div id="list"></div>
@@ -147,7 +142,7 @@ font-size:12px;
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -219,7 +214,7 @@ reader.readAsDataURL(f);
 }
 }
 
-/* ================= FIXED SAFE SUBMIT ================= */
+/* ================= FIXED SUBMIT ================= */
 function submitProperty(){
 
 let phoneVal = (phone.value || "").trim();
@@ -237,7 +232,6 @@ if(extraAmenities.value){
 amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()).filter(a=>a));
 }
 
-/* CLEAN SAFE DATA */
 let data={
 ownerUid: currentUser.uid || "",
 ownerEmail: currentUser.email || "",
@@ -255,31 +249,22 @@ status: "pending",
 createdAt: Date.now()
 };
 
-/* FINAL SANITIZER */
+/* CLEAN NULLS */
 Object.keys(data).forEach(k=>{
-if(data[k] === undefined){
-data[k] = null;
-}
+if(data[k] === undefined) data[k] = null;
 });
 
-if(editingId){
-
-db.ref("allProperties/"+editingId).update(data);
-db.ref("pendingProperties/"+editingId).update(data);
-
-editingId=null;
-alert("Updated successfully");
-
-}else{
-
-let ref=db.ref("pendingProperties").push(data);
-db.ref("allProperties/"+ref.key).set(data);
-
+/* 🔥 IMPORTANT FIX: ONLY ONE WRITE */
+db.ref("pendingProperties").push(data)
+.then(()=>{
 alert("Submitted for approval");
-}
-
 clearForm();
 load();
+})
+.catch(err=>{
+console.error(err);
+alert("Upload failed");
+});
 }
 
 /* LOAD */
@@ -312,7 +297,6 @@ html+=`
 
 list.innerHTML=html;
 });
-}
 
 /* EDIT */
 function edit(id,p){
