@@ -12,22 +12,11 @@
 <style>
 body{font-family:Arial;margin:0;background:#f4f6fb;}
 .container{max-width:900px;margin:auto;padding:20px;}
-
-.card{
-background:white;
-padding:15px;
-margin-top:15px;
-border-radius:12px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
+.card{background:white;padding:15px;margin-top:15px;border-radius:12px;}
 
 input,select,textarea,button{
-width:100%;
-padding:10px;
-margin-top:10px;
-border-radius:8px;
-border:1px solid #ddd;
-box-sizing:border-box;
+width:100%;padding:10px;margin-top:10px;
+border-radius:8px;border:1px solid #ddd;
 }
 
 button{background:#2563eb;color:white;border:none;cursor:pointer;}
@@ -35,44 +24,12 @@ button:hover{background:#1d4ed8;}
 
 .hidden{display:none;}
 
-.badge{
-display:inline-block;
-padding:4px 8px;
-border-radius:6px;
-color:white;
-font-size:12px;
-}
-
+.badge{padding:4px 8px;border-radius:6px;color:white;font-size:12px;}
 .pending{background:orange;}
 .approved{background:green;}
 .rejected{background:red;}
 
-.amenitiesGrid{
-display:grid;
-grid-template-columns:repeat(2,1fr);
-gap:8px;
-margin-top:10px;
-}
-
-.amenitiesGrid label{
-display:flex;
-align-items:center;
-gap:6px;
-font-size:14px;
-background:#f8f9fb;
-padding:6px;
-border-radius:6px;
-}
-
-img.preview{
-width:100px;
-height:80px;
-object-fit:cover;
-margin:5px;
-border-radius:6px;
-}
-
-small{color:gray;}
+img.preview{width:100px;height:80px;object-fit:cover;margin:5px;border-radius:6px;}
 </style>
 </head>
 
@@ -80,83 +37,42 @@ small{color:gray;}
 
 <div class="container">
 
-<!-- AUTH -->
 <div id="authBox" class="card">
 <h2>Landlord Login</h2>
-
 <input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
-
 <button onclick="login()">Login</button>
 <button onclick="signup()" style="background:green;">Signup</button>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <div class="card">
-<h2>Welcome, <span id="user"></span></h2>
+<h2>Welcome <span id="user"></span></h2>
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
-<!-- PROPERTY FORM -->
 <div class="card">
 <h3>Upload Property</h3>
 
-<label>Property Type</label>
 <select id="type">
 <option>Single Room</option>
-<option>Shared Single Room</option>
 <option>Bedsitter</option>
-<option>Shared Bedsitter</option>
 <option>1 Bedroom</option>
 <option>2 Bedroom</option>
 </select>
 
-<small>Example areas: Bomas, Chania, Nyeri Town, etc</small>
-<input id="locationText" placeholder="Area Name">
-
-<input id="rent" type="number" placeholder="Rent (KES)">
-<input id="deposit" type="number" placeholder="Deposit (KES)">
-
-<input id="phone" placeholder="Phone (must start with 254)">
-
+<input id="location" placeholder="Location">
+<input id="rent" type="number" placeholder="Rent">
+<input id="phone" placeholder="Phone (254...)">
 <textarea id="desc" placeholder="Description"></textarea>
 
-<small style="color:red;">
-⚠️ Stand inside the property before sharing location
-</small>
-
-<button onclick="getLocation()">📍 Share My Location</button>
-
-<h4>Amenities</h4>
-
-<div class="amenitiesGrid">
-<label><input class="amenity" type="checkbox" value="Water"> Water</label>
-<label><input class="amenity" type="checkbox" value="Electricity"> Electricity</label>
-<label><input class="amenity" type="checkbox" value="WiFi"> WiFi</label>
-<label><input class="amenity" type="checkbox" value="Parking"> Parking</label>
-<label><input class="amenity" type="checkbox" value="Security"> Security</label>
-<label><input class="amenity" type="checkbox" value="Furnished"> Furnished</label>
-</div>
-
-<!-- EXTRA AMENITIES INPUT -->
-<textarea id="extraAmenities" placeholder="Other amenities (comma separated e.g. CCTV, Borehole, Balcony)"></textarea>
-
-<select id="utilities">
-<option value="Yes">Utilities Included: Yes</option>
-<option value="No">No</option>
-<option value="Partial">Partial</option>
-</select>
-
-<input type="file" id="images" multiple accept="image/*" onchange="convertImages()">
-
+<input type="file" id="images" multiple onchange="convertImages()">
 <div id="preview"></div>
 
-<button onclick="submitProperty()">Submit Property</button>
+<button onclick="submitProperty()">Submit</button>
 </div>
 
-<!-- LIST -->
 <div class="card">
 <h3>Your Properties</h3>
 <div id="list"></div>
@@ -164,19 +80,13 @@ small{color:gray;}
 
 </div>
 
-</div>
-
 <script>
 
-/* ================= FIREBASE ================= */
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing",
-storageBucket:"dekut-housing.appspot.com",
-messagingSenderId:"784034754945",
-appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+projectId:"dekut-housing"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -184,220 +94,79 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* ================= DEKUT COORDINATES ================= */
-const DEKUT_LAT = -0.3976;
-const DEKUT_LNG = 36.9597;
+let currentUser=null;
+let images=[];
 
-/* ================= STATE ================= */
-let currentUser = null;
-let imagesBase64 = [];
-let lat = null;
-let lng = null;
-
-/* ================= AUTH ================= */
 function signup(){
-let email=document.getElementById("email").value;
-let pass=document.getElementById("password").value;
-
-auth.createUserWithEmailAndPassword(email,pass)
-.then(r=>{currentUser=r.user; show();})
-.catch(e=>alert(e.message));
+auth.createUserWithEmailAndPassword(email.value,password.value)
+.then(r=>{currentUser=r.user; show();});
 }
 
 function login(){
-let email=document.getElementById("email").value;
-let pass=document.getElementById("password").value;
-
-auth.signInWithEmailAndPassword(email,pass)
-.then(r=>{currentUser=r.user; show();})
-.catch(e=>alert(e.message));
+auth.signInWithEmailAndPassword(email.value,password.value)
+.then(r=>{currentUser=r.user; show();});
 }
 
 function show(){
-document.getElementById("authBox").classList.add("hidden");
-document.getElementById("dashboard").classList.remove("hidden");
-document.getElementById("user").innerText=currentUser.email;
-loadProperties();
+authBox.classList.add("hidden");
+dashboard.classList.remove("hidden");
+user.innerText=currentUser.email;
+load();
 }
 
-/* ================= GPS ================= */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-
-let d=calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
-alert("Location captured! Distance to DeKUT: "+d.toFixed(2)+" km");
-});
-}
-
-function calculateDistance(lat1,lon1,lat2,lon2){
-const R=6371;
-const dLat=(lat2-lat1)*Math.PI/180;
-const dLon=(lon2-lon1)*Math.PI/180;
-
-const a=
-Math.sin(dLat/2)*Math.sin(dLat/2)+
-Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-Math.sin(dLon/2)*Math.sin(dLon/2);
-
-const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-return R*c;
-}
-
-/* ================= IMAGES ================= */
 function convertImages(){
-let files=document.getElementById("images").files;
-imagesBase64=[];
-
-document.getElementById("preview").innerHTML="";
-
-for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
-imagesBase64.push(e.target.result);
-document.getElementById("preview").innerHTML+=
-`<img class="preview" src="${e.target.result}">`;
-};
-reader.readAsDataURL(f);
-}
+images=[];
+preview.innerHTML="";
+for(let f of images.files){}
 }
 
-/* ================= SUBMIT ================= */
 function submitProperty(){
 
-let phone=document.getElementById("phone").value;
+let id = db.ref("properties").push().key;
 
-if(!phone.startsWith("254")){
-alert("Phone must start with 254");
-return;
-}
-
-let amenities=[];
-document.querySelectorAll(".amenity:checked")
-.forEach(c=>amenities.push(c.value));
-
-let extra=document.getElementById("extraAmenities").value
-.split(",").map(a=>a.trim()).filter(a=>a);
-
-let data={
-ownerUid:currentUser.uid,
-ownerEmail:currentUser.email,
-type:document.getElementById("type").value,
-location:document.getElementById("locationText").value,
-rent:document.getElementById("rent").value,
-deposit:document.getElementById("deposit").value,
-phone:phone,
-description:document.getElementById("desc").value,
-amenities:[...amenities,...extra],
-utilities:document.getElementById("utilities").value,
-images:imagesBase64,
-lat:lat,
-lng:lng,
-distanceToDekutKm: lat?calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG):null,
+db.ref("properties/"+id).set({
+owner:currentUser.uid,
+type:type.value,
+location:location.value,
+rent:rent.value,
+phone:phone.value,
+desc:desc.value,
+images:images,
 status:"pending",
 createdAt:Date.now()
-};
+});
 
-db.ref("pendingProperties").push(data);
-
-alert("Sent for approval");
-clearForm();
-loadProperties();
+alert("Submitted");
+load();
 }
 
-/* ================= LOAD PROPERTIES ================= */
-
-function loadProperties(){
-
-db.ref("allProperties").on("value",snap=>{
-let data=snap.val()||{};
+function load(){
+db.ref("properties").on("value",snap=>{
+let d=snap.val()||{};
 let html="";
 
-for(let id in data){
-
-let p=data[id];
-
-if(p.ownerUid !== currentUser.uid) continue;
-
-let badgeClass = p.status || "pending";
-let reason = p.rejectionReason ? `<br><small style="color:red;"><b>Reason:</b> ${p.rejectionReason}</small>` : "";
+for(let id in d){
+let p=d[id];
+if(p.owner!==currentUser.uid) continue;
 
 html += `
 <div class="card">
-
-<b>${p.type || ""}</b>
-<span class="badge ${badgeClass}">${p.status || "pending"}</span><br>
-
-📍 ${p.location || ""}<br>
-💰 KES ${p.rent || ""} | Deposit: ${p.deposit || ""}<br>
-📞 ${p.phone || ""}<br>
-📏 ${p.distanceToDekutKm ? p.distanceToDekutKm.toFixed(2) : "?"} km to DeKUT
-
-${reason}
-
-<div>
-${(p.images || []).map(i => `<img class="preview" src="${i}">`).join("")}
-</div>
-
-<button onclick="deleteProperty('${id}')"
-style="background:red;margin-top:10px;">
-Delete
-</button>
-
-</div>
-`;
+<b>${p.type}</b>
+<span class="badge ${p.status}">${p.status}</span><br>
+📍 ${p.location}<br>
+💰 ${p.rent}<br>
+</div>`;
 }
 
-document.getElementById("list").innerHTML = html;
+list.innerHTML=html;
 });
 }
 
-/* ================= DELETE (OPTION A SYNCED) ================= */
-function deleteProperty(id){
-
-db.ref("pendingProperties/"+id).remove();
-db.ref("approvedProperties/"+id).remove();
-db.ref("rejectedProperties/"+id).remove();
-db.ref("allProperties/"+id).remove();
-
-alert("Property deleted from system");
-}
-
-/* ================= CLEAR FORM ================= */
-function clearForm(){
-document.getElementById("type").value="";
-document.getElementById("locationText").value="";
-document.getElementById("rent").value="";
-document.getElementById("deposit").value="";
-document.getElementById("phone").value="";
-document.getElementById("desc").value="";
-document.getElementById("images").value="";
-document.getElementById("extraAmenities").value="";
-imagesBase64=[];
-lat=null;
-lng=null;
-document.getElementById("preview").innerHTML="";
-}
-
-/* ================= LOGOUT ================= */
-function logout(){
-auth.signOut().then(()=>{
-location.reload();
-});
-}
-
-/* ================= AUTO LOGIN ================= */
-auth.onAuthStateChanged(user=>{
-if(user){
-currentUser = user;
-document.getElementById("authBox").classList.add("hidden");
-document.getElementById("dashboard").classList.remove("hidden");
-document.getElementById("user").innerText = user.email;
-loadProperties();
-}
+auth.onAuthStateChanged(u=>{
+if(u){currentUser=u;show();}
 });
 
+function logout(){auth.signOut();location.reload();}
 </script>
 
 </body>
