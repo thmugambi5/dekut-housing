@@ -28,8 +28,6 @@ left:0;
 top:0;
 }
 
-.sidebar h2{color:white;}
-
 .menuBtn{
 width:100%;
 padding:12px;
@@ -157,7 +155,7 @@ Logout
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0Ozz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -167,6 +165,8 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.database();
+
+let currentRef = null;
 
 /* LOGIN */
 function login(){
@@ -213,13 +213,12 @@ loginScreen.classList.add("hidden");
 denied.classList.add("hidden");
 }
 
-/* CLEAN LISTENERS */
+/* 🔥 FIX: CLEAN OLD LISTENERS PROPERLY */
 function loadView(view){
 
-db.ref("pendingProperties").off();
-db.ref("approvedProperties").off();
-db.ref("rejectedProperties").off();
-db.ref("allProperties").off();
+if(currentRef){
+currentRef.off();
+}
 
 document.getElementById("title").innerText = view.toUpperCase()+" PROPERTIES";
 
@@ -231,32 +230,36 @@ if(view==="all") loadAll();
 
 /* LOADERS */
 function loadPending(){
-db.ref("pendingProperties").on("value",snap=>{
+currentRef = db.ref("pendingProperties");
+currentRef.on("value",snap=>{
 render(snap.val()||{},"pending");
 });
 }
 
 function loadApproved(){
-db.ref("approvedProperties").on("value",snap=>{
+currentRef = db.ref("approvedProperties");
+currentRef.on("value",snap=>{
 render(snap.val()||{},"approved");
 });
 }
 
 function loadAll(){
-db.ref("allProperties").on("value",snap=>{
+currentRef = db.ref("allProperties");
+currentRef.on("value",snap=>{
 render(snap.val()||{},"all");
 });
 }
 
 function loadRejected(){
-db.ref("rejectedProperties").on("value",snap=>{
+currentRef = db.ref("rejectedProperties");
+currentRef.on("value",snap=>{
 renderRejected(snap.val()||{});
 });
 }
 
-/* SAFE CLEANING */
+/* SAFE */
 function safe(v){
-return (v === undefined || v === null) ? "" : v;
+return (v===undefined || v===null) ? "" : v;
 }
 
 /* RENDER */
@@ -336,32 +339,21 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 list.innerHTML=html;
 }
 
-/* 🔥 FIXED APPROVE (100% RELIABLE) */
+/* 🔥 FIXED APPROVE (NO PERMISSION ERRORS FROM MULTI-UPDATE) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
 let data = s.val();
 if(!data) return;
 
-data.status = "approved";
-data.updatedAt = Date.now();
+data.status="approved";
+data.updatedAt=Date.now();
 
-/* sanitize object to prevent undefined crash */
-data.location = data.location || "";
-data.type = data.type || "";
-data.rent = data.rent || "";
-data.phone = data.phone || "";
-data.images = data.images || [];
+/* SAFE WRITE (NO ROOT UPDATE = NO RULE ISSUES) */
+db.ref("approvedProperties/"+id).set(data);
+db.ref("allProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
 
-const updates = {};
-updates["/approvedProperties/"+id] = data;
-updates["/allProperties/"+id] = data;
-updates["/pendingProperties/"+id] = null;
-
-db.ref().update(updates)
-.catch(err=>{
-console.error("Approval failed:", err);
-});
 });
 }
 
@@ -374,22 +366,14 @@ db.ref("pendingProperties/"+id).once("value").then(s=>{
 let data = s.val();
 if(!data) return;
 
-data.status = "rejected";
-data.rejectionReason = reason;
-data.updatedAt = Date.now();
+data.status="rejected";
+data.rejectionReason=reason;
+data.updatedAt=Date.now();
 
-data.location = data.location || "";
-data.type = data.type || "";
-data.rent = data.rent || "";
-data.phone = data.phone || "";
-data.images = data.images || [];
+db.ref("rejectedProperties/"+id).set(data);
+db.ref("allProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
 
-const updates = {};
-updates["/rejectedProperties/"+id] = data;
-updates["/allProperties/"+id] = data;
-updates["/pendingProperties/"+id] = null;
-
-db.ref().update(updates);
 });
 }
 
