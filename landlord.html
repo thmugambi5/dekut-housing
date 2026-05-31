@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord System - Phase 1 Fixed</title>
+<title>Landlord System - Clean Auth Final</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -40,13 +40,11 @@ button:hover{background:#1d4ed8;}
 
 .hidden{display:none;}
 
-.row{display:flex;gap:10px;flex-wrap:wrap;}
-
 .preview{
 width:90px;height:70px;
 object-fit:cover;
-border-radius:6px;
 margin:5px;
+border-radius:6px;
 }
 
 .badge{
@@ -58,8 +56,6 @@ font-size:12px;
 }
 
 .pending{background:orange;}
-.approved{background:green;}
-.rejected{background:red;}
 </style>
 </head>
 
@@ -69,12 +65,11 @@ font-size:12px;
 
 <!-- AUTH -->
 <div id="authBox" class="card">
-<h2>Landlord Login</h2>
+<h2>Landlord Signup / Login</h2>
+
+<input id="fullName" placeholder="Full Name (Signup only)">
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
-
-<input id="bizName" placeholder="Business Name">
-<input id="username" placeholder="Username">
 
 <button onclick="signup()">Signup</button>
 <button onclick="login()">Login</button>
@@ -88,17 +83,15 @@ font-size:12px;
 <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 
-<!-- FORM -->
+<!-- PROPERTY FORM -->
 <div class="card">
 <h3>Upload Property</h3>
 
-<input id="propertyName" placeholder="Property Name (required)">
+<input id="propertyName" placeholder="Property Name">
 <select id="propertyType">
-<option value="">Select Type</option>
 <option>Single Room</option>
-<option>Shared Single Room</option>
+<option>Shared Room</option>
 <option>Bedsitter</option>
-<option>Shared Bedsitter</option>
 <option>1 Bedroom</option>
 <option>2 Bedroom</option>
 </select>
@@ -106,24 +99,10 @@ font-size:12px;
 <input id="location" placeholder="Area">
 <input id="rent" type="number" placeholder="Rent">
 <input id="deposit" type="number" placeholder="Deposit">
-<input id="phone" placeholder="Phone (254...)">
+<input id="phone" placeholder="254...">
 
 <textarea id="desc" placeholder="Description"></textarea>
 
-<h4>Amenities</h4>
-<label><input type="checkbox" value="Water"> Water</label>
-<label><input type="checkbox" value="WiFi"> WiFi</label>
-<label><input type="checkbox" value="Electricity"> Electricity</label>
-<label><input type="checkbox" value="Parking"> Parking</label>
-<label><input type="checkbox" value="Security"> Security</label>
-
-<input id="extraAmenities" placeholder="Other amenities">
-
-<h4>Images (Max 10)</h4>
-<input type="file" id="imagesInput" multiple onchange="convertImages()">
-<div id="preview"></div>
-
-<button onclick="getLocation()">📍 Capture GPS</button>
 <button onclick="submitProperty()">Submit Property</button>
 </div>
 
@@ -152,12 +131,36 @@ const auth = firebase.auth();
 const db = firebase.database();
 
 let user=null;
-let images=[];
-let lat=null;
-let lng=null;
-let editId=null;
 
-/* AUTH */
+/* SIGNUP */
+function signup(){
+
+auth.createUserWithEmailAndPassword(email.value,password.value)
+.then(cred=>{
+
+db.ref("users/"+cred.user.uid).set({
+fullName: fullName.value,
+email: email.value
+});
+
+alert("Account created");
+})
+.catch(e=>alert(e.message));
+}
+
+/* LOGIN */
+function login(){
+auth.signInWithEmailAndPassword(email.value,password.value)
+.catch(e=>alert(e.message));
+}
+
+/* LOGOUT */
+function logout(){
+auth.signOut();
+location.reload();
+}
+
+/* AUTH STATE */
 auth.onAuthStateChanged(u=>{
 if(u){
 user=u;
@@ -168,58 +171,11 @@ load();
 }
 });
 
-/* FUNCTIONS */
-function signup(){
-auth.createUserWithEmailAndPassword(email.value,password.value)
-.then(()=>alert("Account created"))
-.catch(e=>alert(e.message));
-}
-
-function login(){
-auth.signInWithEmailAndPassword(email.value,password.value)
-.catch(e=>alert(e.message));
-}
-
-function logout(){
-auth.signOut();
-location.reload();
-}
-
-/* GPS */
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-lat=pos.coords.latitude;
-lng=pos.coords.longitude;
-alert("GPS captured");
-});
-}
-
-/* IMAGES */
-function convertImages(){
-let files=imagesInput.files;
-images=[];
-preview.innerHTML="";
-
-if(files.length>10){
-alert("Max 10 images allowed");
-return;
-}
-
-for(let f of files){
-let reader=new FileReader();
-reader.onload=e=>{
-images.push(e.target.result);
-preview.innerHTML+=`<img class="preview" src="${e.target.result}">`;
-};
-reader.readAsDataURL(f);
-}
-}
-
-/* SUBMIT */
+/* SUBMIT → ONLY PENDING */
 function submitProperty(){
 
 if(!propertyName.value || !propertyType.value){
-alert("Name and Type required");
+alert("Fill required fields");
 return;
 }
 
@@ -228,19 +184,9 @@ alert("Phone must start with 254");
 return;
 }
 
-let amenities=[];
-document.querySelectorAll("input[type=checkbox]:checked")
-.forEach(c=>amenities.push(c.value));
-
-if(extraAmenities.value){
-amenities.push(...extraAmenities.value.split(",").map(a=>a.trim()));
-}
-
 let data={
 ownerId:user.uid,
 ownerEmail:user.email,
-businessName:bizName.value,
-username:username.value,
 
 propertyName:propertyName.value,
 propertyType:propertyType.value,
@@ -250,22 +196,15 @@ deposit:Number(deposit.value),
 phone:phone.value,
 description:desc.value,
 
-amenities:amenities,
-images:images,
-
-lat:lat,
-lng:lng,
-
 status:"pending",
 createdAt:Date.now()
 };
 
-db.ref("pendingProperties").push(data)
-.then(()=>{
+db.ref("pendingProperties").push(data);
+
 alert("Submitted for approval");
 clearForm();
 load();
-});
 }
 
 /* LOAD */
@@ -300,20 +239,13 @@ rent.value="";
 deposit.value="";
 phone.value="";
 desc.value="";
-extraAmenities.value="";
-images=[];
-preview.innerHTML="";
-lat=null;
-lng=null;
 }
 
-/* 🔥 FIX: MAKE FUNCTIONS GLOBAL */
+/* GLOBAL */
 window.signup = signup;
 window.login = login;
 window.logout = logout;
 window.submitProperty = submitProperty;
-window.getLocation = getLocation;
-window.convertImages = convertImages;
 
 </script>
 
