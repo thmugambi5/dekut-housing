@@ -15,6 +15,7 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#f6f6f6;}
 
+/* HEADER */
 header{
 padding:14px;
 background:#fff;
@@ -27,6 +28,7 @@ z-index:1000;
 box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* FILTERS */
 .filters{
 display:flex;
 gap:8px;
@@ -43,6 +45,7 @@ border-radius:8px;
 width:160px;
 }
 
+/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -50,6 +53,7 @@ gap:14px;
 padding:14px;
 }
 
+/* CARD */
 .card{
 background:#fff;
 border-radius:14px;
@@ -57,7 +61,79 @@ overflow:hidden;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-/* ================= GALLERY ================= */
+/* BADGE */
+.badge{
+display:inline-block;
+padding:4px 8px;
+border-radius:6px;
+font-size:12px;
+color:white;
+background:green;
+margin-top:5px;
+}
+
+/* BUTTONS */
+.btnRow{
+display:flex;
+flex-wrap:wrap;
+gap:6px;
+margin-top:10px;
+}
+
+.btn{
+flex:1;
+padding:8px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-size:12px;
+}
+
+.detailsbtn{background:#111;color:#fff;}
+.callBtn{background:#16a34a;color:#fff;}
+.waBtn{background:#25D366;color:#fff;}
+.mapBtn{background:#2563eb;color:#fff;}
+
+/* MAP */
+.mapModal{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:black;
+z-index:9999;
+}
+#map{width:100%;height:100%;}
+
+/* BACK */
+.backBtn{
+position:absolute;
+top:10px;left:10px;
+background:white;
+padding:8px 12px;
+border-radius:8px;
+z-index:10000;
+cursor:pointer;
+}
+
+/* ZOOM */
+.zoomModal{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.95);
+z-index:10000;
+align-items:center;
+justify-content:center;
+}
+.zoomModal img{
+max-width:95%;
+max-height:95%;
+object-fit:contain;
+}
+
+/* ================= AIRBNB GALLERY ================= */
 .gallery{
 position:relative;
 width:100%;
@@ -72,7 +148,7 @@ height:100%;
 transition:transform .4s ease;
 }
 
-.gallery img{
+.galleryTrack img{
 width:100%;
 height:240px;
 object-fit:cover;
@@ -80,7 +156,6 @@ flex-shrink:0;
 cursor:zoom-in;
 }
 
-/* arrows */
 .arrow{
 position:absolute;
 top:50%;
@@ -90,13 +165,11 @@ color:#fff;
 border:none;
 padding:8px;
 cursor:pointer;
-z-index:2;
 }
 
 .arrow.left{left:8px;}
 .arrow.right{right:8px;}
 
-/* dots */
 .dots{
 position:absolute;
 bottom:8px;
@@ -114,68 +187,6 @@ cursor:pointer;
 }
 
 .dot.active{background:#fff;}
-
-/* buttons */
-.btnRow{
-display:flex;
-gap:6px;
-flex-wrap:wrap;
-margin-top:10px;
-}
-
-.btn{
-flex:1;
-padding:8px;
-border:none;
-border-radius:8px;
-font-size:12px;
-cursor:pointer;
-}
-
-.detailsbtn{background:#111;color:#fff;}
-.waBtn{background:#25D366;color:#fff;}
-.callBtn{background:#16a34a;color:#fff;}
-.mapBtn{background:#2563eb;color:#fff;}
-
-/* zoom */
-.zoomModal{
-display:none;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.95);
-z-index:9999;
-align-items:center;
-justify-content:center;
-}
-
-.zoomModal img{
-max-width:95%;
-max-height:95%;
-object-fit:contain;
-}
-
-/* map */
-.mapModal{
-display:none;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:#000;
-z-index:9999;
-}
-
-#map{width:100%;height:100%;}
-
-.backBtn{
-position:absolute;
-top:10px;left:10px;
-background:white;
-padding:8px 12px;
-border-radius:8px;
-z-index:10000;
-cursor:pointer;
-}
 </style>
 </head>
 
@@ -187,7 +198,9 @@ cursor:pointer;
 <input id="searchBox" placeholder="Search..." oninput="applyFilters()">
 <input id="minRent" type="number" placeholder="Min Rent">
 <input id="maxRent" type="number" placeholder="Max Rent">
+<input id="maxDist" type="number" placeholder="Max Distance KM">
 <button onclick="applyFilters()">Filter</button>
+<button onclick="resetFilters()">Reset</button>
 </div>
 
 <div class="grid" id="list"></div>
@@ -206,7 +219,7 @@ cursor:pointer;
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGZ0zOzz4NjJE9S0Q",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
 databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
 projectId:"dekut-housing"
@@ -218,39 +231,44 @@ const db = firebase.database();
 let data = {};
 let filtered = [];
 let page = 0;
+const SIZE = 6;
 
-const DEKUT = [-0.3976, 36.9597];
+const DEKUT = [-0.4167, 36.9511];
 let map;
 
-/* ================= LOAD ================= */
-db.ref("properties").on("value",snap=>{
+/* ONLY APPROVED PROPERTIES */
+db.ref("approvedProperties").on("value", snap=>{
 data = snap.val() || {};
 applyFilters();
 });
 
-/* ONLY APPROVED */
-function isApproved(p){
-return p.status === "approved";
+/* FILTER */
+function isValid(p){
+return true; // already approved node only
 }
 
-/* ================= FILTER ================= */
 function applyFilters(){
-
 let search = document.getElementById("searchBox").value.toLowerCase();
 let min = +document.getElementById("minRent").value || 0;
 let max = +document.getElementById("maxRent").value || 999999;
+let dist = +document.getElementById("maxDist").value || 999;
 
 filtered = [];
 
 for(let id in data){
 let p = data[id];
-if(!isApproved(p)) continue;
 
 let rent = +p.rent || 0;
 let text = (p.type + " " + p.location).toLowerCase();
+let d = +p.distance || 999;
 
-if(rent >= min && rent <= max && (search === "" || text.includes(search))){
-filtered.push({...p,id});
+if(
+rent >= min &&
+rent <= max &&
+d <= dist &&
+(search === "" || text.includes(search))
+){
+filtered.push({...p, id});
 }
 }
 
@@ -259,113 +277,103 @@ document.getElementById("list").innerHTML = "";
 renderMore();
 }
 
-/* ================= RENDER ================= */
+/* RENDER */
 function renderMore(){
 let list = document.getElementById("list");
-let next = filtered.slice(page*6,(page+1)*6);
+let next = filtered.slice(page*SIZE, (page+1)*SIZE);
 
 next.forEach(p=>{
-let galleryId = Math.random().toString(36).substr(2,9);
-
 list.innerHTML += `
 <div class="card">
 
-<div class="gallery" data-id="${galleryId}">
-<button class="arrow left" onclick="move('${galleryId}',-1)">‹</button>
+${renderGallery(p.images || [])}
 
-<div class="galleryTrack" id="track-${galleryId}">
-${(p.images||[]).map(img=>`
-<img src="${img}" onclick="zoom('${img}')">
-`).join("")}
-</div>
-
-<button class="arrow right" onclick="move('${galleryId}',1)">›</button>
-
-<div class="dots" id="dots-${galleryId}">
-${(p.images||[]).map((_,i)=>`<div class="dot" onclick="goTo('${galleryId}',${i})"></div>`).join("")}
-</div>
-</div>
-
-<div style="padding:12px;">
+<div class="cardContent">
 <b>${p.type}</b><br>
 📍 ${p.location}<br>
-💰 KSh ${p.rent}
+💰 KSh ${p.rent}<br>
 
 <div class="btnRow">
-<button class="btn detailsbtn">Details</button>
+<button class="btn detailsbtn" onclick='openDetails(${JSON.stringify(p)})'>Details</button>
 <button class="btn waBtn" onclick="wa('${p.phone||""}')">WhatsApp</button>
 <button class="btn callBtn" onclick="call('${p.phone||""}')">Call</button>
 <button class="btn mapBtn" onclick='openMap(${JSON.stringify(p)})'>Map</button>
 </div>
 </div>
-
 </div>`;
 });
 
 page++;
 }
 
-/* ================= GALLERY STATE ================= */
-let state = {};
-let timers = {};
+/* GALLERY */
+let galleryState = {};
 
-/* init auto */
-setInterval(()=>{},1000);
+function renderGallery(images){
+let id = Math.random().toString(36).substr(2,9);
+galleryState[id] = 0;
 
-/* move */
+setTimeout(()=>updateDots(id),0);
+
+return `
+<div class="gallery">
+<button class="arrow left" onclick="move('${id}',-1)">‹</button>
+
+<div class="galleryTrack" id="track-${id}">
+${images.map(img=>`<img src="${img}" onclick="zoom('${img}')">`).join("")}
+</div>
+
+<button class="arrow right" onclick="move('${id}',1)">›</button>
+
+<div class="dots" id="dots-${id}">
+${images.map((_,i)=>`<div class="dot" onclick="goTo('${id}',${i})"></div>`).join("")}
+</div>
+</div>`;
+}
+
 function move(id,dir){
 let track = document.getElementById("track-"+id);
-if(!track) return;
-
 let count = track.children.length;
-state[id] = (state[id] || 0) + dir;
 
-if(state[id] < 0) state[id] = count-1;
-if(state[id] >= count) state[id] = 0;
-
-track.style.transform = `translateX(-${state[id]*100}%)`;
+galleryState[id] = (galleryState[id] + dir + count) % count;
+track.style.transform = `translateX(-${galleryState[id]*100}%)`;
 updateDots(id);
 }
 
-/* dot */
 function goTo(id,i){
-state[id] = i;
+galleryState[id] = i;
 move(id,0);
 }
 
-/* dots */
 function updateDots(id){
-let dots = document.querySelectorAll("#dots-"+id+" .dot");
-dots.forEach((d,i)=>{
-d.classList.toggle("active", i === state[id]);
+document.querySelectorAll("#dots-"+id+" .dot").forEach((d,i)=>{
+d.classList.toggle("active", i === galleryState[id]);
 });
 }
 
-/* zoom */
+/* ZOOM */
 function zoom(src){
 document.getElementById("zoomImg").src = src;
-document.getElementById("zoomModal").style.display="flex";
+document.getElementById("zoomModal").style.display = "flex";
 }
 function closeZoom(){
-document.getElementById("zoomModal").style.display="none";
+document.getElementById("zoomModal").style.display = "none";
 }
 
-/* whatsapp */
+/* CALL / WA */
 function wa(p){
 if(!p) return;
-window.open(`https://wa.me/${p}`,"_blank");
+window.open(`https://wa.me/${p}`, "_blank");
 }
-
-/* call */
 function call(p){
 if(!p) return;
-window.location.href=`tel:${p}`;
+window.location.href = `tel:${p}`;
 }
 
-/* ================= MAP (REAL ROADS) ================= */
+/* MAP WITH REAL ROADS (OSRM) */
 async function openMap(p){
 
-document.getElementById("mapModal").style.display="block";
+document.getElementById("mapModal").style.display = "block";
 
 setTimeout(async ()=>{
 
@@ -373,7 +381,9 @@ if(map) map.remove();
 
 map = L.map("map").setView(DEKUT, 13);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+attribution:"© OpenStreetMap"
+}).addTo(map);
 
 const start = DEKUT;
 const end = [p.lat, p.lng];
@@ -387,14 +397,16 @@ const url =
 
 try{
 const res = await fetch(url);
-const data = await res.json();
+const json = await res.json();
 
-if(data.routes?.length){
-const coords = data.routes[0].geometry.coordinates;
-const path = coords.map(c => [c[1],c[0]]);
+if(json.routes?.length){
 
-L.polyline(path,{color:"blue",weight:5}).addTo(map);
-map.fitBounds(path);
+const coords = json.routes[0].geometry.coordinates;
+const latlngs = coords.map(c=>[c[1], c[0]]);
+
+const line = L.polyline(latlngs,{color:"blue",weight:5}).addTo(map);
+map.fitBounds(line.getBounds());
+
 }else{
 L.polyline([start,end],{color:"red"}).addTo(map);
 map.fitBounds([start,end]);
@@ -409,13 +421,37 @@ map.fitBounds([start,end]);
 }
 
 function closeMap(){
-document.getElementById("mapModal").style.display="none";
+document.getElementById("mapModal").style.display = "none";
 }
 
-/* keyboard support */
-document.addEventListener("keydown",(e)=>{
-if(e.key==="ArrowRight") document.querySelectorAll(".gallery").forEach(g=>move(g.dataset.id,1));
-if(e.key==="ArrowLeft") document.querySelectorAll(".gallery").forEach(g=>move(g.dataset.id,-1));
+/* DETAILS */
+function openDetails(p){
+alert("Extend modal if needed");
+}
+
+/* FILTER RESET */
+function resetFilters(){
+document.getElementById("searchBox").value="";
+document.getElementById("minRent").value="";
+document.getElementById("maxRent").value="";
+document.getElementById("maxDist").value="";
+applyFilters();
+}
+
+/* KEYBOARD NAV */
+document.addEventListener("keydown",e=>{
+if(e.key==="ArrowRight"){
+document.querySelectorAll(".gallery").forEach(g=>{
+let id = g.querySelector(".galleryTrack").id.replace("track-","");
+move(id,1);
+});
+}
+if(e.key==="ArrowLeft"){
+document.querySelectorAll(".gallery").forEach(g=>{
+let id = g.querySelector(".galleryTrack").id.replace("track-","");
+move(id,-1);
+});
+}
 });
 
 </script>
