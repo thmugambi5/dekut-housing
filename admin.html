@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard</title>
+<title>Admin Dashboard (Single Node)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -92,7 +92,7 @@ dashboard.classList.add("hidden");
 }
 });
 
-/* SWITCH VIEW */
+/* VIEW SWITCH */
 function loadView(view){
 
 document.getElementById("title").innerText = view.toUpperCase();
@@ -100,40 +100,22 @@ document.getElementById("title").innerText = view.toUpperCase();
 if(currentRef) currentRef.off();
 currentRef = null;
 
-/* ALL VIEW (MERGE) */
-if(view === "all"){
-Promise.all([
-db.ref("pendingProperties").once("value"),
-db.ref("approvedProperties").once("value"),
-db.ref("rejectedProperties").once("value")
-]).then(([p,a,r])=>{
-let merged = {
-...p.val(),
-...a.val(),
-...r.val()
-};
-render(merged,"all");
-});
-return;
+db.ref("properties").once("value").then(snap=>{
+let data = snap.val() || {};
+let filtered = {};
+
+for(let id in data){
+let p = data[id];
+if(view !== "all" && p.status !== view) continue;
+filtered[id] = p;
 }
 
-/* SINGLE NODE LISTENING */
-currentRef = db.ref(view + "Properties");
-
-currentRef.on("value",snap=>{
-if(view === "rejected"){
-renderRejected(snap.val() || {});
-}else{
-render(snap.val() || {}, view);
-}
+render(filtered);
 });
 }
 
-/* SAFE */
-function safe(v){return v ?? "";}
-
-/* RENDER NORMAL */
-function render(data,type){
+/* RENDER */
+function render(data){
 
 let html="";
 
@@ -144,19 +126,20 @@ if(!p) continue;
 html += `
 <div class="card">
 
-<span class="badge ${type}">${type}</span><br>
+<span class="badge ${p.status}">${p.status}</span><br>
 
-<b>${safe(p.type)}</b><br>
-📍 ${safe(p.location)}<br>
-💰 ${safe(p.rent)}<br>
-📞 ${safe(p.phone)}<br>
+<b>${p.type}</b><br>
+📍 ${p.location}<br>
+💰 ${p.rent}<br>
+📞 ${p.phone}<br>
 
 <div>
 ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 </div>
+
 `;
 
-if(type === "pending"){
+if(p.status === "pending"){
 html += `
 <textarea id="r_${id}" placeholder="Rejection reason"></textarea>
 <button onclick="approve('${id}')">Approve</button>
@@ -165,7 +148,7 @@ html += `
 }
 
 html += `
-<button onclick="remove('${id}','${type}Properties')">Delete</button>
+<button onclick="remove('${id}')">Delete</button>
 </div>
 `;
 }
@@ -173,76 +156,30 @@ html += `
 list.innerHTML = html;
 }
 
-/* REJECTED RENDER */
-function renderRejected(data){
-
-let html="";
-
-for(let id in data){
-let p=data[id];
-if(!p) continue;
-
-html += `
-<div class="card">
-
-<span class="badge rejected">rejected</span><br>
-
-<b>${safe(p.type)}</b><br>
-📍 ${safe(p.location)}<br>
-
-<p>${safe(p.rejectionReason)}</p>
-
-<button onclick="remove('${id}','rejectedProperties')">Delete</button>
-
-</div>
-`;
-}
-
-list.innerHTML = html;
-}
-
-/* APPROVE (MOVE) */
+/* APPROVE */
 function approve(id){
 
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
-if(!data) return;
-
-data.status = "approved";
-data.updatedAt = Date.now();
-
-const updates = {};
-updates["approvedProperties/"+id] = data;
-updates["pendingProperties/"+id] = null;
-
-db.ref().update(updates);
+db.ref("properties/"+id).update({
+status:"approved",
+updatedAt:Date.now()
 });
 }
 
-/* REJECT (MOVE) */
+/* REJECT */
 function reject(id){
 
 let reason = document.getElementById("r_"+id).value || "";
 
-db.ref("pendingProperties/"+id).once("value").then(s=>{
-let data = s.val();
-if(!data) return;
-
-data.status = "rejected";
-data.rejectionReason = reason;
-data.updatedAt = Date.now();
-
-const updates = {};
-updates["rejectedProperties/"+id] = data;
-updates["pendingProperties/"+id] = null;
-
-db.ref().update(updates);
+db.ref("properties/"+id).update({
+status:"rejected",
+rejectionReason:reason,
+updatedAt:Date.now()
 });
 }
 
 /* DELETE */
-function remove(id,node){
-db.ref(node+"/"+id).remove();
+function remove(id){
+db.ref("properties/"+id).remove();
 }
 
 /* LOGOUT */
