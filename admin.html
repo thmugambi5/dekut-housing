@@ -17,7 +17,6 @@ display:flex;
 background:#f5f7fb;
 }
 
-/* SIDEBAR */
 .sidebar{
 width:250px;
 background:#111;
@@ -45,14 +44,12 @@ cursor:pointer;
 
 .menuBtn:hover{background:#333;}
 
-/* CONTENT */
 .content{
 margin-left:260px;
 padding:20px;
 width:100%;
 }
 
-/* CARD */
 .card{
 background:white;
 padding:10px;
@@ -88,7 +85,6 @@ border-radius:6px;
 border:1px solid #ccc;
 }
 
-/* LOGIN SCREEN */
 .loginBox{
 max-width:350px;
 margin:100px auto;
@@ -115,18 +111,14 @@ border-radius:6px;
 cursor:pointer;
 }
 
-.error{
-color:red;
-font-size:13px;
-}
-
 .hidden{display:none;}
+.error{color:red;font-size:13px;}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 <div id="loginScreen" class="loginBox">
 <h2>Admin Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -135,7 +127,7 @@ font-size:13px;
 <p class="error" id="err"></p>
 </div>
 
-<!-- ACCESS DENIED -->
+<!-- DENIED -->
 <div id="denied" class="loginBox hidden">
 <h2>Access Denied</h2>
 <p>Only admin@dekut.com is allowed.</p>
@@ -179,58 +171,61 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
+let currentUser=null;
 
 /* LOGIN */
 function login(){
-let email = document.getElementById("email").value;
-let pass = document.getElementById("password").value;
+let email=document.getElementById("email").value;
+let pass=document.getElementById("password").value;
 
 auth.signInWithEmailAndPassword(email,pass)
-.catch(e=>{
-document.getElementById("err").innerText = e.message;
-});
+.catch(e=>document.getElementById("err").innerText=e.message);
 }
 
-/* AUTH STATE */
+/* AUTH */
 auth.onAuthStateChanged(user=>{
 if(!user){
 showLogin();
 return;
 }
 
-if(user.email !== "admin@dekut.com"){
+if(user.email!=="admin@dekut.com"){
 showDenied();
 auth.signOut();
 return;
 }
 
-currentUser = user;
 showDashboard();
 loadView("pending");
 });
 
-/* UI STATES */
+/* UI */
 function showLogin(){
-document.getElementById("loginScreen").classList.remove("hidden");
-document.getElementById("dashboard").classList.add("hidden");
-document.getElementById("denied").classList.add("hidden");
+loginScreen.classList.remove("hidden");
+dashboard.classList.add("hidden");
+denied.classList.add("hidden");
 }
 
 function showDenied(){
-document.getElementById("denied").classList.remove("hidden");
-document.getElementById("loginScreen").classList.add("hidden");
-document.getElementById("dashboard").classList.add("hidden");
+denied.classList.remove("hidden");
+loginScreen.classList.add("hidden");
+dashboard.classList.add("hidden");
 }
 
 function showDashboard(){
-document.getElementById("dashboard").classList.remove("hidden");
-document.getElementById("loginScreen").classList.add("hidden");
-document.getElementById("denied").classList.add("hidden");
+dashboard.classList.remove("hidden");
+loginScreen.classList.add("hidden");
+denied.classList.add("hidden");
 }
 
-/* VIEW */
+/* VIEW SWITCH (IMPORTANT FIX: clear old listeners) */
 function loadView(view){
+
+db.ref("pendingProperties").off();
+db.ref("approvedProperties").off();
+db.ref("rejectedProperties").off();
+db.ref("allProperties").off();
+
 document.getElementById("title").innerText=view.toUpperCase()+" PROPERTIES";
 
 if(view==="pending") loadPending();
@@ -252,35 +247,38 @@ render(snap.val()||{},"approved");
 });
 }
 
-function loadRejected(){
-db.ref("rejectedProperties").on("value",snap=>{
-renderRejected(snap.val()||{});
-});
-}
-
 function loadAll(){
 db.ref("allProperties").on("value",snap=>{
 render(snap.val()||{},"all");
 });
 }
 
-/* RENDER */
+function loadRejected(){
+db.ref("rejectedProperties").on("value",snap=>{
+renderRejected(snap.val()||{});
+});
+}
+
+/* SAFE RENDER */
+function safe(v){ return v===undefined ? "" : v; }
+
 function render(data,type){
 
 let html="";
 
 for(let id in data){
 let p=data[id];
+if(!p) continue;
 
 html+=`
 <div class="card">
 
 <span class="badge ${type}">${type}</span><br>
 
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-💰 ${p.rent||""}<br>
-📞 ${p.phone||""}<br>
+<b>${safe(p.type)}</b><br>
+📍 ${safe(p.location)}<br>
+💰 ${safe(p.rent)}<br>
+📞 ${safe(p.phone)}<br>
 
 <div>
 ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
@@ -305,25 +303,27 @@ html+=`
 html+=`</div>`;
 }
 
-document.getElementById("list").innerHTML = html;
+list.innerHTML=html;
 }
 
 /* REJECTED */
 function renderRejected(data){
+
 let html="";
 
 for(let id in data){
 let p=data[id];
+if(!p) continue;
 
 html+=`
 <div class="card">
 
 <span class="badge rejected">rejected</span><br>
 
-<b>${p.type||""}</b><br>
-📍 ${p.location||""}<br>
+<b>${safe(p.type)}</b><br>
+📍 ${safe(p.location)}<br>
 
-<p><b>Reason:</b> ${p.rejectionReason||""}</p>
+<p><b>Reason:</b> ${safe(p.rejectionReason)}</p>
 
 <div>
 ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
@@ -335,36 +335,47 @@ ${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
 `;
 }
 
-document.getElementById("list").innerHTML=html;
+list.innerHTML=html;
 }
 
-/* ACTIONS */
+/* FIXED APPROVE (CRITICAL) */
 function approve(id){
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
 let data=s.val();
-data.status="approved";
+if(!data) return;
 
+data.status="approved";
+data.approvedAt=Date.now();
+
+/* ensure BOTH nodes ALWAYS match */
 db.ref("approvedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
 db.ref("allProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
+
 });
 }
 
+/* FIXED REJECT */
 function reject(id){
+
 let reason=document.getElementById("r_"+id).value||"";
 
 db.ref("pendingProperties/"+id).once("value").then(s=>{
 let data=s.val();
+if(!data) return;
+
 data.status="rejected";
 data.rejectionReason=reason;
+data.rejectedAt=Date.now();
 
 db.ref("rejectedProperties/"+id).set(data);
-db.ref("pendingProperties/"+id).remove();
 db.ref("allProperties/"+id).set(data);
+db.ref("pendingProperties/"+id).remove();
 });
 }
 
+/* REMOVE */
 function remove(id,node){
 db.ref(node+"/"+id).remove();
 }
