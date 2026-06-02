@@ -1,34 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>My Listings</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-<style>
-body{font-family:Arial;background:#f5f7fb;margin:0;padding:15px;}
-.card{background:white;padding:15px;margin:10px;border-radius:10px;}
-button{padding:8px;margin:5px;}
-.edit{background:blue;color:white;}
-.delete{background:red;color:white;}
-</style>
-</head>
-
-<body>
-
-<h2>My Listings</h2>
-<div id="list"></div>
-
 <script>
 
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
 authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -36,22 +11,55 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let uid = null;
+let currentUser = null;
 
-/* AUTH */
+/* 🔐 AUTH GATE (CRITICAL) */
 auth.onAuthStateChanged(user=>{
-
 if(!user){
 window.location.href="landlord-login.html";
 return;
 }
 
-uid = user.uid;
+currentUser = user;
 loadMyListings();
+});
+
+/* UPLOAD PROPERTY */
+async function upload(){
+
+if(!currentUser){
+alert("Login required");
+return;
+}
+
+let images = [];
+let files = document.getElementById("images").files;
+
+for(let f of files){
+images.push(await toBase64(f));
+}
+
+await db.ref("pendingProperties").push({
+
+ownerUid: currentUser.uid,
+
+type:document.getElementById("type").value,
+rent:document.getElementById("rent").value,
+deposit:document.getElementById("deposit").value,
+phone:document.getElementById("phone").value,
+location:document.getElementById("location").value,
+extra:document.getElementById("extra").value,
+
+images,
+approved:false,
+createdAt:Date.now()
 
 });
 
-/* LOAD ONLY OWN LISTINGS */
+alert("Uploaded successfully");
+}
+
+/* MY LISTINGS */
 function loadMyListings(){
 
 db.ref("pendingProperties").on("value",snap=>{
@@ -59,49 +67,40 @@ db.ref("pendingProperties").on("value",snap=>{
 const data = snap.val() || {};
 const list = document.getElementById("list");
 
-list.innerHTML="";
+list.innerHTML = "";
 
 for(let id in data){
 
 const p = data[id];
 
-if(p.ownerUid !== uid) continue;
+if(p.ownerUid !== currentUser.uid) continue;
 
 list.innerHTML += `
 <div class="card">
+<b>${p.type}</b><br>
+${p.location}<br>
+KSh ${p.rent || ""}<br>
 
-<h3>${p.type}</h3>
-<p>${p.location}</p>
-<p>KSh ${p.rent}</p>
-
-<button class="edit" onclick="editItem('${id}')">Edit</button>
-<button class="delete" onclick="deleteItem('${id}')">Delete</button>
-
+<button onclick="del('${id}')">Delete</button>
 </div>
 `;
-
 }
 
 });
 
 }
 
-/* DELETE */
-function deleteItem(id){
+function del(id){
 db.ref("pendingProperties/"+id).remove();
 }
 
-/* EDIT (basic version) */
-function editItem(id){
-const newRent = prompt("Enter new rent:");
-if(!newRent) return;
-
-db.ref("pendingProperties/"+id).update({
-rent:newRent
+/* BASE64 */
+function toBase64(file){
+return new Promise(res=>{
+const r=new FileReader();
+r.onload=()=>res(r.result);
+r.readAsDataURL(file);
 });
 }
 
 </script>
-
-</body>
-</html>
