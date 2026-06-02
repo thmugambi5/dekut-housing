@@ -34,6 +34,7 @@ input,button{
     margin:10px 0;
     border-radius:8px;
     border:1px solid #ccc;
+    box-sizing:border-box;
 }
 
 button{
@@ -43,25 +44,26 @@ button{
     cursor:pointer;
 }
 
-.loading{color:#333;text-align:center;}
-.error{color:red;text-align:center;}
-.success{color:green;text-align:center;}
+button:hover{ background:#0056b3; }
+
+.loading{ color:#333; font-size:13px; text-align:center; }
+.error{ color:red; font-size:13px; text-align:center; }
+.success{ color:green; font-size:13px; text-align:center; }
+
 </style>
 </head>
 
 <body>
 
 <div class="loginBox">
-
 <h2>🔐 Admin Login</h2>
 
-<input type="email" id="email" placeholder="Admin Email">
+<input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Password">
 
 <button id="loginBtn" onclick="login()">Login</button>
 
 <div id="msg"></div>
-
 </div>
 
 <script>
@@ -86,61 +88,59 @@ function generateToken(){
     return "adm_" + Math.random().toString(36).substring(2) + Date.now();
 }
 
-/* LOGIN (STEP G UPGRADED) */
+/* LOGIN */
 async function login(){
 
     let email = document.getElementById("email").value.trim();
     let password = document.getElementById("password").value;
-
     let msg = document.getElementById("msg");
     let btn = document.getElementById("loginBtn");
 
-    msg.innerHTML = "<div class='loading'>⏳ Logging in...</div>";
+    msg.innerHTML = "<div class='loading'>Logging in...</div>";
     btn.disabled = true;
 
     try{
 
-        /* AUTH LOGIN */
-        const userCredential =
-            await auth.signInWithEmailAndPassword(email, password);
+        const userCred = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCred.user;
 
-        const user = userCredential.user;
+        // CHECK ADMIN LIST
+        const snap = await db.ref("admins/" + user.uid).once("value");
 
-        console.log("LOGIN SUCCESS:", user.email);
+        if(!snap.exists()){
+            throw new Error("Not authorized as admin");
+        }
 
-        /* GENERATE SESSION TOKEN */
         const token = generateToken();
 
-        /* STORE SESSION IN FIREBASE */
+        // CREATE SESSION
         await db.ref("adminSessions/" + user.uid).set({
             token: token,
             createdAt: Date.now()
         });
 
-        msg.innerHTML =
-            "<div class='success'>✔ Login successful</div>";
+        msg.innerHTML = "<div class='success'>Login successful</div>";
 
-        /* REDIRECT WITH TOKEN (STEP G HANDSHAKE) */
         setTimeout(()=>{
-            window.location.href =
-                "admin.html?token=" + token;
+            window.location.href = "admin.html?token=" + token;
         },800);
 
-    }
-    catch(error){
+    } catch(err){
 
-        msg.innerHTML =
-            "<div class='error'>❌ " +
-            error.message +
-            "</div>";
-
+        msg.innerHTML = "<div class='error'>" + err.message + "</div>";
         btn.disabled = false;
+
     }
 }
 
-/* OPTIONAL DEBUG */
-auth.onAuthStateChanged(user=>{
-    console.log("AUTH STATE:", user ? user.email : "No user");
+/* AUTO LOGIN */
+auth.onAuthStateChanged(async user=>{
+    if(!user) return;
+
+    const snap = await db.ref("adminSessions/" + user.uid).once("value");
+    if(snap.exists()){
+        window.location.href = "admin.html?token=" + snap.val().token;
+    }
 });
 
 </script>
