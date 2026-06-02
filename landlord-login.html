@@ -9,9 +9,9 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;display:flex;justify-content:center;align-items:center;height:100vh;}
-.box{background:#fff;padding:20px;border-radius:12px;width:340px;}
+.box{background:white;padding:20px;border-radius:12px;width:340px;}
 input{width:100%;padding:12px;margin:8px 0;}
-button{width:100%;padding:12px;background:#2563eb;color:#fff;border:none;}
+button{width:100%;padding:12px;background:#2563eb;color:white;border:none;}
 .msg{text-align:center;margin-top:10px;}
 </style>
 </head>
@@ -32,7 +32,8 @@ button{width:100%;padding:12px;background:#2563eb;color:#fff;border:none;}
 
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com"
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -44,11 +45,11 @@ async function login(){
 try{
 
 const res = await auth.signInWithEmailAndPassword(
-email.value,
-password.value
+document.getElementById("email").value,
+document.getElementById("password").value
 );
 
-document.getElementById("msg").innerText="Success";
+document.getElementById("msg").innerText="Login success";
 
 setTimeout(()=>{
 window.location.href="landlord-dashboard.html";
