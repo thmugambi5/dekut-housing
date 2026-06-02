@@ -11,14 +11,34 @@
 
 <style>
 
-/* (ALL YOUR ORIGINAL CSS KEPT EXACTLY THE SAME) */
-
 body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
 }
 
+/* LOADING SCREEN (NEW SECURITY LAYER UX) */
+#loadingScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:99999;
+}
+
+/* HIDE APP UNTIL AUTH VERIFIED */
+#app{
+  display:none;
+}
+
+/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -47,11 +67,13 @@ body{
 
 .sidebar button:hover{ background:#333; }
 
+/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
 }
 
+/* STATS */
 .stats{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -66,6 +88,7 @@ body{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* SEARCH */
 .searchBox{
   width:100%;
   padding:12px;
@@ -75,6 +98,7 @@ body{
   box-sizing:border-box;
 }
 
+/* CARD */
 .card{
   background:white;
   margin-top:15px;
@@ -94,6 +118,7 @@ body{
   line-height:1.8;
 }
 
+/* BADGES */
 .badge{
   display:inline-block;
   padding:5px 10px;
@@ -105,7 +130,10 @@ body{
 
 .pending{ background:orange; }
 .approved{ background:green; }
+.available{ background:#28a745; }
+.occupied{ background:#d32f2f; }
 
+/* BUTTONS */
 button{
   padding:10px 12px;
   border:none;
@@ -121,6 +149,7 @@ button{
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
 
+/* DETAILS MODAL */
 .modal{
   display:none;
   position:fixed;
@@ -131,6 +160,11 @@ button{
   background:white;
   z-index:9999;
   overflow:auto;
+}
+
+.modalContent{
+  padding:15px;
+  line-height:1.8;
 }
 
 .backBtn{
@@ -144,6 +178,7 @@ button{
   z-index:99999;
 }
 
+/* MOBILE */
 @media(max-width:768px){
   .sidebar{ position:relative; width:100%; height:auto; }
   .main{ margin-left:0; }
@@ -154,6 +189,15 @@ button{
 
 <body>
 
+<!-- 🔐 LOADING GATE (NEW SECURITY LAYER) -->
+<div id="loadingScreen">
+  <h2>🔐 Verifying Admin Access...</h2>
+  <p>Please wait</p>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
 <div class="sidebar">
 
   <h2>🏠 Admin Panel</h2>
@@ -162,7 +206,9 @@ button{
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
-  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
+  <button onclick="logout()" style="background:#c62828;">
+    🚪 Logout
+  </button>
 
 </div>
 
@@ -171,6 +217,7 @@ button{
   <h1>Dashboard</h1>
 
   <div class="stats">
+
     <div class="statBox">
       <h2 id="totalPending">0</h2>
       <p>Pending</p>
@@ -180,6 +227,7 @@ button{
       <h2 id="totalApproved">0</h2>
       <p>Approved</p>
     </div>
+
   </div>
 
   <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
@@ -191,6 +239,8 @@ button{
 <div class="modal" id="detailsModal">
   <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
   <div id="detailsContent"></div>
+</div>
+
 </div>
 
 <script>
@@ -212,7 +262,11 @@ const auth = firebase.auth();
 
 const ADMIN_EMAIL = "admin@dekut.com";
 
-/* 🔐 LEVEL 3 SECURITY GATE */
+let pending = {};
+let approved = {};
+let mode = "pending";
+
+/* 🔐 HARD SECURITY GATE */
 auth.onAuthStateChanged(user => {
 
   if(!user){
@@ -223,33 +277,40 @@ auth.onAuthStateChanged(user => {
   if(user.email !== ADMIN_EMAIL){
     auth.signOut();
     window.location.href = "admin-login.html";
+    return;
   }
 
+  /* SUCCESS: UNLOCK APP */
+  document.getElementById("loadingScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  /* START REALTIME ONLY AFTER AUTH */
+  startRealtime();
+
 });
+
+/* REALTIME DATA ONLY AFTER AUTH */
+function startRealtime(){
+
+  db.ref("pendingProperties").on("value", snap=>{
+    pending = snap.val() || {};
+    updateStats();
+    render();
+  });
+
+  db.ref("properties").on("value", snap=>{
+    approved = snap.val() || {};
+    updateStats();
+    render();
+  });
+
+}
 
 function logout(){
   auth.signOut().then(()=>{
     window.location.href = "admin-login.html";
   });
 }
-
-/* DATA */
-let pending = {};
-let approved = {};
-let mode = "pending";
-
-/* REALTIME (NO REFRESH LAG) */
-db.ref("pendingProperties").on("value", snap=>{
-  pending = snap.val() || {};
-  updateStats();
-  render();
-});
-
-db.ref("properties").on("value", snap=>{
-  approved = snap.val() || {};
-  updateStats();
-  render();
-});
 
 function updateStats(){
   document.getElementById("totalPending").innerText =
@@ -297,7 +358,7 @@ function render(){
 
         <div class="cardContent">
 
-          <b>🏠 ${p.type || ""}</b><br>
+          <b>🏠 ${p.type || "Property"}</b><br>
           📍 ${p.location || ""}<br>
           💰 KSh ${p.rent || ""}<br>
           📞 ${p.phone || ""}<br>
@@ -324,6 +385,7 @@ function render(){
   }
 }
 
+/* DETAILS */
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
 
@@ -347,6 +409,7 @@ function closeDetails(){
 }
 
 function approve(id){
+
   let item = pending[id];
   if(!item) return;
 
@@ -354,6 +417,7 @@ function approve(id){
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
+
 }
 
 function rejectItem(id){
