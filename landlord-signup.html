@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Landlord Signup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.box{
+background:white;
+padding:20px;
+border-radius:12px;
+width:340px;
+}
+
+h2{
+text-align:center;
+}
+
+input{
+width:100%;
+padding:12px;
+margin:8px 0;
+border:1px solid #ccc;
+border-radius:8px;
+}
+
+button{
+width:100%;
+padding:12px;
+background:#16a34a;
+color:white;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.msg{
+text-align:center;
+margin-top:10px;
+font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+<h2>🏠 Landlord Signup</h2>
+
+<input type="text" id="name" placeholder="Full Name">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="signup()">Create Account</button>
+
+<div class="msg" id="msg"></div>
+</div>
+
+<script>
+
+const firebaseConfig = {
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+/* SIGNUP */
+async function signup(){
+
+const name = document.getElementById("name").value.trim();
+const email = document.getElementById("email").value.trim();
+const password = document.getElementById("password").value;
+
+const msg = document.getElementById("msg");
+
+if(!name || !email || !password){
+msg.innerText = "Fill all fields";
+return;
+}
+
+try{
+
+msg.innerText = "Creating account...";
+
+const res = await auth.createUserWithEmailAndPassword(email, password);
+
+const user = res.user;
+
+/* SAVE LANDLORD PROFILE */
+await db.ref("landlords/" + user.uid).set({
+name: name,
+email: email,
+createdAt: Date.now()
+});
+
+msg.innerText = "Account created successfully";
+
+setTimeout(()=>{
+window.location.href = "landlord-login.html";
+},1000);
+
+}catch(err){
+msg.innerText = err.message;
+}
+
+}
+
+</script>
+
+</body>
+</html>
