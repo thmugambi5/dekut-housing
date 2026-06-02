@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Login - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<style>
+/* (UNCHANGED STYLES) */
+body{
+    margin:0;
+    font-family:Arial;
+    background:#f4f4f4;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.loginBox{
+    width:320px;
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+}
+
+input,button{
+    width:100%;
+    padding:10px;
+    margin:10px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+button{
+    background:#007bff;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="loginBox" id="loginBox">
+
+<h2>🔐 Admin Login</h2>
+
+<input type="email" id="email" placeholder="Admin Email">
+<input type="password" id="password" placeholder="Password">
+
+<button id="loginBtn" onclick="login()">Login</button>
+
+<div id="msg"></div>
+
+</div>
+
+<script>
+
+const firebaseConfig = {
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const ADMIN_EMAIL = "admin@dekut.com";
+
+/* LOGIN */
+function login(){
+
+  let email = document.getElementById("email").value;
+  let password = document.getElementById("password").value;
+  let msg = document.getElementById("msg");
+
+  auth.signInWithEmailAndPassword(email,password)
+  .then(user=>{
+
+    if(user.user.email !== ADMIN_EMAIL){
+      auth.signOut();
+      msg.innerHTML = "❌ Not authorized";
+      return;
+    }
+
+    msg.innerHTML = "✔ Success";
+
+    setTimeout(()=>{
+      window.location.href = "admin.html";
+    },1000);
+
+  })
+  .catch(e=>{
+    msg.innerHTML = e.message;
+  });
+
+}
+
+/* SESSION PERSISTENCE */
+auth.onAuthStateChanged(user=>{
+
+  if(user && user.email === ADMIN_EMAIL){
+    window.location.href = "admin.html";
+  }
+
+});
+
+</script>
+
+</body>
+</html>
