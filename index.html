@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Map</title>
+<title>DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -13,21 +13,55 @@
 
 <style>
 body{margin:0;font-family:Arial;}
-header{padding:10px;text-align:center;font-weight:bold;background:#fff;}
-#map{height:50vh;}
+header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
+#map{height:45vh;}
+.controls{padding:10px;display:flex;gap:10px;flex-wrap:wrap;}
+input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
 .card{background:#fff;padding:10px;border-radius:10px;}
-img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
 .price{color:green;font-weight:bold;}
+img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
+button{margin:3px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
+.whatsapp{background:#25D366;color:#fff;}
+.mapbtn{background:#007bff;color:#fff;}
+.galleryBtn{background:#333;color:#fff;}
+.galleryModal{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.9);justify-content:center;align-items:center;
+}
+.galleryBox{text-align:center;color:#fff;}
+.galleryBox img{max-width:90%;max-height:80vh;}
 </style>
 </head>
 
 <body>
 
-<header>🏠 DeKUT Housing Map</header>
+<header>🏠 DeKUT Housing</header>
 
 <div id="map"></div>
+
+<div class="controls">
+<input id="search" placeholder="Search...">
+<select id="typeFilter">
+<option value="">All Types</option>
+<option>Bedsitter</option>
+<option>Single Room</option>
+<option>One Bedroom</option>
+</select>
+</div>
+
 <div class="grid" id="list"></div>
+
+<!-- IMAGE SWIPE MODAL -->
+<div class="galleryModal" id="gallery">
+  <div class="galleryBox">
+    <button onclick="prev()">⬅</button>
+    <img id="gimg">
+    <button onclick="next()">➡</button>
+    <br><br>
+    <button onclick="closeGallery()">Close</button>
+  </div>
+</div>
 
 <script>
 
@@ -44,14 +78,45 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// MAP
-let map = L.map("map").setView([-0.390, 37.790], 13);
+let map = L.map("map").setView([-0.39,37.79],13);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap"
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  attribution:"© OpenStreetMap"
 }).addTo(map);
 
-db.ref("properties").on("value", snap => {
+let galleryImages = [];
+let index = 0;
+
+function openGallery(imgs){
+  galleryImages = imgs;
+  index = 0;
+  document.getElementById("gallery").style.display="flex";
+  document.getElementById("gimg").src = imgs[0];
+}
+
+function next(){
+  index = (index+1)%galleryImages.length;
+  gimg.src = galleryImages[index];
+}
+
+function prev(){
+  index = (index-1+galleryImages.length)%galleryImages.length;
+  gimg.src = galleryImages[index];
+}
+
+function closeGallery(){
+  document.getElementById("gallery").style.display="none";
+}
+
+function wa(phone){
+  window.open("https://wa.me/"+phone,"_blank");
+}
+
+function goMap(lat,lng){
+  map.setView([lat,lng],17);
+}
+
+db.ref("properties").on("value", snap=>{
 
   let data = snap.val();
   let list = document.getElementById("list");
@@ -60,36 +125,27 @@ db.ref("properties").on("value", snap => {
   for(let id in data){
     let p = data[id];
 
-    let imgs = "";
-    if(p.images && p.images.length){
-      imgs = `<img src="${p.images[0]}">`;
-    }
+    let imgs = p.images?.[0] || "";
 
     list.innerHTML += `
       <div class="card">
-        ${imgs}
-        <b>${p.type}</b><br>
-        <div class="price">KSh ${p.rent}</div>
-        <div>${p.location}</div>
-        <div>${p.distance} KM from DeKUT</div>
-        <div>${p.gender}</div>
-        <div>${p.amenities}</div>
-        <div>${p.phone}</div>
-      </div>
-    `;
-
-    // MAP MARKER
-    if(p.lat && p.lng){
-
-      L.marker([p.lat, p.lng]).addTo(map)
-      .bindPopup(`
+        ${imgs?`<img src="${imgs}">`:""}
         <b>${p.type}</b><br>
         KSh ${p.rent}<br>
         ${p.location}<br>
-        ${p.phone}
-      `);
+
+        <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
+        <button class="mapbtn" onclick="goMap(${p.lat},${p.lng})">View Map</button>
+        <button class="galleryBtn" onclick='openGallery(${JSON.stringify(p.images||[])})'>Photos</button>
+      </div>
+    `;
+
+    if(p.lat && p.lng){
+      L.marker([p.lat,p.lng]).addTo(map)
+      .bindPopup(`<b>${p.type}</b><br>KSh ${p.rent}`);
     }
   }
+
 });
 
 </script>
