@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
@@ -19,6 +20,48 @@ font-family:Arial;
 background:#f5f5f5;
 margin:0;
 padding:15px;
+}
+
+.topbar{
+max-width:700px;
+margin:0 auto 12px;
+background:white;
+padding:12px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+}
+
+.topbar a,
+.topbar button{
+width:auto;
+margin:0;
+padding:9px 11px;
+border-radius:8px;
+text-decoration:none;
+font-size:14px;
+}
+
+.topbar a{
+background:#111;
+color:white;
+}
+
+.topbar button{
+background:#c62828;
+}
+
+#authGate{
+max-width:700px;
+margin:auto;
+background:white;
+padding:18px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+text-align:center;
 }
 
 .card{
@@ -182,6 +225,21 @@ transition:width 0.3s ease;
 </head>
 
 <body>
+
+<div id="authGate">Checking landlord account...</div>
+
+<div id="uploadApp" style="display:none;">
+
+<div class="topbar">
+<div>
+<b>Landlord Upload</b><br>
+<small id="landlordEmail"></small>
+</div>
+<div>
+<a href="landlord-dashboard.html">Dashboard</a>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
 
 <div class="card">
 
@@ -390,6 +448,8 @@ Preparing upload...
 
 </div>
 
+</div>
+
 <script>
 
 /* FIREBASE */
@@ -405,7 +465,30 @@ appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 
 firebase.initializeApp(firebaseConfig);
 
+const auth = firebase.auth();
 const db = firebase.database();
+
+let currentLandlord = null;
+
+auth.onAuthStateChanged(user => {
+
+if(!user){
+window.location.href = "landlord-login.html";
+return;
+}
+
+currentLandlord = user;
+document.getElementById("authGate").style.display = "none";
+document.getElementById("uploadApp").style.display = "block";
+document.getElementById("landlordEmail").innerText = user.email;
+
+});
+
+function logout(){
+auth.signOut().then(() => {
+window.location.href = "landlord-login.html";
+});
+}
 
 /* GPS */
 let lat = "";
@@ -528,6 +611,12 @@ preview.appendChild(img);
 
 /* UPLOAD */
 async function upload(){
+
+if(!currentLandlord){
+alert("Please login as a landlord before uploading.");
+window.location.href = "landlord-login.html";
+return;
+}
 
 const uploadBtn =
 document.getElementById("uploadBtn");
@@ -681,8 +770,12 @@ distance: distance,
 images: images,
 
 approved: false,
+reviewStatus: "pending",
 
 status: availabilityVal,
+
+landlordUid: currentLandlord.uid,
+landlordEmail: currentLandlord.email,
 
 createdAt: Date.now()
 
