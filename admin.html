@@ -10,49 +10,228 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
-/* (UNCHANGED STYLES — SAME AS YOUR ORIGINAL) */
 
-body{margin:0;font-family:Arial;background:#f4f6f9;}
-
-.sidebar{
-  position:fixed;left:0;top:0;width:220px;height:100%;
-  background:#111;color:white;padding:20px;overflow:auto;
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f4f6f9;
 }
+
+/* LOADING SCREEN */
+#loadingScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:18px;
+  z-index:99999;
+}
+
+/* HIDE MAIN UNTIL AUTH VERIFIED */
+#app{
+  display:none;
+}
+
+/* SIDEBAR */
+.sidebar{
+  position:fixed;
+  left:0;
+  top:0;
+  width:220px;
+  height:100%;
+  background:#111;
+  color:white;
+  padding:20px;
+  overflow:auto;
+}
+
+.sidebar h2{ margin-top:0; }
 
 .sidebar button{
-  width:100%;margin:5px 0;padding:12px;border:none;
-  border-radius:8px;cursor:pointer;background:#222;color:white;
+  width:100%;
+  margin:5px 0;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+  font-size:15px;
 }
 
-.main{margin-left:240px;padding:20px;}
+.sidebar button:hover{ background:#333; }
 
-.card{background:white;margin-top:15px;border-radius:12px;overflow:hidden;}
+/* MAIN */
+.main{
+  margin-left:240px;
+  padding:20px;
+}
 
-button{padding:10px;border:none;border-radius:8px;cursor:pointer;}
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
 
-.approve{background:#28a745;color:white;}
-.reject{background:#ff9800;color:white;}
-.delete{background:#e74c3c;color:white;}
-.view{background:#111;color:white;}
+.statBox{
+  background:white;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* SEARCH */
+.searchBox{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  margin-top:15px;
+  box-sizing:border-box;
+}
+
+/* CARD */
+.card{
+  background:white;
+  margin-top:15px;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+
+.cardContent{
+  padding:15px;
+  line-height:1.8;
+}
+
+/* BADGES */
+.badge{
+  display:inline-block;
+  padding:5px 10px;
+  border-radius:6px;
+  color:white;
+  font-size:12px;
+  margin-right:5px;
+}
+
+.pending{ background:orange; }
+.approved{ background:green; }
+
+/* BUTTONS */
+button{
+  padding:10px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  margin:4px;
+  font-weight:bold;
+}
+
+.approve{ background:#28a745; color:white; }
+.reject{ background:#ff9800; color:white; }
+.delete{ background:#e74c3c; color:white; }
+.view{ background:#111; color:white; }
+.mapbtn{ background:#007bff; color:white; }
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:white;
+  z-index:9999;
+  overflow:auto;
+}
+
+.modalContent{
+  padding:15px;
+}
+
+.backBtn{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:10px 14px;
+  border-radius:8px;
+  z-index:99999;
+}
+
+@media(max-width:768px){
+  .sidebar{ position:relative; width:100%; height:auto; }
+  .main{ margin-left:0; }
+}
+
 </style>
 </head>
 
 <body>
 
+<!-- LOADING -->
+<div id="loadingScreen">🔐 Verifying admin access...</div>
+
+<!-- APP (HIDDEN UNTIL VERIFIED) -->
+<div id="app">
+
 <div class="sidebar">
+
   <h2>🏠 Admin Panel</h2>
+
   <button onclick="showPending()">🟡 Pending</button>
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="loadAll()">📦 All Listings</button>
+
   <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
+
 </div>
 
 <div class="main">
+
   <h1>Dashboard</h1>
 
-  <input id="search" placeholder="Search..." oninput="render()">
+  <div class="stats">
+
+    <div class="statBox">
+      <h2 id="totalPending">0</h2>
+      <p>Pending</p>
+    </div>
+
+    <div class="statBox">
+      <h2 id="totalApproved">0</h2>
+      <p>Approved</p>
+    </div>
+
+  </div>
+
+  <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
 
   <div id="list"></div>
+
+</div>
+
+<div class="modal" id="detailsModal">
+  <button class="backBtn" onclick="closeDetails()">⬅ Back</button>
+  <div id="detailsContent"></div>
+</div>
+
 </div>
 
 <script>
@@ -72,28 +251,29 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-/* 🔐 ROLE CHECK SYSTEM (NO HARDCODED EMAIL) */
-auth.onAuthStateChanged(user => {
+let pending = {};
+let approved = {};
+let mode = "pending";
+
+/* 🔐 SECURITY CHECK (STEP C CORE) */
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  // CHECK FIREBASE ADMIN NODE
-  db.ref("admins/" + user.uid).once("value")
-  .then(snap => {
+  const snap = await db.ref("admins/" + user.uid).once("value");
 
-    if(!snap.exists()){
-      auth.signOut();
-      window.location.href = "admin-login.html";
-      return;
-    }
+  if(!snap.exists()){
+    auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
 
-    // USER IS VALID ADMIN → ALLOW ACCESS
-    console.log("Admin verified ✔");
-
-  });
+  // AUTH SUCCESS
+  document.getElementById("loadingScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
 
 });
 
@@ -104,77 +284,131 @@ function logout(){
   });
 }
 
-/* DATA */
-let pending = {};
-let approved = {};
-let mode = "pending";
-
 /* REALTIME */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
+  updateStats();
   render();
 });
 
 db.ref("properties").on("value", snap=>{
   approved = snap.val() || {};
+  updateStats();
   render();
 });
 
+function updateStats(){
+  document.getElementById("totalPending").innerText =
+    Object.keys(pending).length;
+
+  document.getElementById("totalApproved").innerText =
+    Object.keys(approved).length;
+}
+
+function showPending(){ mode="pending"; render(); }
+function showApproved(){ mode="approved"; render(); }
+function loadAll(){ mode="all"; render(); }
+
 function render(){
 
-  let q = document.getElementById("search").value?.toLowerCase() || "";
+  let q = document.getElementById("search").value.toLowerCase();
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  let source = {...pending, ...approved};
+  let source =
+    mode==="pending" ? pending :
+    mode==="approved" ? approved :
+    {...pending, ...approved};
 
   for(let id in source){
 
     let p = source[id];
 
-    if(q && !(p.location+p.type).toLowerCase().includes(q)) continue;
+    let text =
+      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
+
+    if(q && !text.includes(q)) continue;
+
+    let img = p.images?.[0] || "";
+    let isPending = pending[id] ? true : false;
 
     list.innerHTML += `
       <div class="card">
 
-        <b>${p.type}</b><br>
-        ${p.location}<br>
-        KSh ${p.rent}<br>
+        ${img ? `<img src="${img}">` : ""}
 
-        <button class="view">View</button>
+        <div class="cardContent">
 
-        ${pending[id] ? `
-          <button class="approve" onclick="approve('${id}')">Approve</button>
-          <button class="reject" onclick="rejectItem('${id}')">Reject</button>
-        ` : ""}
+          <b>🏠 ${p.type || ""}</b><br>
+          📍 ${p.location || ""}<br>
+          💰 KSh ${p.rent || ""}<br>
+          📞 ${p.phone || ""}<br>
 
-        <button class="delete" onclick="deleteItem('${id}')">Delete</button>
+          <span class="badge ${isPending ? "pending" : "approved"}">
+            ${isPending ? "Pending" : "Approved"}
+          </span>
+
+          <br><br>
+
+          <button class="view" onclick='openDetails(${JSON.stringify(p)})'>View</button>
+
+          ${isPending ? `
+            <button class="approve" onclick="approve('${id}')">✔ Approve</button>
+            <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
+          ` : ""}
+
+          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
+
+        </div>
 
       </div>
     `;
   }
 }
 
-/* APPROVE */
+function openDetails(p){
+
+  document.getElementById("detailsContent").innerHTML = `
+    <div class="modalContent">
+
+      <h2>${p.type}</h2>
+      <p>${p.location}</p>
+      <p>KSh ${p.rent}</p>
+
+      <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">
+        View Map
+      </button>
+
+    </div>
+  `;
+
+  document.getElementById("detailsModal").style.display="block";
+}
+
+function closeDetails(){
+  document.getElementById("detailsModal").style.display="none";
+}
+
+/* ACTIONS */
 function approve(id){
   let item = pending[id];
-  if(!item) return;
-
   item.approved = true;
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
 }
 
-/* REJECT */
 function rejectItem(id){
   db.ref("pendingProperties/" + id).remove();
 }
 
-/* DELETE */
 function deleteItem(id){
   db.ref("pendingProperties/" + id).remove();
   db.ref("properties/" + id).remove();
+}
+
+function openMap(lat,lng){
+  window.open("https://www.google.com/maps?q="+lat+","+lng);
 }
 
 </script>
