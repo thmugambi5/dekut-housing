@@ -2,329 +2,43 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard - DeKUT Housing</title>
+<title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
-<style>
-
-body{margin:0;font-family:Arial;background:#f4f6f9;}
-
-#lockScreen{
-position:fixed;top:0;left:0;width:100%;height:100%;
-background:#111;color:white;
-display:flex;justify-content:center;align-items:center;
-flex-direction:column;
-}
-
-.sidebar{
-position:fixed;left:0;top:0;width:240px;height:100%;
-background:#0f172a;color:white;padding:20px;
-}
-
-.sidebar button{
-width:100%;margin:6px 0;padding:12px;
-border:none;border-radius:10px;
-background:#1e293b;color:white;
-cursor:pointer;
-}
-
-.main{
-margin-left:260px;padding:20px;display:none;
-}
-
-.card{
-background:white;margin-top:15px;padding:10px;border-radius:10px;
-}
-
-</style>
 </head>
-
 <body>
 
-<div id="lockScreen">
-<h2>🔐 Verifying landlord access...</h2>
-</div>
+<h2>Landlord Login</h2>
 
-<div class="sidebar">
-<h2>Landlord Panel</h2>
+<input id="email" placeholder="Email"><br><br>
+<input id="password" type="password" placeholder="Password"><br><br>
 
-<button onclick="showUpload()">Upload Property</button>
-<button onclick="showMyListings()">My Listings</button>
-<button onclick="logout()">Logout</button>
-
-</div>
-
-<div class="main">
-
-<h1>Dashboard</h1>
-
-<div id="content"></div>
-
-</div>
+<button onclick="login()">Login</button>
 
 <script>
-
 const firebaseConfig = {
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain: "dekut-housing.firebaseapp.com",
-databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-projectId: "dekut-housing",
-storageBucket: "dekut-housing.appspot.com",
-messagingSenderId: "784034754945",
-appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-const db = firebase.database();
 
-let currentUser = null;
+async function login(){
+const email=document.getElementById("email").value;
+const password=document.getElementById("password").value;
 
-/* 🔐 CLEAN AUTH (NO TOKENS - FIXED ROOT CAUSE OF YOUR BUGS) */
-auth.onAuthStateChanged(async user => {
-
-if(!user){
-window.location.href = "landlord-login.html";
-return;
-}
-
-currentUser = user;
-
-/* VERIFY LANDLORD EXISTS */
-const snap = await db.ref("landlords/" + user.uid).once("value");
-
-if(!snap.exists()){
-alert("Not registered as landlord");
-await auth.signOut();
-return;
-}
-
-/* ACCESS GRANTED */
-document.getElementById("lockScreen").style.display = "none";
-document.querySelector(".main").style.display = "block";
-
-showUpload();
-
-});
-
-function showUpload(){
-document.getElementById("content").innerHTML =
-"<h3>Upload form loading...</h3>";
-}
-
-function showMyListings(){
-document.getElementById("content").innerHTML =
-"<h3>Your listings loading...</h3>";
-}
-
-function logout(){
-auth.signOut().then(()=>{
-window.location.href = "landlord-login.html";
-});
-}
-  function loadUploadForm(){
-
-document.getElementById("content").innerHTML = `
-
-<div class="card">
-
-<h2>🏠 Upload Property</h2>
-
-<label>House Type</label>
-<select id="type">
-<option>Bedsitter</option>
-<option>Single Room</option>
-<option>One Bedroom</option>
-<option>Two Bedroom</option>
-<option>Shared Bedsitter</option>
-<option>Shared Single Room</option>
-</select>
-
-<label>Rent</label>
-<input id="rent" type="number">
-
-<label>Deposit</label>
-<input id="deposit" type="number">
-
-<label>Gender</label>
-<select id="gender">
-<option>Any Gender</option>
-<option>Male Only</option>
-<option>Female Only</option>
-<option>Mixed</option>
-</select>
-
-<label>Availability</label>
-<select id="availability">
-<option>Available</option>
-<option>Occupied</option>
-</select>
-
-<label>Rooms Available</label>
-<input id="roomsAvailable" type="number">
-
-<label>Utilities</label>
-<select id="utilities">
-<option>Yes</option>
-<option>No</option>
-<option>Partially Included</option>
-</select>
-
-<label>Phone</label>
-<input id="phone">
-
-<label>Description</label>
-<textarea id="extra"></textarea>
-
-<label>Extra Amenities</label>
-<input id="extraAmenities">
-
-<label>Photos</label>
-<input type="file" id="images" multiple>
-
-<div id="preview"></div>
-
-<label>Location</label>
-<input id="location">
-
-<button onclick="getLocation()">📍 Capture GPS</button>
-
-<div id="locStatus">No location</div>
-
-<button onclick="upload()">Upload Property</button>
-
-<div id="msg"></div>
-
-</div>
-
-`;
-
-}
-
-function getLocation(){
-
-navigator.geolocation.getCurrentPosition(pos=>{
-window.lat = pos.coords.latitude;
-window.lng = pos.coords.longitude;
-document.getElementById("locStatus").innerText = "Location captured";
-});
-
-}
-
-function toBase64(file){
-return new Promise(res=>{
-const reader = new FileReader();
-reader.onload = ()=>res(reader.result);
-reader.readAsDataURL(file);
-});
-}
-
-document.addEventListener("change", async e=>{
-if(e.target.id === "images"){
-let preview = document.getElementById("preview");
-preview.innerHTML = "";
-
-for(let file of e.target.files){
-let img = document.createElement("img");
-img.style.width = "80px";
-img.style.margin = "5px";
-img.src = await toBase64(file);
-preview.appendChild(img);
+try{
+await auth.signInWithEmailAndPassword(email,password);
+window.location.href="landlord-dashboard.html";
+}catch(e){
+alert(e.message);
 }
 }
-});
-
-async function upload(){
-
-const user = currentUser;
-
-if(!user){
-alert("Not logged in");
-return;
-}
-
-const type = document.getElementById("type").value;
-const rent = document.getElementById("rent").value;
-const deposit = document.getElementById("deposit").value;
-const gender = document.getElementById("gender").value;
-const availability = document.getElementById("availability").value;
-const roomsAvailable = document.getElementById("roomsAvailable").value;
-const utilities = document.getElementById("utilities").value;
-const phone = document.getElementById("phone").value;
-const extra = document.getElementById("extra").value;
-const location = document.getElementById("location").value;
-
-let files = document.getElementById("images").files;
-let images = [];
-
-for(let f of files){
-images.push(await toBase64(f));
-}
-
-let amenities = document.getElementById("extraAmenities").value;
-
-await db.ref("pendingProperties").push({
-
-ownerUid: user.uid,   // ✅ IMPORTANT FIX
-
-type,
-rent,
-deposit,
-gender,
-availability,
-roomsAvailable,
-utilities,
-phone,
-extra,
-location,
-lat: window.lat || "",
-lng: window.lng || "",
-images,
-amenities,
-approved:false,
-status:availability,
-createdAt:Date.now()
-
-});
-
-document.getElementById("msg").innerHTML =
-"✅ Uploaded successfully";
-
-}
-
-function showUpload(){
-loadUploadForm();
-}
-
-function showMyListings(){
-
-db.ref("pendingProperties")
-.orderByChild("ownerUid")
-.equalTo(currentUser.uid)
-.once("value", snap=>{
-
-let data = snap.val() || {};
-let html = "<h3>My Listings</h3>";
-
-for(let id in data){
-html += `<div class="card">
-<b>${data[id].type}</b><br>
-${data[id].location}<br>
-KSh ${data[id].rent}
-</div>`;
-}
-
-document.getElementById("content").innerHTML = html;
-
-});
-
-}
-
 </script>
 
 </body>
