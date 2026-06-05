@@ -7,9 +7,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-/* (UNCHANGED STYLES) */
 body{
     margin:0;
     font-family:Arial;
@@ -75,25 +75,51 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-const ADMIN_EMAIL = "admin@dekut.com";
+const db = firebase.database();
 
-/* LOGIN */
+/* LOGIN + STEP B LOGIC */
 function login(){
 
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
   let msg = document.getElementById("msg");
 
-  auth.signInWithEmailAndPassword(email,password)
-  .then(user=>{
+  msg.innerHTML = "⏳ Logging in...";
 
-    if(user.user.email !== ADMIN_EMAIL){
-      auth.signOut();
-      msg.innerHTML = "❌ Not authorized";
+  auth.signInWithEmailAndPassword(email, password)
+  .then(async (userCredential)=>{
+
+    const user = userCredential.user;
+
+    const adminRef = db.ref("admins");
+
+    const snap = await adminRef.once("value");
+    const admins = snap.val() || {};
+
+    const hasAdmins = Object.keys(admins).length > 0;
+
+    /* =========================
+       STEP B: FIRST ADMIN SETUP
+       ========================= */
+    if(!hasAdmins){
+
+      await adminRef.child(user.uid).set({
+        email: user.email,
+        role: "superadmin",
+        createdAt: Date.now()
+      });
+
+      msg.innerHTML = "✔ First admin created. Redirecting...";
+
+      setTimeout(()=>{
+        window.location.href = "admin.html";
+      },1000);
+
       return;
     }
 
-    msg.innerHTML = "✔ Success";
+    /* EXISTING ADMIN LOGIN (TEMP ALLOW - STEP C WILL LOCK THIS) */
+    msg.innerHTML = "✔ Login successful";
 
     setTimeout(()=>{
       window.location.href = "admin.html";
@@ -101,7 +127,7 @@ function login(){
 
   })
   .catch(e=>{
-    msg.innerHTML = e.message;
+    msg.innerHTML = "❌ " + e.message;
   });
 
 }
@@ -109,7 +135,7 @@ function login(){
 /* SESSION PERSISTENCE */
 auth.onAuthStateChanged(user=>{
 
-  if(user && user.email === ADMIN_EMAIL){
+  if(user){
     window.location.href = "admin.html";
   }
 
