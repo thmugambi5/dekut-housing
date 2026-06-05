@@ -2,44 +2,115 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Login</title>
+<title>Landlord Login - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  font-family:Arial, sans-serif;
+  background:#eef2f6;
+}
+.box{
+  width:100%;
+  max-width:360px;
+  background:white;
+  padding:22px;
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(15,23,42,0.12);
+}
+h1{font-size:24px;margin:0 0 6px;text-align:center}
+p{color:#5b6472;text-align:center;line-height:1.5}
+label{display:block;margin-top:14px;font-weight:bold}
+input{
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font-size:15px;
+}
+button{
+  width:100%;
+  margin-top:18px;
+  padding:12px;
+  border:0;
+  border-radius:8px;
+  background:#0f172a;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled{background:#94a3b8;cursor:not-allowed}
+.link{display:block;margin-top:14px;text-align:center;color:#0f5fd7;text-decoration:none}
+.msg{margin-top:12px;text-align:center;font-size:14px;color:#b91c1c}
+</style>
 </head>
 <body>
 
-<h2>Landlord Login</h2>
+<div class="box">
+  <h1>Landlord Login</h1>
+  <p>Upload and track your rental houses.</p>
 
-<input id="email" placeholder="Email"><br><br>
-<input id="password" type="password" placeholder="Password"><br><br>
+  <label>Email</label>
+  <input id="email" type="email" placeholder="you@example.com">
 
-<button onclick="login()">Login</button>
+  <label>Password</label>
+  <input id="password" type="password" placeholder="Password">
+
+  <button id="loginBtn" onclick="login()">Login</button>
+  <a class="link" href="landlord-signup.html">Create landlord account</a>
+  <a class="link" href="index.html">Back to houses</a>
+  <div id="msg" class="msg"></div>
+</div>
 
 <script>
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 
 async function login(){
-const email=document.getElementById("email").value;
-const password=document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const msg = document.getElementById("msg");
+  const btn = document.getElementById("loginBtn");
 
-try{
-await auth.signInWithEmailAndPassword(email,password);
-window.location.href="landlord-dashboard.html";
-}catch(e){
-alert(e.message);
-}
+  if(!email || !password){
+    msg.innerText = "Please enter email and password.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Logging in...";
+
+  try{
+    await auth.signInWithEmailAndPassword(email,password);
+    window.location.href="landlord-dashboard.html";
+  }
+  catch(error){
+    msg.innerText = error.message;
+    btn.disabled = false;
+    btn.innerText = "Login";
+  }
 }
 </script>
-
 </body>
 </html>
