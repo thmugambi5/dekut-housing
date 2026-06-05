@@ -2,20 +2,24 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Map Upgrade</title>
+<title>DeKUT Housing Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
 <style>
-body {
+body{
     margin:0;
     font-family:Arial;
     background:#f7f7f7;
 }
 
-header {
+header{
     background:white;
     padding:15px;
     position:sticky;
@@ -24,21 +28,22 @@ header {
     border-bottom:1px solid #ddd;
 }
 
-.top-bar {
+.top-bar{
     display:flex;
     flex-wrap:wrap;
     gap:10px;
 }
 
-input {
+input, select{
     padding:10px;
     border-radius:20px;
     border:1px solid #ddd;
     flex:1;
+    min-width:140px;
 }
 
-button {
-    padding:10px;
+button{
+    padding:10px 15px;
     border:none;
     border-radius:20px;
     background:#ff385c;
@@ -46,42 +51,71 @@ button {
     cursor:pointer;
 }
 
-/* layout */
-.container {
+.container{
     padding:20px;
 }
 
-.grid {
+.grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
     gap:15px;
 }
 
-/* card */
-.card {
+.card{
     background:white;
     border-radius:15px;
     overflow:hidden;
     box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-.card img {
+.card img{
     width:100%;
-    height:150px;
+    height:180px;
     object-fit:cover;
 }
 
-.content {
-    padding:10px;
+.content{
+    padding:12px;
 }
 
-.title { font-weight:bold; }
-.price { color:green; }
+.title{
+    font-weight:bold;
+}
 
-.meta { font-size:13px; color:#555; }
+.price{
+    color:green;
+    font-weight:bold;
+}
 
-#map {
-    height:500px;
+.meta{
+    font-size:13px;
+    color:#555;
+}
+
+.whatsapp{
+    display:block;
+    margin-top:10px;
+    background:#25D366;
+    color:white;
+    text-align:center;
+    padding:10px;
+    border-radius:10px;
+    text-decoration:none;
+}
+
+.map-btn{
+    width:100%;
+    margin-top:8px;
+    background:#4285F4;
+    color:white;
+    border:none;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+#map{
+    height:550px;
     display:none;
 }
 </style>
@@ -90,11 +124,33 @@ button {
 <body>
 
 <header>
-<h2>🏠 DeKUT Housing</h2>
+
+<h2>🏠 DeKUT Housing Pro</h2>
 
 <div class="top-bar">
 
 <input id="search" placeholder="Search..." onkeyup="applyFilters()">
+
+<select id="rentFilter" onchange="applyFilters()">
+<option value="">All Rent</option>
+<option value="low">Under 5,000</option>
+<option value="mid">5,000 - 10,000</option>
+<option value="high">10,000+</option>
+</select>
+
+<select id="typeFilter" onchange="applyFilters()">
+<option value="">All Types</option>
+<option value="bedsitter">Bedsitter</option>
+<option value="one bedroom">One Bedroom</option>
+<option value="shared">Shared</option>
+</select>
+
+<select id="genderFilter" onchange="applyFilters()">
+<option value="">Any Gender</option>
+<option value="male">Male</option>
+<option value="female">Female</option>
+<option value="any">Any</option>
+</select>
 
 <button onclick="toggleMap()">🗺 Map</button>
 
@@ -110,110 +166,264 @@ button {
 
 <script>
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
+/////////////////////////////////////////////////////////
+// 🔥 FIREBASE CONFIG (PASTE YOUR CONFIG HERE LATER)
+/////////////////////////////////////////////////////////
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+
+/////////////////////////////////////////////////////////
+// DATA SOURCE (Google Sheets CSV)
+/////////////////////////////////////////////////////////
+
+const SHEET_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
 
 let allData = [];
 let map;
-let markers = [];
 let isMap = false;
+let markers = [];
 
-/* LOAD DATA */
-async function loadData() {
+/////////////////////////////////////////////////////////
+// SAFE CSV PARSER
+/////////////////////////////////////////////////////////
+
+function parseCSV(text){
+
+    const rows = text.split("\n");
+
+    let result = [];
+
+    for(let i=1;i<rows.length;i++){
+
+        if(!rows[i].trim()) continue;
+
+        const cols = rows[i].split(",");
+
+        result.push({
+            type: cols[2] || "",
+            rent: parseInt(cols[3]) || 0,
+            location: cols[4] || "",
+            distance: cols[5] || "",
+            gender: cols[6] || "",
+            phone: cols[8] || "",
+            image: cols[11] || "",
+            lat: parseFloat(cols[12]) || null,
+            lng: parseFloat(cols[13]) || null
+        });
+    }
+
+    return result;
+}
+
+/////////////////////////////////////////////////////////
+// LOAD DATA
+/////////////////////////////////////////////////////////
+
+async function loadData(){
+
     const res = await fetch(SHEET_URL);
     const text = await res.text();
+
     allData = parseCSV(text);
+
     render(allData);
 }
 
-/* CSV */
-function parseCSV(text){
-    return text.trim().split("\n").slice(1).map(r=>{
-        const c=r.split(",");
-        return {
-            type:c[2],
-            rent:c[3],
-            location:c[4],
-            distance:c[5],
-            phone:c[8],
-            image:c[11]
-        };
-    });
+/////////////////////////////////////////////////////////
+// IMAGE (NOW FIREBASE READY)
+/////////////////////////////////////////////////////////
+
+function getImage(url){
+    if(!url) return "";
+
+    // If already Firebase URL
+    if(url.includes("firebasestorage.googleapis.com")){
+        return url;
+    }
+
+    // fallback (future uploads will always be Firebase)
+    return url;
 }
 
-/* RENDER GRID */
+/////////////////////////////////////////////////////////
+// RENDER GRID
+/////////////////////////////////////////////////////////
+
 function render(data){
-    let grid=document.getElementById("grid");
-    grid.innerHTML="";
 
-    data.forEach(item=>{
+    let grid = document.getElementById("grid");
+    grid.innerHTML = "";
 
-        let img=item.image||"";
+    data.forEach((item,index)=>{
 
-        if(img.includes("drive.google")){
-            let id=img.match(/[-\w]{25,}/);
-            if(id) img=`https://lh3.googleusercontent.com/d/${id[0]}`;
+        let img = getImage(item.image);
+
+        let phone = (item.phone || "").replace(/\D/g,'');
+
+        if(phone.startsWith("0")){
+            phone = "254" + phone.substring(1);
         }
 
-        grid.innerHTML+=`
+        grid.innerHTML += `
         <div class="card">
 
-        ${img?`<img src="${img}">`:``}
+            ${img ? `<img src="${img}">` : ""}
 
-        <div class="content">
-            <div class="title">${item.type}</div>
-            <div class="price">KSh ${item.rent}</div>
-            <div class="meta">${item.location}</div>
-            <div class="meta">${item.distance}</div>
-        </div>
+            <div class="content">
 
+                <div class="title">${item.type}</div>
+                <div class="price">KSh ${item.rent}</div>
+
+                <div class="meta">📍 ${item.location}</div>
+                <div class="meta">🚶 ${item.distance}</div>
+                <div class="meta">🚻 ${item.gender}</div>
+
+                <a class="whatsapp"
+                   href="https://wa.me/${phone}"
+                   target="_blank">
+                   WhatsApp
+                </a>
+
+                <button class="map-btn"
+                        onclick="viewOnMap(${index})">
+                    📍 View on Map
+                </button>
+
+            </div>
         </div>`;
     });
 }
 
-/* FILTER */
+/////////////////////////////////////////////////////////
+// FILTERS
+/////////////////////////////////////////////////////////
+
 function applyFilters(){
-    let q=document.getElementById("search").value.toLowerCase();
 
-    let f=allData.filter(x=>
-        (x.location+x.type).toLowerCase().includes(q)
-    );
+    const search = document.getElementById("search").value.toLowerCase();
+    const rentFilter = document.getElementById("rentFilter").value;
+    const typeFilter = document.getElementById("typeFilter").value;
+    const genderFilter = document.getElementById("genderFilter").value;
 
-    render(f);
+    let filtered = allData.filter(item=>{
+
+        let matchSearch =
+        (item.location + item.type)
+        .toLowerCase()
+        .includes(search);
+
+        let matchRent = true;
+        if(rentFilter === "low") matchRent = item.rent < 5000;
+        if(rentFilter === "mid") matchRent = item.rent >= 5000 && item.rent <= 10000;
+        if(rentFilter === "high") matchRent = item.rent > 10000;
+
+        let matchType = true;
+        if(typeFilter) matchType = (item.type || "").toLowerCase().includes(typeFilter);
+
+        let matchGender = true;
+        if(genderFilter) matchGender = (item.gender || "").toLowerCase().includes(genderFilter);
+
+        return matchSearch && matchRent && matchType && matchGender;
+    });
+
+    render(filtered);
 }
 
-/* MAP */
+/////////////////////////////////////////////////////////
+// MAP
+/////////////////////////////////////////////////////////
+
 function toggleMap(){
-    isMap=!isMap;
 
-    document.getElementById("grid").style.display=isMap?"none":"grid";
-    document.getElementById("map").style.display=isMap?"block":"none";
+    isMap = !isMap;
 
-    if(isMap) initMap();
+    document.getElementById("grid").style.display =
+    isMap ? "none" : "grid";
+
+    document.getElementById("map").style.display =
+    isMap ? "block" : "none";
+
+    if(isMap){
+        initMap();
+    }
 }
 
 function initMap(){
 
-    if(map) return;
+    if(map){
+        map.invalidateSize();
+        return;
+    }
 
-    map=L.map("map").setView([-0.39,37.81],13);
+    map = L.map("map");
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
         attribution:"© OpenStreetMap"
     }).addTo(map);
 
-    allData.forEach(item=>{
+    let bounds = [];
 
-        let lat=-0.39+(Math.random()*0.02);
-        let lng=37.81+(Math.random()*0.02);
+    allData.forEach((item,index)=>{
 
-        let marker=L.marker([lat,lng]).addTo(map);
+        if(!item.lat || !item.lng) return;
+
+        let marker = L.marker([item.lat,item.lng]).addTo(map);
 
         marker.bindPopup(`
             <b>${item.type}</b><br>
             KSh ${item.rent}<br>
-            ${item.location}
+            📍 ${item.location}
         `);
+
+        markers[index] = marker;
+
+        bounds.push([item.lat,item.lng]);
     });
+
+    if(bounds.length){
+        map.fitBounds(bounds,{padding:[50,50]});
+    }else{
+        map.setView([-0.39,37.81],13);
+    }
+}
+
+/////////////////////////////////////////////////////////
+// VIEW ON MAP
+/////////////////////////////////////////////////////////
+
+function viewOnMap(index){
+
+    const item = allData[index];
+
+    if(!item.lat || !item.lng){
+        alert("No coordinates available.");
+        return;
+    }
+
+    if(!isMap){
+        toggleMap();
+    }
+
+    setTimeout(()=>{
+
+        map.setView([item.lat,item.lng],17);
+
+        if(markers[index]){
+            markers[index].openPopup();
+        }
+
+    },300);
 }
 
 loadData();
