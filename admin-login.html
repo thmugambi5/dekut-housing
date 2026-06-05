@@ -71,6 +71,8 @@ button:hover{
 
 <script>
 
+<script>
+
 const firebaseConfig = {
   apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
   authDomain:"dekut-housing.firebaseapp.com",
@@ -88,48 +90,116 @@ const db = firebase.database();
 
 const ADMIN_EMAIL = "admin@dekut.com";
 
+/* GENERATE SESSION TOKEN */
+function generateToken(){
+  return "adm_" +
+    Math.random().toString(36).substring(2) +
+    Date.now();
+}
+
 /* LOGIN */
 async function login(){
 
-  let email = document.getElementById("email").value.trim();
-  let password = document.getElementById("password").value;
-  let msg = document.getElementById("msg");
+  let email =
+    document.getElementById("email").value.trim();
+
+  let password =
+    document.getElementById("password").value;
+
+  let msg =
+    document.getElementById("msg");
 
   try{
 
+    msg.innerText = "Signing in...";
+
     const userCredential =
-      await auth.signInWithEmailAndPassword(email, password);
+      await auth.signInWithEmailAndPassword(
+        email,
+        password
+      );
 
     const user = userCredential.user;
 
+    /* EMAIL CHECK */
     if(user.email !== ADMIN_EMAIL){
+
       await auth.signOut();
-      msg.innerText = "Not authorized";
+
+      msg.innerText =
+        "Not authorized";
+
       return;
     }
 
-    // REGISTER SESSION (NO TOKEN IN URL ANYMORE)
-    await db.ref("adminSessions/" + user.uid).set({
-      active:true,
-      createdAt:Date.now()
+    /* VERIFY ADMIN RECORD EXISTS */
+    const adminSnap =
+      await db.ref("admins/" + user.uid)
+      .once("value");
+
+    if(!adminSnap.exists()){
+
+      await auth.signOut();
+
+      msg.innerText =
+        "Admin account not registered";
+
+      return;
+    }
+
+    /* CREATE SESSION TOKEN */
+    const token = generateToken();
+
+    await db.ref("adminSessions/" + user.uid)
+    .set({
+      token: token,
+      createdAt: Date.now()
     });
 
-    msg.innerText = "Login success...";
+    msg.innerText =
+      "Login successful";
 
     setTimeout(()=>{
-      window.location.href = "admin.html";
+
+      window.location.href =
+        "admin.html?token=" + token;
+
     },800);
 
-  }catch(err){
-    msg.innerText = err.message;
   }
+  catch(err){
+
+    console.error(err);
+
+    msg.innerText =
+      err.message;
+
+  }
+
 }
 
-/* AUTO LOGIN GUARD */
-auth.onAuthStateChanged(user=>{
-  if(user && user.email === ADMIN_EMAIL){
-    window.location.href = "admin.html";
-  }
+/* AUTO LOGIN */
+auth.onAuthStateChanged(async user=>{
+
+  if(!user) return;
+
+  if(user.email !== ADMIN_EMAIL) return;
+
+  const sessionSnap =
+    await db.ref("adminSessions/" + user.uid)
+    .once("value");
+
+  if(!sessionSnap.exists()) return;
+
+  const session =
+    sessionSnap.val();
+
+  if(!session.token) return;
+
+  window.location.href =
+    "admin.html?token=" +
+    session.token;
+
 });
 
 </script>
