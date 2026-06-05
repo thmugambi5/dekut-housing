@@ -2,50 +2,262 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard</title>
+<title>Landlord Dashboard - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-</head>
 
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#172033}
+header{
+  background:white;
+  padding:14px 18px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 8px rgba(15,23,42,0.08);
+}
+h1{font-size:22px;margin:0}
+.wrap{max-width:1050px;margin:0 auto;padding:18px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,a.button{
+  border:0;
+  border-radius:8px;
+  padding:10px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-block;
+}
+.primary{background:#0f172a;color:white}
+.danger{background:#b91c1c;color:white}
+.light{background:#e2e8f0;color:#172033}
+.successBtn{background:#15803d;color:white}
+.warnBtn{background:#d97706;color:white}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.stat,.card{
+  background:white;
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.stat strong{font-size:28px;display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card img{width:100%;height:170px;object-fit:cover;border-radius:8px;margin-bottom:10px}
+.meta{line-height:1.7;color:#334155}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;color:white;font-size:12px;margin-top:8px}
+.pending{background:#d97706}
+.approved{background:#15803d}
+.rejected{background:#b91c1c}
+.suspended{background:#6b7280}
+.empty{text-align:center;color:#64748b;padding:24px}
+.cardActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.reason{background:#fee2e2;color:#7f1d1d;border-radius:8px;padding:8px;margin-top:10px}
+@media(max-width:640px){
+  header{display:block}
+  .actions{margin-top:12px}
+  button,a.button{width:100%;text-align:center}
+}
+</style>
+</head>
 <body>
 
-<h2>Welcome Landlord</h2>
+<header>
+  <div>
+    <h1>Landlord Dashboard</h1>
+    <div id="who" style="color:#64748b;font-size:14px;margin-top:4px">Checking account...</div>
+  </div>
+  <div class="actions">
+    <a class="button primary" href="landlord.html">Upload Property</a>
+    <a class="button light" href="index.html">View Public Site</a>
+    <button class="danger" onclick="logout()">Logout</button>
+  </div>
+</header>
 
-<button onclick="logout()">Logout</button>
+<main class="wrap">
+  <section class="stats">
+    <div class="stat"><strong id="pendingCount">0</strong>Pending approval</div>
+    <div class="stat"><strong id="approvedCount">0</strong>Approved live houses</div>
+    <div class="stat"><strong id="rejectedCount">0</strong>Rejected</div>
+    <div class="stat"><strong id="totalCount">0</strong>Total uploads</div>
+  </section>
 
-<div id="formArea">
-  <!-- we will reuse your form here next step -->
-  <p>Go to landlord.html to upload property</p>
-</div>
+  <h2>Your Properties</h2>
+  <div id="list" class="grid"></div>
+</main>
 
 <script>
-
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
+const db = firebase.database();
+
+let currentUser = null;
+let pending = {};
+let approved = {};
+let rejected = {};
 
 auth.onAuthStateChanged(user=>{
-if(!user){
-window.location.href = "landlord-login.html";
-}
+  if(!user){
+    window.location.href = "landlord-login.html";
+    return;
+  }
+  currentUser = user;
+  document.getElementById("who").innerText = user.email;
+  startRealtime();
 });
+
+function startRealtime(){
+  db.ref("pendingProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
+    pending = snap.val() || {};
+    render();
+  });
+  db.ref("properties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
+    approved = snap.val() || {};
+    render();
+  });
+  db.ref("rejectedProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
+    rejected = snap.val() || {};
+    render();
+  });
+}
+
+function render(){
+  if(!currentUser) return;
+  const rows = [
+    ...Object.entries(pending).map(([id,p])=>({id,...p, source:"pending", reviewStatus:"Pending"})),
+    ...Object.entries(approved).map(([id,p])=>({id,...p, source:"approved", reviewStatus:p.listingState === "suspended" ? "Suspended" : "Approved"})),
+    ...Object.entries(rejected).map(([id,p])=>({id,...p, source:"rejected", reviewStatus:"Rejected"}))
+  ].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+
+  document.getElementById("pendingCount").innerText = Object.keys(pending).length;
+  document.getElementById("approvedCount").innerText = Object.keys(approved).length;
+  document.getElementById("rejectedCount").innerText = Object.keys(rejected).length;
+  document.getElementById("totalCount").innerText = rows.length;
+
+  const list = document.getElementById("list");
+  if(rows.length === 0){
+    list.innerHTML = "<div class='card empty'>No properties yet. Upload your first house for review.</div>";
+    return;
+  }
+
+  list.innerHTML = rows.map(p=>{
+    const img = p.images?.[0] || "";
+    const badgeClass =
+      p.reviewStatus === "Approved" ? "approved" :
+      p.reviewStatus === "Suspended" ? "suspended" :
+      p.reviewStatus === "Rejected" ? "rejected" :
+      "pending";
+    const availabilityToggle = p.status === "Available" ? "Occupied" : "Available";
+    return `
+      <article class="card">
+        ${img ? `<img src="${img}" alt="">` : ""}
+        <div class="meta">
+          <strong>${p.type || "Property"}</strong><br>
+          ${p.location || ""}<br>
+          KSh ${p.rent || ""}<br>
+          ${p.phone || ""}<br>
+          <b>Status:</b> ${p.status || p.availability || ""}<br>
+          <span class="badge ${badgeClass}">${p.reviewStatus}</span>
+          ${p.rejectReason ? `<div class="reason"><b>Admin reason:</b> ${p.rejectReason}</div>` : ""}
+          ${p.suspendReason ? `<div class="reason"><b>Suspension reason:</b> ${p.suspendReason}</div>` : ""}
+          <div class="cardActions">
+            ${p.source === "pending" ? `
+              <button class="light" onclick="editPending('${p.id}')">Edit</button>
+              <button class="danger" onclick="deletePending('${p.id}')">Delete</button>
+            ` : ""}
+            ${p.source === "approved" ? `
+              <button class="successBtn" onclick="updateAvailability('${p.id}','${availabilityToggle}')">Mark ${availabilityToggle}</button>
+              <button class="warnBtn" onclick="sendApprovedEditForReview('${p.id}')">Request Edit Review</button>
+            ` : ""}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function editPending(id){
+  const p = pending[id];
+  if(!p) return;
+
+  const rent = prompt("Monthly rent", p.rent || "");
+  if(rent === null) return;
+  const deposit = prompt("Deposit amount", p.deposit || "");
+  if(deposit === null) return;
+  const phone = prompt("Contact number", p.phone || "");
+  if(phone === null) return;
+  const location = prompt("Location", p.location || "");
+  if(location === null) return;
+  const description = prompt("Description", p.extra || "");
+  if(description === null) return;
+
+  db.ref("pendingProperties/" + id).update({
+    rent: rent.trim(),
+    deposit: deposit.trim(),
+    phone: phone.trim(),
+    location: location.trim(),
+    extra: description.trim(),
+    updatedAt: Date.now()
+  });
+}
+
+function deletePending(id){
+  if(!confirm("Delete this pending upload?")) return;
+  db.ref("pendingProperties/" + id).remove();
+}
+
+function updateAvailability(id, status){
+  db.ref("properties/" + id).update({
+    status,
+    availability: status,
+    updatedAt: Date.now()
+  });
+}
+
+function sendApprovedEditForReview(id){
+  const p = approved[id];
+  if(!p) return;
+
+  const rent = prompt("New monthly rent", p.rent || "");
+  if(rent === null) return;
+  const phone = prompt("New contact number", p.phone || "");
+  if(phone === null) return;
+  const description = prompt("Updated description", p.extra || "");
+  if(description === null) return;
+
+  const updated = {
+    ...p,
+    rent: rent.trim(),
+    phone: phone.trim(),
+    extra: description.trim(),
+    approved: false,
+    reviewStatus: "pending_edit",
+    previousPropertyId: id,
+    updatedAt: Date.now()
+  };
+
+  db.ref("pendingProperties").push(updated).then(()=>{
+    alert("Edit sent to admin for review. The current approved listing stays live until admin approves the update.");
+  });
+}
 
 function logout(){
-auth.signOut().then(()=>{
-window.location.href="landlord-login.html";
-});
+  auth.signOut().then(()=> window.location.href="landlord-login.html");
 }
-
 </script>
-
 </body>
 </html>
