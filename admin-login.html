@@ -84,11 +84,6 @@ button:disabled{
     margin-top:10px;
 }
 
-.testBtn{
-    background:#111;
-    margin-top:5px;
-}
-
 </style>
 </head>
 
@@ -115,14 +110,6 @@ id="loginBtn"
 onclick="login()"
 >
 Login
-</button>
-
-<!-- TEST BUTTON -->
-<button
-class="testBtn"
-onclick="testWrite()"
->
-TEST DATABASE WRITE
 </button>
 
 <div id="msg"></div>
@@ -182,7 +169,7 @@ async function login(){
         console.log("LOGIN SUCCESS:", user.email);
         console.log("USER UID:", user.uid);
 
-        /* CHECK ADMINS NODE */
+        /* CHECK ADMINS NODE. If empty, the first successful login becomes admin. */
         const adminRef = db.ref("admins");
 
         const snap =
@@ -191,23 +178,16 @@ async function login(){
         const admins =
           snap.val() || {};
 
-        console.log("ADMINS:", admins);
-
-        /* CREATE FIRST ADMIN */
         if(Object.keys(admins).length === 0){
-
-            console.log("CREATING FIRST ADMIN");
-
             await adminRef.child(user.uid).set({
-
                 email:user.email,
                 role:"superadmin",
                 createdAt:Date.now()
-
             });
-
-            console.log("FIRST ADMIN CREATED");
-
+        }
+        else if(!admins[user.uid]){
+            await auth.signOut();
+            throw new Error("This account is not registered as an admin.");
         }
 
         msg.innerHTML =
@@ -237,36 +217,6 @@ async function login(){
 
 }
 
-/* TEST DATABASE WRITE */
-async function testWrite(){
-
-    try{
-
-        await db.ref("testAdmin").set({
-
-            hello:"admin works",
-            time:Date.now()
-
-        });
-
-        alert("WRITE SUCCESS");
-
-        console.log("DATABASE WRITE SUCCESS");
-
-    }
-    catch(error){
-
-        console.error("WRITE FAILED:", error);
-
-        alert("WRITE FAILED");
-
-    }
-
-}
-
-/* IMPORTANT:
-   NO AUTO REDIRECT HERE
-*/
 auth.onAuthStateChanged(user=>{
 
     console.log(
