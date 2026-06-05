@@ -115,26 +115,25 @@ auth.onAuthStateChanged(async user=>{
     }
 
     /* VERIFY SESSION */
-    const sessionSnap =
-      await db.ref("adminSessions/" + user.uid).once("value");
+   const sessionSnap =
+  await db.ref("adminSessions/" + user.uid).once("value");
 
-    if(!sessionSnap.exists()){
-      alert("FAILED: session missing");
-      await auth.signOut();
-      return;
-    }
+if(!sessionSnap.exists()){
+  alert("Session missing");
+  await auth.signOut();
+  return;
+}
 
-    const session = sessionSnap.val();
+const session = sessionSnap.val();
 
-    /* TOKEN CHECK */
-    if(session.token !== urlToken){
-      alert("FAILED: token mismatch");
-      console.log("DB token:", session.token);
-      console.log("URL token:", urlToken);
-      await auth.signOut();
-      return;
-    }
+console.log("SESSION:", session.token);
+console.log("URL:", urlToken);
 
+if(String(session.token) !== String(urlToken)){
+  alert("FAILED: token mismatch");
+  await auth.signOut();
+  return;
+}
     /* SESSION EXPIRY (24 HOURS) */
     const SESSION_LIMIT = 24 * 60 * 60 * 1000;
 
