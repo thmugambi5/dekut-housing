@@ -84,12 +84,17 @@ button:disabled{
     margin-top:10px;
 }
 
+.testBtn{
+    background:#111;
+    margin-top:5px;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="loginBox" id="loginBox">
+<div class="loginBox">
 
 <h2>🔐 Admin Login</h2>
 
@@ -110,6 +115,14 @@ id="loginBtn"
 onclick="login()"
 >
 Login
+</button>
+
+<!-- TEST BUTTON -->
+<button
+class="testBtn"
+onclick="testWrite()"
+>
+TEST DATABASE WRITE
 </button>
 
 <div id="msg"></div>
@@ -172,13 +185,15 @@ async function login(){
         /* CHECK ADMINS NODE */
         const adminRef = db.ref("admins");
 
-        const snap = await adminRef.once("value");
+        const snap =
+          await adminRef.once("value");
 
-        const admins = snap.val() || {};
+        const admins =
+          snap.val() || {};
 
         console.log("ADMINS:", admins);
 
-        /* CREATE FIRST ADMIN IF NONE EXISTS */
+        /* CREATE FIRST ADMIN */
         if(Object.keys(admins).length === 0){
 
             console.log("CREATING FIRST ADMIN");
@@ -200,7 +215,8 @@ async function login(){
 
         setTimeout(()=>{
 
-            window.location.href = "admin.html";
+            window.location.href =
+              "admin.html";
 
         },1000);
 
@@ -221,15 +237,42 @@ async function login(){
 
 }
 
-/* SESSION PERSISTENCE */
+/* TEST DATABASE WRITE */
+async function testWrite(){
+
+    try{
+
+        await db.ref("testAdmin").set({
+
+            hello:"admin works",
+            time:Date.now()
+
+        });
+
+        alert("WRITE SUCCESS");
+
+        console.log("DATABASE WRITE SUCCESS");
+
+    }
+    catch(error){
+
+        console.error("WRITE FAILED:", error);
+
+        alert("WRITE FAILED");
+
+    }
+
+}
+
+/* IMPORTANT:
+   NO AUTO REDIRECT HERE
+*/
 auth.onAuthStateChanged(user=>{
 
-    if(user){
-
-        console.log("SESSION ACTIVE:", user.email);
-
-        window.location.href = "admin.html";
-    }
+    console.log(
+      "AUTH STATE:",
+      user ? user.email : "No user"
+    );
 
 });
 
