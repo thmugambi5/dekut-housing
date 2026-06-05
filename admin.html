@@ -87,59 +87,114 @@ const db = firebase.database();
 
 let userGlobal = null;
 
-/* 🔐 LEVEL H SECURITY CORE */
+/* 🔐 ADMIN SECURITY */
 auth.onAuthStateChanged(async user=>{
 
-  if(!user){
+  try{
+
+    if(!user){
+      window.location.href="admin-login.html";
+      return;
+    }
+
+    userGlobal = user;
+
+    /* VERIFY ADMIN RECORD */
+    const adminSnap =
+      await db.ref("admins/" + user.uid).once("value");
+
+    if(!adminSnap.exists()){
+      await auth.signOut();
+      window.location.href="admin-login.html";
+      return;
+    }
+
+    /* VERIFY SESSION EXISTS */
+    const sessionSnap =
+      await db.ref("adminSessions/" + user.uid).once("value");
+
+    if(!sessionSnap.exists()){
+      await auth.signOut();
+      window.location.href="admin-login.html";
+      return;
+    }
+
+    const session = sessionSnap.val();
+
+    /* VERIFY TOKEN */
+    const urlToken =
+      new URLSearchParams(window.location.search).get("token");
+
+    if(!urlToken){
+      await auth.signOut();
+      window.location.href="admin-login.html";
+      return;
+    }
+
+    if(session.token !== urlToken){
+      await auth.signOut();
+      window.location.href="admin-login.html";
+      return;
+    }
+
+    /* SESSION EXPIRY (24 HOURS) */
+    const SESSION_LIMIT = 24 * 60 * 60 * 1000;
+
+    if(Date.now() - session.createdAt > SESSION_LIMIT){
+
+      await db.ref("adminSessions/" + user.uid).remove();
+
+      await auth.signOut();
+
+      window.location.href="admin-login.html";
+
+      return;
+    }
+
+    /* ACCESS GRANTED */
+    document.getElementById("lockScreen").style.display="none";
+    document.querySelector(".main").style.display="block";
+
+  }
+  catch(error){
+
+    console.error(error);
+
+    await auth.signOut();
+
     window.location.href="admin-login.html";
-    return;
   }
 
-  userGlobal = user;
-
-  const adminSnap =
-    await db.ref("admins/" + user.uid).once("value");
-
-  if(!adminSnap.exists()){
-    await auth.signOut();
-    return;
-  }
-
-  const sessionSnap =
-    await db.ref("adminSessions/" + user.uid).once("value");
-
-  if(!sessionSnap.exists()){
-    await auth.signOut();
-    return;
-  }
-
-  const session = sessionSnap.val();
-
-  if(!session.active){
-    await auth.signOut();
-    return;
-  }
-
-  document.getElementById("lockScreen").style.display="none";
-  document.querySelector(".main").style.display="block";
 });
 
 /* LOGOUT */
-function logout(){
-  auth.signOut().then(()=>{
-    window.location.href="admin-login.html";
-  });
+async function logout(){
+
+  try{
+
+    if(userGlobal){
+      await db.ref("adminSessions/" + userGlobal.uid).remove();
+    }
+
+    await auth.signOut();
+
+  }catch(e){
+    console.error(e);
+  }
+
+  window.location.href="admin-login.html";
 }
 
-/* DATA */
+/* LIVE PENDING LISTINGS */
 db.ref("pendingProperties").on("value",snap=>{
-  render(snap.val()||{});
+  render(snap.val() || {});
 });
 
 function render(data){
 
   let list = document.getElementById("list");
-  list.innerHTML="";
+
+  list.innerHTML = "";
 
   for(let id in data){
 
@@ -147,24 +202,36 @@ function render(data){
 
     list.innerHTML += `
       <div class="card">
-        <b>${p.type}</b><br>
-        ${p.location}<br>
-        KSh ${p.rent}
+        <b>${p.type || ""}</b><br>
+        📍 ${p.location || ""}<br>
+        💰 KSh ${p.rent || ""}<br>
       </div>
     `;
   }
 }
 
+/* SHOW PENDING */
 function showPending(){
-  db.ref("pendingProperties").once("value",snap=>{
-    render(snap.val()||{});
+
+  db.ref("pendingProperties")
+  .once("value",snap=>{
+
+    render(snap.val() || {});
+
   });
+
 }
 
+/* SHOW APPROVED */
 function showApproved(){
-  db.ref("properties").once("value",snap=>{
-    render(snap.val()||{});
+
+  db.ref("properties")
+  .once("value",snap=>{
+
+    render(snap.val() || {});
+
   });
+
 }
 
 </script>
