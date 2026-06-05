@@ -2,169 +2,456 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Dekut Housing</title>
+<title>DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f5f5f5;margin:0;padding:10px;}
 
-.container{max-width:900px;margin:auto;}
+*{box-sizing:border-box;}
 
-.filters{
-  background:#fff;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
+body{
+margin:0;
+font-family:Arial;
+background:#f6f6f6;
 }
 
-input,select{
-  padding:8px;
-  margin:5px;
-  border-radius:6px;
-  border:1px solid #ccc;
+header{
+padding:14px;
+background:#fff;
+text-align:center;
+font-weight:bold;
+font-size:20px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+position:sticky;
+top:0;
+z-index:1000;
+}
+
+.adminBtn{
+float:right;
+background:black;
+color:white;
+padding:8px 12px;
+border-radius:8px;
+border:none;
+cursor:pointer;
+}
+
+.filters{
+background:#fff;
+padding:10px;
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+justify-content:center;
+}
+
+.filters input,
+.filters select{
+padding:10px;
+border:1px solid #ccc;
+border-radius:8px;
+width:160px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:14px;
+padding:14px;
 }
 
 .card{
-  background:#fff;
-  margin:10px 0;
-  padding:10px;
-  border-radius:10px;
+background:#fff;
+border-radius:14px;
+overflow:hidden;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-img{
-  width:100%;
-  max-height:200px;
-  object-fit:cover;
-  border-radius:10px;
+.card img{
+width:100%;
+height:220px;
+object-fit:cover;
+cursor:pointer;
 }
 
-small{color:gray;}
+.cardContent{
+padding:12px;
+line-height:1.7;
+}
+
+button{
+margin:4px;
+padding:10px 12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.whatsapp{background:#25D366;color:white;}
+.call{background:#ff9800;color:white;}
+.mapbtn{background:#007bff;color:white;}
+.detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
+.photosbtn{background:#333;color:white;}
+
+.badge{
+display:inline-block;
+padding:4px 8px;
+border-radius:6px;
+font-size:12px;
+color:white;
+margin-top:6px;
+}
+
+.available{background:green;}
+.occupied{background:red;}
+
+.modal,.photoModal,.detailsModal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:black;
+z-index:9999;
+}
+
+.backBtn{
+position:absolute;
+top:10px;
+left:10px;
+background:white;
+padding:8px 12px;
+border-radius:8px;
+z-index:99999;
+font-weight:bold;
+cursor:pointer;
+}
+
+.photoContainer{
+width:100%;
+height:100%;
+overflow-x:auto;
+white-space:nowrap;
+scroll-snap-type:x mandatory;
+}
+
+.photoSlide{
+display:inline-block;
+width:100%;
+height:100%;
+scroll-snap-align:start;
+}
+
+.photoSlide img{
+width:100%;
+height:100%;
+object-fit:contain;
+}
+
+.detailsContent{
+background:white;
+width:100%;
+height:100%;
+overflow:auto;
+}
+
+.detailsImage{
+width:100%;
+height:300px;
+object-fit:cover;
+}
+
+.detailsBody{
+padding:15px;
+line-height:1.9;
+}
+
+#map{width:100%;height:100%;}
+
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<header>
+🏠 DeKUT Housing
+<button class="adminBtn" onclick="goAdmin()">Admin</button>
+</header>
 
-<h2>🏠 Dekut Housing Listings</h2>
+<div style="text-align:center;padding:10px;">
+<button class="mapbtn" onclick="openAllHousesMap()">🗺 View All Houses on Map</button>
+</div>
 
-<!-- FILTERS -->
 <div class="filters">
 
+<input id="searchBox" placeholder="Search wifi, bedsitter, Bomas..." oninput="applyFilters()">
 <input id="minRent" type="number" placeholder="Min Rent">
 <input id="maxRent" type="number" placeholder="Max Rent">
+<input id="maxDist" type="number" placeholder="Max Distance (km)">
 
-<input id="maxDistance" type="number" placeholder="Max Distance (km)">
-
-<button onclick="applyFilters()">Apply Filters</button>
+<button onclick="applyFilters()">Filter</button>
 <button onclick="resetFilters()">Reset</button>
 
 </div>
 
-<div id="listings"></div>
+<div class="grid" id="list"></div>
 
+<div class="modal" id="mapModal"></div>
+
+<div class="photoModal" id="photoModal">
+<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
+<div class="photoContainer" id="photoContainer"></div>
+</div>
+
+<div class="detailsModal" id="detailsModal">
+<div class="detailsContent" id="detailsContent"></div>
 </div>
 
 <script>
 
+/* FIREBASE */
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain: "dekut-housing.firebaseapp.com",
-  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId: "dekut-housing",
+apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing",
+storageBucket:"dekut-housing.appspot.com",
+messagingSenderId:"784034754945",
+appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const DEKUT_LAT = -0.3977905;
-const DEKUT_LNG = 36.9608515;
-
-let allProperties = [];
-
-/* DISTANCE CALC */
-function distance(lat1, lon1, lat2, lon2){
-  const R = 6371;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
-
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) *
-    Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLon/2)**2;
-
-  return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);
+function goAdmin(){
+window.location.href="admin-login.html";
 }
 
-/* LOAD DATA */
+/* DATA */
+let data = {};
+let filteredArray = [];
+
+/* INFINITE SCROLL CONTROL */
+let renderIndex = 0;
+const PAGE_SIZE = 6;
+let isLoading = false;
+
+/* REAL-TIME FIREBASE (NO LAG + AUTO UPDATE) */
 db.ref("properties").on("value", snap=>{
-  allProperties = [];
-
-  snap.forEach(child=>{
-    let p = child.val();
-
-    if(p.lat && p.lng){
-      p.distance = distance(p.lat,p.lng,DEKUT_LAT,DEKUT_LNG);
-    } else {
-      p.distance = 999;
-    }
-
-    allProperties.push(p);
-  });
-
-  render(allProperties);
+data = snap.val() || {};
+applyFilters();   // re-filter instantly on update
 });
 
-/* RENDER */
-function render(list){
-  let box = document.getElementById("listings");
-  box.innerHTML = "";
-
-  list.forEach(p=>{
-    let div = document.createElement("div");
-    div.className = "card";
-
-    div.innerHTML = `
-      <h3>${p.type} - KSh ${p.rent}</h3>
-      <small>📍 ${p.location || "N/A"} | 📏 ${p.distance} km from DeKUT</small>
-      <p>🧰 ${p.amenities || "None"}</p>
-
-      ${p.images && p.images[0] ? `<img src="${p.images[0]}">` : ""}
-    `;
-
-    box.appendChild(div);
-  });
+/* SAFE */
+function safe(obj){
+return encodeURIComponent(JSON.stringify(obj));
 }
 
-/* FILTER */
+/* FILTERS (KEEP APPROVED ONLY) */
 function applyFilters(){
 
-  let min = parseInt(document.getElementById("minRent").value) || 0;
-  let max = parseInt(document.getElementById("maxRent").value) || 999999;
-  let dist = parseFloat(document.getElementById("maxDistance").value) || 999;
+let search = document.getElementById("searchBox").value.toLowerCase();
+let min = parseInt(document.getElementById("minRent").value) || 0;
+let max = parseInt(document.getElementById("maxRent").value) || 999999;
+let dist = parseFloat(document.getElementById("maxDist").value) || 999;
 
-  let filtered = allProperties.filter(p=>{
-    return (
-      parseInt(p.rent || 0) >= min &&
-      parseInt(p.rent || 0) <= max &&
-      parseFloat(p.distance || 999) <= dist
-    );
-  });
+filteredArray = [];
 
-  render(filtered);
+for(let id in data){
+
+let p = data[id];
+
+/* 🔥 ONLY APPROVED APPEAR */
+if(p.approved !== true) continue;
+
+let rent = parseInt(p.rent || 0);
+let distance = parseFloat(p.distance || 999);
+
+let text = ((p.type||"")+" "+(p.location||"")+" "+(p.amenities||"")).toLowerCase();
+
+if(
+rent>=min &&
+rent<=max &&
+distance<=dist &&
+(search==="" || text.includes(search))
+){
+filteredArray.push({id,...p});
 }
+
+}
+
+/* RESET INFINITE SCROLL */
+renderIndex = 0;
+document.getElementById("list").innerHTML = "";
+renderMore();
+
+}
+
+/* INFINITE SCROLL RENDER */
+function renderMore(){
+
+if(isLoading) return;
+isLoading = true;
+
+let list = document.getElementById("list");
+
+let nextItems = filteredArray.slice(renderIndex, renderIndex + PAGE_SIZE);
+
+nextItems.forEach(p=>{
+
+let img = p.images?.[0] || "";
+let statusClass = (p.status||"").toLowerCase()==="available" ? "available":"occupied";
+
+list.innerHTML += `
+<div class="card">
+
+${img?`<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
+
+<div class="cardContent">
+
+<b>🏠 ${p.type||""}</b><br>
+📍 ${p.location||""}<br>
+🧰 ${p.amenities||""}<br>
+📏 ${p.distance||""} KM<br>
+💰 KSh ${p.rent||""}<br>
+
+<div class="badge ${statusClass}">${p.status||""}</div>
+
+<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>
+View Details
+</button>
+
+</div>
+</div>`;
+});
+
+renderIndex += PAGE_SIZE;
+isLoading = false;
+
+}
+
+/* SCROLL LISTENER */
+window.addEventListener("scroll", ()=>{
+
+if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
+renderMore();
+}
+
+});
 
 /* RESET */
 function resetFilters(){
-  document.getElementById("minRent").value = "";
-  document.getElementById("maxRent").value = "";
-  document.getElementById("maxDistance").value = "";
-  render(allProperties);
+document.getElementById("searchBox").value="";
+document.getElementById("minRent").value="";
+document.getElementById("maxRent").value="";
+document.getElementById("maxDist").value="";
+applyFilters();
 }
+
+/* DETAILS */
+function openDetails(encoded){
+
+let p = JSON.parse(decodeURIComponent(encoded));
+
+document.getElementById("detailsContent").innerHTML=`
+<div class="backBtn" onclick="closeDetails()">⬅ Back</div>
+
+${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
+
+<div class="detailsBody">
+
+<h2>${p.type||""}</h2>
+
+<b>Rent:</b> ${p.rent}<br>
+<b>Location:</b> ${p.location}<br>
+<b>Contact:</b> ${p.phone}<br>
+
+<button class="mapbtn" onclick="closeDetails(); openMap(${p.lat},${p.lng})">
+View Map
+</button>
+
+</div>`;
+
+document.getElementById("detailsModal").style.display="block";
+}
+
+/* PHOTO */
+function openPhotos(encoded){
+
+let imgs = JSON.parse(decodeURIComponent(encoded));
+let c = document.getElementById("photoContainer");
+c.innerHTML="";
+
+imgs.forEach(i=>{
+c.innerHTML += `<div class="photoSlide"><img src="${i}"></div>`;
+});
+
+document.getElementById("photoModal").style.display="block";
+}
+
+/* MAP */
+function openMap(lat,lng){
+
+document.getElementById("mapModal").style.display="block";
+
+document.getElementById("mapModal").innerHTML=`
+<div id="map"></div>
+<div class="backBtn" onclick="closeMap()">⬅ Back</div>
+`;
+
+setTimeout(()=>{
+
+let map=L.map("map").setView([lat,lng],15);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+L.marker([lat,lng]).addTo(map);
+
+},100);
+}
+
+function openAllHousesMap(){
+document.getElementById("mapModal").style.display="block";
+document.getElementById("mapModal").innerHTML=`<div id="map"></div>`;
+
+setTimeout(()=>{
+
+let map=L.map("map").setView([-0.3977,36.9608],14);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+let markers=L.markerClusterGroup();
+
+for(let id in data){
+let p=data[id];
+
+if(p.approved && p.lat && p.lng){
+markers.addLayer(L.marker([p.lat,p.lng]));
+}
+}
+
+map.addLayer(markers);
+
+},100);
+}
+
+/* CLOSE */
+function closeDetails(){document.getElementById("detailsModal").style.display="none";}
+function closePhotos(){document.getElementById("photoModal").style.display="none";}
+function closeMap(){document.getElementById("mapModal").style.display="none";}
 
 </script>
 
