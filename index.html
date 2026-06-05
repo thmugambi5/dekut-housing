@@ -3,21 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <title>DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
 body{font-family:Arial;background:#f7f7f7;margin:0;}
-.card{background:#fff;margin:10px;padding:10px;border-radius:10px;}
-img{width:100%;border-radius:10px;margin-top:5px;}
+header{background:#fff;padding:15px;text-align:center;font-weight:bold;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;padding:15px;}
+
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+img{
+  width:100%;
+  height:160px;
+  object-fit:cover;
+  border-radius:10px;
+}
+
+.meta{font-size:13px;color:#555;}
+.price{color:green;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
-<h2 style="text-align:center;">DeKUT Housing</h2>
-<div id="list"></div>
+<header>🏠 DeKUT Housing Listings</header>
+
+<div id="grid" class="grid">Loading...</div>
 
 <script>
 
@@ -34,9 +53,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-db.ref("properties").on("value", snap=>{
+db.ref("properties").on("value", snap => {
   let data = snap.val();
-  let html = "";
+  let grid = document.getElementById("grid");
+  grid.innerHTML = "";
 
   for(let id in data){
     let p = data[id];
@@ -48,18 +68,19 @@ db.ref("properties").on("value", snap=>{
       });
     }
 
-    html += `
+    grid.innerHTML += `
       <div class="card">
-        <b>${p.type}</b><br>
-        KSh ${p.rent}<br>
-        ${p.location}<br>
-        ${p.distance} KM<br>
         ${imgs}
+        <h3>${p.type}</h3>
+        <div class="price">KSh ${p.rent}</div>
+        <div class="meta">${p.location}</div>
+        <div class="meta">${p.distance} KM from DeKUT</div>
+        <div class="meta">${p.gender}</div>
+        <div class="meta">${p.amenities}</div>
+        <div class="meta">${p.phone}</div>
       </div>
     `;
   }
-
-  document.getElementById("list").innerHTML = html;
 });
 
 </script>
