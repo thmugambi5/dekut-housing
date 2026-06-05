@@ -17,7 +17,7 @@ body{
   background:#f4f6f9;
 }
 
-/* LOADING SCREEN */
+/* LOADING SCREEN (NEW SECURITY LAYER UX) */
 #loadingScreen{
   position:fixed;
   top:0;
@@ -29,11 +29,11 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  font-size:18px;
+  flex-direction:column;
   z-index:99999;
 }
 
-/* HIDE MAIN UNTIL AUTH VERIFIED */
+/* HIDE APP UNTIL AUTH VERIFIED */
 #app{
   display:none;
 }
@@ -130,6 +130,8 @@ body{
 
 .pending{ background:orange; }
 .approved{ background:green; }
+.available{ background:#28a745; }
+.occupied{ background:#d32f2f; }
 
 /* BUTTONS */
 button{
@@ -147,7 +149,7 @@ button{
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
 
-/* MODAL */
+/* DETAILS MODAL */
 .modal{
   display:none;
   position:fixed;
@@ -162,6 +164,7 @@ button{
 
 .modalContent{
   padding:15px;
+  line-height:1.8;
 }
 
 .backBtn{
@@ -175,6 +178,7 @@ button{
   z-index:99999;
 }
 
+/* MOBILE */
 @media(max-width:768px){
   .sidebar{ position:relative; width:100%; height:auto; }
   .main{ margin-left:0; }
@@ -185,10 +189,13 @@ button{
 
 <body>
 
-<!-- LOADING -->
-<div id="loadingScreen">🔐 Verifying admin access...</div>
+<!-- 🔐 LOADING GATE (NEW SECURITY LAYER) -->
+<div id="loadingScreen">
+  <h2>🔐 Verifying Admin Access...</h2>
+  <p>Please wait</p>
+</div>
 
-<!-- APP (HIDDEN UNTIL VERIFIED) -->
+<!-- MAIN APP -->
 <div id="app">
 
 <div class="sidebar">
@@ -199,7 +206,9 @@ button{
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
-  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
+  <button onclick="logout()" style="background:#c62828;">
+    🚪 Logout
+  </button>
 
 </div>
 
@@ -251,51 +260,57 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+const ADMIN_EMAIL = "admin@dekut.com";
+
 let pending = {};
 let approved = {};
 let mode = "pending";
 
-/* 🔐 SECURITY CHECK (STEP C CORE) */
-auth.onAuthStateChanged(async user => {
+/* 🔐 HARD SECURITY GATE */
+auth.onAuthStateChanged(user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  const snap = await db.ref("admins/" + user.uid).once("value");
-
-  if(!snap.exists()){
+  if(user.email !== ADMIN_EMAIL){
     auth.signOut();
     window.location.href = "admin-login.html";
     return;
   }
 
-  // AUTH SUCCESS
+  /* SUCCESS: UNLOCK APP */
   document.getElementById("loadingScreen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
+  /* START REALTIME ONLY AFTER AUTH */
+  startRealtime();
+
 });
 
-/* LOGOUT */
+/* REALTIME DATA ONLY AFTER AUTH */
+function startRealtime(){
+
+  db.ref("pendingProperties").on("value", snap=>{
+    pending = snap.val() || {};
+    updateStats();
+    render();
+  });
+
+  db.ref("properties").on("value", snap=>{
+    approved = snap.val() || {};
+    updateStats();
+    render();
+  });
+
+}
+
 function logout(){
   auth.signOut().then(()=>{
     window.location.href = "admin-login.html";
   });
 }
-
-/* REALTIME */
-db.ref("pendingProperties").on("value", snap=>{
-  pending = snap.val() || {};
-  updateStats();
-  render();
-});
-
-db.ref("properties").on("value", snap=>{
-  approved = snap.val() || {};
-  updateStats();
-  render();
-});
 
 function updateStats(){
   document.getElementById("totalPending").innerText =
@@ -308,6 +323,10 @@ function updateStats(){
 function showPending(){ mode="pending"; render(); }
 function showApproved(){ mode="approved"; render(); }
 function loadAll(){ mode="all"; render(); }
+
+function safe(obj){
+  return encodeURIComponent(JSON.stringify(obj));
+}
 
 function render(){
 
@@ -339,7 +358,7 @@ function render(){
 
         <div class="cardContent">
 
-          <b>🏠 ${p.type || ""}</b><br>
+          <b>🏠 ${p.type || "Property"}</b><br>
           📍 ${p.location || ""}<br>
           💰 KSh ${p.rent || ""}<br>
           📞 ${p.phone || ""}<br>
@@ -350,7 +369,7 @@ function render(){
 
           <br><br>
 
-          <button class="view" onclick='openDetails(${JSON.stringify(p)})'>View</button>
+          <button class="view" onclick='openDetails("${safe(p)}")'>View</button>
 
           ${isPending ? `
             <button class="approve" onclick="approve('${id}')">✔ Approve</button>
@@ -366,19 +385,19 @@ function render(){
   }
 }
 
-function openDetails(p){
+/* DETAILS */
+function openDetails(encoded){
+  let p = JSON.parse(decodeURIComponent(encoded));
 
   document.getElementById("detailsContent").innerHTML = `
     <div class="modalContent">
-
       <h2>${p.type}</h2>
       <p>${p.location}</p>
-      <p>KSh ${p.rent}</p>
+      <p>${p.rent}</p>
 
       <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">
         View Map
       </button>
-
     </div>
   `;
 
@@ -389,13 +408,16 @@ function closeDetails(){
   document.getElementById("detailsModal").style.display="none";
 }
 
-/* ACTIONS */
 function approve(id){
+
   let item = pending[id];
+  if(!item) return;
+
   item.approved = true;
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
+
 }
 
 function rejectItem(id){
