@@ -11,8 +11,6 @@
 
 <style>
 
-/* (same UI you already approved - shortened here for clarity) */
-
 body{margin:0;font-family:Arial;background:#f4f6f9;}
 
 #lockScreen{
@@ -61,11 +59,8 @@ body{margin:0;font-family:Arial;background:#f4f6f9;}
 </div>
 
 <div class="main">
-
 <h1>Dashboard</h1>
-
 <div id="list"></div>
-
 </div>
 
 <script>
@@ -99,35 +94,45 @@ auth.onAuthStateChanged(async user=>{
 
     userGlobal = user;
 
+    const urlToken =
+      new URLSearchParams(window.location.search)
+      .get("token");
+
+    if(!urlToken){
+      await auth.signOut();
+      window.location.href="admin-login.html";
+      return;
+    }
+
     /* VERIFY ADMIN RECORD */
     const adminSnap =
       await db.ref("admins/" + user.uid).once("value");
 
-if(!adminSnap.exists()){
-  alert("FAILED: admin record missing");
-  await auth.signOut();
-  return;
-}
+    if(!adminSnap.exists()){
+      alert("FAILED: admin record missing");
+      await auth.signOut();
+      return;
+    }
 
-if(!sessionSnap.exists()){
-  alert("FAILED: session missing");
-  await auth.signOut();
-  return;
-}
+    /* VERIFY SESSION */
+    const sessionSnap =
+      await db.ref("adminSessions/" + user.uid).once("value");
 
-if(!urlToken){
-  alert("FAILED: token missing from URL");
-  await auth.signOut();
-  return;
-}
+    if(!sessionSnap.exists()){
+      alert("FAILED: session missing");
+      await auth.signOut();
+      return;
+    }
 
-if(session.token !== urlToken){
-  alert("FAILED: token mismatch");
-  console.log("DB token:", session.token);
-  console.log("URL token:", urlToken);
-  await auth.signOut();
-  return;
-}
+    const session = sessionSnap.val();
+
+    /* TOKEN CHECK */
+    if(session.token !== urlToken){
+      alert("FAILED: token mismatch");
+      console.log("DB token:", session.token);
+      console.log("URL token:", urlToken);
+      await auth.signOut();
+      return;
     }
 
     /* SESSION EXPIRY (24 HOURS) */
@@ -136,11 +141,9 @@ if(session.token !== urlToken){
     if(Date.now() - session.createdAt > SESSION_LIMIT){
 
       await db.ref("adminSessions/" + user.uid).remove();
-
       await auth.signOut();
 
       window.location.href="admin-login.html";
-
       return;
     }
 
@@ -152,10 +155,9 @@ if(session.token !== urlToken){
   catch(error){
 
     console.error(error);
-
     await auth.signOut();
-
     window.location.href="admin-login.html";
+
   }
 
 });
@@ -178,7 +180,7 @@ async function logout(){
   window.location.href="admin-login.html";
 }
 
-/* LIVE PENDING LISTINGS */
+/* DATA */
 db.ref("pendingProperties").on("value",snap=>{
   render(snap.val() || {});
 });
@@ -186,7 +188,6 @@ db.ref("pendingProperties").on("value",snap=>{
 function render(data){
 
   let list = document.getElementById("list");
-
   list.innerHTML = "";
 
   for(let id in data){
@@ -205,26 +206,18 @@ function render(data){
 
 /* SHOW PENDING */
 function showPending(){
-
   db.ref("pendingProperties")
   .once("value",snap=>{
-
     render(snap.val() || {});
-
   });
-
 }
 
 /* SHOW APPROVED */
 function showApproved(){
-
   db.ref("properties")
   .once("value",snap=>{
-
     render(snap.val() || {});
-
   });
-
 }
 
 </script>
