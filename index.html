@@ -2,139 +2,223 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Pro</title>
+<title>DeKUT Housing Map Upgrade</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- FIREBASE -->
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import {
-getFirestore, collection, addDoc, getDocs
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-/* YOUR FIREBASE CONFIG (replace later) */
-const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_BUCKET",
-  messagingSenderId: "YOUR_ID",
-  appId: "YOUR_APP_ID"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getFirestore();
-
-/* LOGIN */
-window.login = async function(){
-    let email = document.getElementById("email").value;
-    let pass = document.getElementById("pass").value;
-
-    await signInWithEmailAndPassword(auth,email,pass);
-    document.getElementById("auth").style.display="none";
-    loadListings();
-}
-
-/* REGISTER */
-window.register = async function(){
-    let email = document.getElementById("email").value;
-    let pass = document.getElementById("pass").value;
-
-    await createUserWithEmailAndPassword(auth,email,pass);
-}
-
-/* LOGOUT */
-window.logout = async function(){
-    await signOut(auth);
-    document.getElementById("auth").style.display="block";
-}
-
-/* ADD PROPERTY (LANDLORD) */
-window.addProperty = async function(){
-    await addDoc(collection(db,"properties"),{
-        type: document.getElementById("type").value,
-        rent: document.getElementById("rent").value,
-        location: document.getElementById("location").value,
-        lat: parseFloat(document.getElementById("lat").value),
-        lng: parseFloat(document.getElementById("lng").value),
-        phone: document.getElementById("phone").value
-    });
-
-    alert("Property added");
-}
-
-/* LOAD PROPERTIES */
-window.loadListings = async function(){
-
-    let snap = await getDocs(collection(db,"properties"));
-    let map = L.map('map').setView([-0.39,37.81],13);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        attribution:'© OpenStreetMap'
-    }).addTo(map);
-
-    snap.forEach(doc=>{
-
-        let d = doc.data();
-
-        L.marker([d.lat,d.lng])
-        .addTo(map)
-        .bindPopup(`
-            <b>${d.type}</b><br>
-            KSh ${d.rent}<br>
-            ${d.location}
-        `);
-    });
-}
-
-</script>
-
 <style>
-body{font-family:Arial;margin:0;background:#f7f7f7;}
-#auth, #dashboard{padding:20px;}
-input{display:block;margin:5px;padding:10px;}
-button{padding:10px;margin:5px;}
-#map{height:500px;}
-</style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#f7f7f7;
+}
 
+header {
+    background:white;
+    padding:15px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    border-bottom:1px solid #ddd;
+}
+
+.top-bar {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+input {
+    padding:10px;
+    border-radius:20px;
+    border:1px solid #ddd;
+    flex:1;
+}
+
+button {
+    padding:10px;
+    border:none;
+    border-radius:20px;
+    background:#ff385c;
+    color:white;
+    cursor:pointer;
+}
+
+/* layout */
+.container {
+    padding:20px;
+}
+
+.grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:15px;
+}
+
+/* card */
+.card {
+    background:white;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card img {
+    width:100%;
+    height:150px;
+    object-fit:cover;
+}
+
+.content {
+    padding:10px;
+}
+
+.title { font-weight:bold; }
+.price { color:green; }
+
+.meta { font-size:13px; color:#555; }
+
+#map {
+    height:500px;
+    display:none;
+}
+</style>
 </head>
 
 <body>
 
-<!-- AUTH -->
-<div id="auth">
-<h2>Login</h2>
-<input id="email" placeholder="email">
-<input id="pass" type="password" placeholder="password">
+<header>
+<h2>🏠 DeKUT Housing</h2>
 
-<button onclick="login()">Login</button>
-<button onclick="register()">Register</button>
+<div class="top-bar">
+
+<input id="search" placeholder="Search..." onkeyup="applyFilters()">
+
+<button onclick="toggleMap()">🗺 Map</button>
+
 </div>
+</header>
 
-<!-- LANDLORD DASHBOARD -->
-<div id="dashboard">
-<h2>Landlord Dashboard</h2>
-
-<input id="type" placeholder="Type">
-<input id="rent" placeholder="Rent">
-<input id="location" placeholder="Location">
-<input id="lat" placeholder="Latitude">
-<input id="lng" placeholder="Longitude">
-<input id="phone" placeholder="Phone">
-
-<button onclick="addProperty()">Add Property</button>
-<button onclick="logout()">Logout</button>
+<div class="container">
 
 <div id="map"></div>
+<div id="grid" class="grid">Loading...</div>
+
 </div>
+
+<script>
+
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
+
+let allData = [];
+let map;
+let markers = [];
+let isMap = false;
+
+/* LOAD DATA */
+async function loadData() {
+    const res = await fetch(SHEET_URL);
+    const text = await res.text();
+    allData = parseCSV(text);
+    render(allData);
+}
+
+/* CSV */
+function parseCSV(text){
+    return text.trim().split("\n").slice(1).map(r=>{
+        const c=r.split(",");
+        return {
+            type:c[2],
+            rent:c[3],
+            location:c[4],
+            distance:c[5],
+            phone:c[8],
+            image:c[11]
+        };
+    });
+}
+
+/* RENDER GRID */
+function render(data){
+    let grid=document.getElementById("grid");
+    grid.innerHTML="";
+
+    data.forEach(item=>{
+
+        let img=item.image||"";
+
+        if(img.includes("drive.google")){
+            let id=img.match(/[-\w]{25,}/);
+            if(id) img=`https://lh3.googleusercontent.com/d/${id[0]}`;
+        }
+
+        grid.innerHTML+=`
+        <div class="card">
+
+        ${img?`<img src="${img}">`:``}
+
+        <div class="content">
+            <div class="title">${item.type}</div>
+            <div class="price">KSh ${item.rent}</div>
+            <div class="meta">${item.location}</div>
+            <div class="meta">${item.distance}</div>
+        </div>
+
+        </div>`;
+    });
+}
+
+/* FILTER */
+function applyFilters(){
+    let q=document.getElementById("search").value.toLowerCase();
+
+    let f=allData.filter(x=>
+        (x.location+x.type).toLowerCase().includes(q)
+    );
+
+    render(f);
+}
+
+/* MAP */
+function toggleMap(){
+    isMap=!isMap;
+
+    document.getElementById("grid").style.display=isMap?"none":"grid";
+    document.getElementById("map").style.display=isMap?"block":"none";
+
+    if(isMap) initMap();
+}
+
+function initMap(){
+
+    if(map) return;
+
+    map=L.map("map").setView([-0.39,37.81],13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        attribution:"© OpenStreetMap"
+    }).addTo(map);
+
+    allData.forEach(item=>{
+
+        let lat=-0.39+(Math.random()*0.02);
+        let lng=37.81+(Math.random()*0.02);
+
+        let marker=L.marker([lat,lng]).addTo(map);
+
+        marker.bindPopup(`
+            <b>${item.type}</b><br>
+            KSh ${item.rent}<br>
+            ${item.location}
+        `);
+    });
+}
+
+loadData();
+
+</script>
 
 </body>
 </html>
