@@ -146,35 +146,21 @@ async function login(){
     }
 
     /* CREATE SESSION TOKEN */
-    const token = generateToken();
+/* CREATE SESSION TOKEN */
+const token = generateToken();
 
-    await db.ref("adminSessions/" + user.uid)
-    .set({
-      token: token,
-      createdAt: Date.now()
-    });
+await db.ref("adminSessions/" + user.uid).set({
+  token: token,
+  createdAt: Date.now(),
+  uid: user.uid
+});
 
-    msg.innerText =
-      "Login successful";
+/* IMPORTANT: wait for DB write to finish */
+await new Promise(r => setTimeout(r, 300));
 
-    setTimeout(()=>{
+msg.innerText = "Login successful";
 
-      window.location.href =
-        "admin.html?token=" + token;
-
-    },800);
-
-  }
-  catch(err){
-
-    console.error(err);
-
-    msg.innerText =
-      err.message;
-
-  }
-
-}
+window.location.href = "admin.html?token=" + token;
 
 /* AUTO LOGIN */
 auth.onAuthStateChanged(async user=>{
