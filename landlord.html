@@ -5,13 +5,8 @@
 <title>Landlord Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase CORE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-
-<!-- Firebase STORAGE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-
-<!-- Firebase REALTIME DATABASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
@@ -67,22 +62,37 @@ button{
 
 <div class="card">
 
-<h2>🏠 Add Property</h2>
+<h2>🏠 Add Property (DeKUT Housing)</h2>
 
-<input id="type" placeholder="Property Type">
-<input id="rent" type="number" placeholder="Rent (KSh)">
-<input id="location" placeholder="Location">
-<input id="distance" placeholder="Distance from DeKUT">
+<!-- SAME STRUCTURE AS YOUR GOOGLE FORM -->
 
-<select id="gender">
-<option>Any</option>
-<option>Male</option>
-<option>Female</option>
+<select id="type">
+<option value="">Property Type</option>
+<option>Bedsitter</option>
+<option>Single Room</option>
+<option>One Bedroom</option>
+<option>Shared Room</option>
 </select>
 
-<input id="phone" placeholder="Phone / WhatsApp">
-<input id="lat" placeholder="Latitude">
-<input id="lng" placeholder="Longitude">
+<input id="rent" type="number" placeholder="Rent (KSh)">
+
+<input id="location" placeholder="Location (e.g. Bomas, Embassy, Gate C)">
+
+<!-- FIXED: MUST BE KM -->
+<input id="distance" type="number" step="0.1" placeholder="Distance from DeKUT (KM)">
+
+<select id="gender">
+<option>Any Gender</option>
+<option>Male Only</option>
+<option>Female Only</option>
+<option>Mixed</option>
+</select>
+
+<input id="amenities" placeholder="Amenities (WiFi, Water, Parking, etc.)">
+
+<input id="phone" placeholder="Phone / WhatsApp Number">
+
+<input id="extra" placeholder="Extra Info (optional)">
 
 <input type="file" id="image">
 
@@ -99,7 +109,7 @@ button{
 <script>
 
 /////////////////////////////////////////////////////
-// FIREBASE CONFIG (ADD YOUR OWN LATER)
+// FIREBASE CONFIG (KEEP YOURS)
 /////////////////////////////////////////////////////
 
 const firebaseConfig = {
@@ -149,7 +159,7 @@ async function uploadImage(file){
 }
 
 /////////////////////////////////////////////////////
-// MAIN UPLOAD FUNCTION
+// MAIN UPLOAD FUNCTION (UPDATED FIELDS)
 /////////////////////////////////////////////////////
 
 async function uploadProperty(){
@@ -169,11 +179,11 @@ async function uploadProperty(){
         type: document.getElementById("type").value,
         rent: Number(document.getElementById("rent").value),
         location: document.getElementById("location").value,
-        distance: document.getElementById("distance").value,
+        distance: Number(document.getElementById("distance").value), // KM FIXED
         gender: document.getElementById("gender").value,
+        amenities: document.getElementById("amenities").value,
         phone: document.getElementById("phone").value,
-        lat: Number(document.getElementById("lat").value),
-        lng: Number(document.getElementById("lng").value),
+        extra: document.getElementById("extra").value,
         image: imageUrl,
         createdAt: Date.now()
     };
