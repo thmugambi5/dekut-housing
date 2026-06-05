@@ -3,68 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <title>DeKUT Housing</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f7f7f7;}
-
-header{
-    background:#fff;
-    padding:15px;
-    position:sticky;
-    top:0;
-    border-bottom:1px solid #ddd;
-}
-
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-    gap:15px;
-    padding:15px;
-}
-
-.card{
-    background:#fff;
-    border-radius:15px;
-    overflow:hidden;
-    box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-
-.card img{
-    width:100%;
-    height:160px;
-    object-fit:cover;
-}
-
-.content{padding:10px;}
-
-.price{color:green;font-weight:bold;}
-.meta{font-size:13px;color:#555;}
-
-.gallery{
-    display:flex;
-    overflow-x:auto;
-    gap:5px;
-}
-
-.gallery img{
-    width:100%;
-    height:160px;
-    flex-shrink:0;
-}
+body{font-family:Arial;background:#f7f7f7;margin:0;}
+.card{background:#fff;margin:10px;padding:10px;border-radius:10px;}
+img{width:100%;border-radius:10px;margin-top:5px;}
 </style>
 </head>
 
 <body>
 
-<header>
-<h2>🏠 DeKUT Housing</h2>
-</header>
-
-<div id="grid" class="grid">Loading...</div>
+<h2 style="text-align:center;">DeKUT Housing</h2>
+<div id="list"></div>
 
 <script>
 
@@ -79,39 +32,34 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
-db.ref("properties").on("value", snap => {
-    let data = snap.val();
-    let grid = document.getElementById("grid");
-    grid.innerHTML = "";
+db.ref("properties").on("value", snap=>{
+  let data = snap.val();
+  let html = "";
 
-    for(let id in data){
-        let p = data[id];
+  for(let id in data){
+    let p = data[id];
 
-        let images = "";
-
-        if(p.images && p.images.length){
-            images = `<img src="${p.images[0]}">`;
-        }
-
-        grid.innerHTML += `
-        <div class="card">
-
-            ${images}
-
-            <div class="content">
-                <div><b>${p.type}</b></div>
-                <div class="price">KSh ${p.rent}</div>
-                <div class="meta">${p.location}</div>
-                <div class="meta">${p.distance} km from DeKUT</div>
-                <div class="meta">${p.gender}</div>
-            </div>
-
-        </div>
-        `;
+    let imgs = "";
+    if(p.images){
+      p.images.forEach(img=>{
+        imgs += `<img src="${img}">`;
+      });
     }
+
+    html += `
+      <div class="card">
+        <b>${p.type}</b><br>
+        KSh ${p.rent}<br>
+        ${p.location}<br>
+        ${p.distance} KM<br>
+        ${imgs}
+      </div>
+    `;
+  }
+
+  document.getElementById("list").innerHTML = html;
 });
 
 </script>
