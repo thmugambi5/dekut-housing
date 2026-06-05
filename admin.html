@@ -29,9 +29,7 @@ body{
   overflow:auto;
 }
 
-.sidebar h2{
-  margin-top:0;
-}
+.sidebar h2{ margin-top:0; }
 
 .sidebar button{
   width:100%;
@@ -45,9 +43,7 @@ body{
   font-size:15px;
 }
 
-.sidebar button:hover{
-  background:#333;
-}
+.sidebar button:hover{ background:#333; }
 
 /* MAIN */
 .main{
@@ -168,17 +164,13 @@ button{
 
 /* MOBILE */
 @media(max-width:768px){
-
   .sidebar{
     position:relative;
     width:100%;
     height:auto;
   }
 
-  .main{
-    margin-left:0;
-  }
-
+  .main{ margin-left:0; }
 }
 
 </style>
@@ -238,13 +230,13 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
 let pending = {};
 let approved = {};
 let mode = "pending";
 
+/* REAL-TIME SYNC (NO REFRESH DELAY) */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
   updateStats();
@@ -279,15 +271,17 @@ function render(){
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  let source = mode==="pending" ? pending :
-                mode==="approved" ? approved :
-                {...pending, ...approved};
+  let source =
+    mode==="pending" ? pending :
+    mode==="approved" ? approved :
+    {...pending, ...approved};
 
   for(let id in source){
 
     let p = source[id];
 
-    let text = ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
+    let text =
+      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
@@ -301,10 +295,10 @@ function render(){
 
         <div class="cardContent">
 
-          <b>🏠 ${p.type}</b><br>
-          📍 ${p.location}<br>
-          💰 KSh ${p.rent}<br>
-          📞 ${p.phone}<br>
+          <b>🏠 ${p.type || "Property"}</b><br>
+          📍 ${p.location || ""}<br>
+          💰 KSh ${p.rent || ""}<br>
+          📞 ${p.phone || ""}<br>
 
           <span class="badge ${isPending ? "pending" : "approved"}">
             ${isPending ? "Pending" : "Approved"}
@@ -350,13 +344,13 @@ function closeDetails(){
   document.getElementById("detailsModal").style.display="none";
 }
 
-/* 🔥 FIX APPLIED HERE */
+/* 🔥 FINAL APPROVAL LOGIC (INDEX DEPENDS ON THIS) */
 function approve(id){
 
   let item = pending[id];
   if(!item) return;
 
-  item.approved = true; // ✅ IMPORTANT FIX ADDED
+  item.approved = true;   // CRITICAL FOR INDEX FILTER
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
