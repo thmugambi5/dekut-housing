@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Signup</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Landlord Signup</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
+
 <body>
 
 <h2>Landlord Signup</h2>
@@ -19,27 +19,47 @@
 <button onclick="signup()">Create Account</button>
 
 <script>
+
 const firebaseConfig = {
 apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com"
+authDomain:"dekut-housing.firebaseapp.com",
+databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+projectId:"dekut-housing"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
+const db = firebase.database();
 
 async function signup(){
-const email=document.getElementById("email").value;
-const password=document.getElementById("password").value;
 
-try{
-await auth.createUserWithEmailAndPassword(email,password);
-alert("Account created");
-window.location.href="landlord-login.html";
-}catch(e){
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+
+try {
+
+// 1. Create account
+const cred = await auth.createUserWithEmailAndPassword(email, password);
+const user = cred.user;
+
+// 2. Save landlord profile
+await db.ref("landlords/" + user.uid).set({
+email: user.email,
+createdAt: Date.now()
+});
+
+// 3. FORCE LOGIN SESSION ACTIVE (IMPORTANT FIX)
+await auth.signInWithEmailAndPassword(email, password);
+
+// 4. Redirect immediately
+window.location.href = "landlord-dashboard.html";
+
+} catch(e){
 alert(e.message);
 }
 }
+
 </script>
 
 </body>
