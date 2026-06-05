@@ -6,12 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-
-/* ===== ALL ORIGINAL STYLES (UNCHANGED) ===== */
 
 *{
 box-sizing:border-box;
@@ -155,6 +152,7 @@ font-size:14px;
 line-height:1.6;
 }
 
+/* PROGRESS BAR */
 .progressWrapper{
 display:none;
 margin-top:18px;
@@ -193,9 +191,9 @@ transition:width 0.3s ease;
 Your property will first be reviewed by admin before appearing to students.
 </div>
 
-<!-- ===== ALL YOUR ORIGINAL FORM FIELDS (UNCHANGED) ===== -->
-
+<!-- HOUSE TYPE -->
 <label>🏠 House Type</label>
+
 <select id="type">
 <option>Bedsitter</option>
 <option>Single Room</option>
@@ -205,13 +203,27 @@ Your property will first be reviewed by admin before appearing to students.
 <option>Shared Single Room</option>
 </select>
 
+<!-- RENT -->
 <label>💰 Monthly Rent (KSh)</label>
-<input id="rent" type="number">
 
+<input
+id="rent"
+type="number"
+placeholder="e.g. 5500"
+>
+
+<!-- DEPOSIT -->
 <label>💳 Deposit Amount (KSh)</label>
-<input id="deposit" type="number">
 
+<input
+id="deposit"
+type="number"
+placeholder="e.g. 3000"
+>
+
+<!-- OCCUPANTS -->
 <label>👥 Preferred Occupants</label>
+
 <select id="gender">
 <option>Any Gender</option>
 <option>Male Only</option>
@@ -219,27 +231,51 @@ Your property will first be reviewed by admin before appearing to students.
 <option>Mixed</option>
 </select>
 
+<!-- STATUS -->
 <label>📌 Availability Status</label>
+
 <select id="availability">
 <option>Available</option>
 <option>Occupied</option>
 </select>
 
+<!-- ROOMS -->
 <label>🚪 Number of Rooms Available</label>
-<input id="roomsAvailable" type="number">
 
+<input
+id="roomsAvailable"
+type="number"
+placeholder="e.g. 2"
+>
+
+<!-- UTILITIES -->
 <label>💡 Utilities Included In Rent?</label>
+
 <select id="utilities">
 <option>Yes</option>
 <option>No</option>
 <option>Partially Included</option>
 </select>
 
+<!-- PHONE -->
 <label>📞 Contact Number</label>
-<input id="phone">
 
+<input
+id="phone"
+placeholder="e.g. +254712345678"
+>
+
+<small>
+Use active Kenyan number with +254 format
+</small>
+
+<!-- DESCRIPTION -->
 <label>📝 Property Description</label>
-<textarea id="extra"></textarea>
+
+<textarea
+id="extra"
+placeholder="e.g. Spacious rooms, tiled floors, quiet environment..."
+></textarea>
 
 <!-- AMENITIES -->
 <div class="amenitiesBox">
@@ -288,28 +324,66 @@ Your property will first be reviewed by admin before appearing to students.
 
 </div>
 
+<!-- EXTRA AMENITIES -->
 <label>➕ Other Amenities</label>
-<input id="extraAmenities">
 
+<input
+id="extraAmenities"
+placeholder="e.g. CCTV, Laundry Area"
+>
+
+<!-- IMAGES -->
 <label>📸 Property Photos</label>
-<input type="file" id="images" multiple accept="image/*">
+
+<input
+type="file"
+id="images"
+multiple
+accept="image/*"
+>
+
+<small>
+Upload multiple clear photos of the property
+</small>
 
 <div class="preview" id="preview"></div>
 
+<!-- LOCATION -->
 <label>📍 Property Location</label>
-<input id="location">
 
-<button class="locationBtn" onclick="getLocation()">📍 Share GPS Location</button>
+<input
+id="location"
+placeholder="e.g. Bomas, Nyeri View, Embassy"
+>
 
-<div class="statusBox" id="locStatus">No location selected</div>
+<small class="warning">
+⚠️ Stand inside the property before capturing GPS location
+</small>
 
-<button id="uploadBtn" onclick="upload()">Upload Property</button>
+<button class="locationBtn" onclick="getLocation()">
+📍 Share Live GPS Location
+</button>
 
+<div class="statusBox" id="locStatus">
+No location selected
+</div>
+
+<!-- UPLOAD BUTTON -->
+<button id="uploadBtn" onclick="upload()">
+Upload Property
+</button>
+
+<!-- PROGRESS -->
 <div class="progressWrapper" id="progressWrapper">
-<div class="progressText" id="progressText">Preparing upload...</div>
+
+<div class="progressText" id="progressText">
+Preparing upload...
+</div>
+
 <div class="progressBar">
 <div class="progressFill" id="progressFill"></div>
 </div>
+
 </div>
 
 <div id="msg"></div>
@@ -333,102 +407,259 @@ firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
-/* 🔥 ADDED AUTH (ONLY FIX) */
-const auth = firebase.auth();
-
+/* GPS */
 let lat = "";
 let lng = "";
 
-/* GPS */
+/* DeKUT coordinates */
+const DEKUT_LAT = -0.3977905;
+const DEKUT_LNG = 36.9608515;
+
+/* DISTANCE CALCULATOR */
+function calculateDistance(lat1, lon1, lat2, lon2){
+
+const R = 6371;
+
+const dLat =
+(lat2 - lat1) * Math.PI / 180;
+
+const dLon =
+(lon2 - lon1) * Math.PI / 180;
+
+const a =
+Math.sin(dLat/2) * Math.sin(dLat/2) +
+Math.cos(lat1 * Math.PI/180) *
+Math.cos(lat2 * Math.PI/180) *
+Math.sin(dLon/2) * Math.sin(dLon/2);
+
+const c =
+2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+return (R * c).toFixed(1);
+
+}
+
+/* PROGRESS FUNCTION */
+function updateProgress(percent, text){
+
+document.getElementById("progressWrapper").style.display = "block";
+
+document.getElementById("progressFill").style.width =
+percent + "%";
+
+document.getElementById("progressText").innerText =
+text;
+
+}
+
+/* GPS CAPTURE */
 function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
+
+if(!navigator.geolocation){
+
+alert("Geolocation not supported");
+
+return;
+
+}
+
+document.getElementById("locStatus").innerHTML =
+"Capturing location...";
+
+navigator.geolocation.getCurrentPosition(
+
+pos => {
+
 lat = pos.coords.latitude;
 lng = pos.coords.longitude;
-document.getElementById("locStatus").innerText =
-"✅ Location captured";
-});
+
+document.getElementById("locStatus").innerHTML =
+"✅ Location captured successfully";
+
+},
+
+err => {
+
+document.getElementById("locStatus").innerHTML =
+"❌ Unable to capture location";
+
+alert("Please allow location permission");
+
 }
 
-/* IMAGE BASE64 */
+);
+
+}
+
+/* IMAGE TO BASE64 */
 function toBase64(file){
-return new Promise(res=>{
+
+return new Promise(resolve => {
+
 let reader = new FileReader();
-reader.onload = ()=>res(reader.result);
+
+reader.onload = () => resolve(reader.result);
+
 reader.readAsDataURL(file);
+
 });
+
 }
 
-/* PREVIEW */
-document.getElementById("images").onchange = async e=>{
-let preview = document.getElementById("preview");
-preview.innerHTML="";
+/* IMAGE PREVIEW */
+document.getElementById("images").onchange = async e => {
+
+let preview =
+document.getElementById("preview");
+
+preview.innerHTML = "";
+
 for(let file of e.target.files){
+
 let img = document.createElement("img");
+
 img.src = await toBase64(file);
+
 preview.appendChild(img);
+
 }
+
 };
 
 /* UPLOAD */
 async function upload(){
 
-/* 🔥 ADDED LOGIN CHECK ONLY */
-const user = auth.currentUser;
+const uploadBtn =
+document.getElementById("uploadBtn");
 
-if(!user){
-alert("Login required");
-return;
-}
-
-const uploadBtn = document.getElementById("uploadBtn");
 uploadBtn.disabled = true;
 
-/* ORIGINAL VALUES (UNCHANGED) */
-const typeVal = document.getElementById("type").value;
-const rentVal = document.getElementById("rent").value;
-const depositVal = document.getElementById("deposit").value;
-const genderVal = document.getElementById("gender").value;
-const availabilityVal = document.getElementById("availability").value;
-const roomsVal = document.getElementById("roomsAvailable").value;
-const utilitiesVal = document.getElementById("utilities").value;
-const phoneVal = document.getElementById("phone").value;
-const extraVal = document.getElementById("extra").value;
-const locationVal = document.getElementById("location").value;
+const typeVal =
+document.getElementById("type").value.trim();
 
-/* VALIDATION (UNCHANGED) */
-if(!typeVal || !rentVal || !phoneVal || !locationVal){
+const rentVal =
+document.getElementById("rent").value.trim();
+
+const depositVal =
+document.getElementById("deposit").value.trim();
+
+const genderVal =
+document.getElementById("gender").value;
+
+const availabilityVal =
+document.getElementById("availability").value;
+
+const roomsVal =
+document.getElementById("roomsAvailable").value.trim();
+
+const utilitiesVal =
+document.getElementById("utilities").value;
+
+const phoneVal =
+document.getElementById("phone").value.trim();
+
+const extraVal =
+document.getElementById("extra").value.trim();
+
+const locationVal =
+document.getElementById("location").value.trim();
+
+const msg =
+document.getElementById("msg");
+
+/* VALIDATION */
+if(
+!typeVal ||
+!rentVal ||
+!phoneVal ||
+!locationVal
+){
+
 alert("Please fill all required fields");
+
 uploadBtn.disabled = false;
+
 return;
+
 }
 
 if(!lat || !lng){
+
 alert("Please capture GPS location first");
+
 uploadBtn.disabled = false;
+
 return;
+
 }
 
+try{
+
+updateProgress(10,"Preparing images...");
+
 /* IMAGES */
-let files = document.getElementById("images").files;
+let files =
+document.getElementById("images").files;
+
 let images = [];
 
-for(let i=0;i<files.length;i++){
-images.push(await toBase64(files[i]));
+for(let i = 0; i < files.length; i++){
+
+let file = files[i];
+
+images.push(await toBase64(file));
+
+let percent =
+10 + Math.floor(((i + 1) / files.length) * 50);
+
+updateProgress(
+percent,
+`Uploading photos ${i+1} of ${files.length}`
+);
+
 }
 
 /* AMENITIES */
-let selected=[];
-document.querySelectorAll(".amenity:checked")
-.forEach(a=>selected.push(a.value));
+updateProgress(70,"Preparing property details...");
 
-let extraA=document.getElementById("extraAmenities").value;
-let amenities=selected.join(", ");
-if(extraA) amenities += ", "+extraA;
+let selected = [];
 
-/* SAVE (ONLY ADDITION) */
+document
+.querySelectorAll(".amenity:checked")
+.forEach(a => {
+
+selected.push(a.value);
+
+});
+
+let extraA =
+document.getElementById("extraAmenities")
+.value
+.trim();
+
+let amenities =
+selected.join(", ");
+
+if(extraA){
+
+amenities +=
+(amenities ? ", " : "") + extraA;
+
+}
+
+/* DISTANCE */
+const distance =
+calculateDistance(
+lat,
+lng,
+DEKUT_LAT,
+DEKUT_LNG
+);
+
+updateProgress(85,"Saving property to database...");
+
+/* SAVE */
 await db.ref("pendingProperties").push({
-
-ownerUid: user.uid,  // 🔥 ADDED ONLY
 
 type: typeVal,
 rent: rentVal,
@@ -441,22 +672,74 @@ phone: phoneVal,
 extra: extraVal,
 location: locationVal,
 amenities: amenities,
-lat,
-lng,
-images,
-approved:false,
-status:availabilityVal,
-createdAt:Date.now()
+
+lat: lat,
+lng: lng,
+
+distance: distance,
+
+images: images,
+
+approved: false,
+
+status: availabilityVal,
+
+createdAt: Date.now()
+
 });
 
-/* SUCCESS */
-document.getElementById("msg").innerHTML =
-"<div class='success'>✅ Uploaded successfully</div>";
+updateProgress(100,"Upload completed successfully");
+
+/* SUCCESS MESSAGE */
+msg.innerHTML = `
+<div class="success">
+✅ Property uploaded successfully.<br>
+Waiting for admin approval.
+</div>
+`;
+
+/* RESET FORM */
+document.getElementById("type").selectedIndex = 0;
+document.getElementById("rent").value = "";
+document.getElementById("deposit").value = "";
+document.getElementById("roomsAvailable").value = "";
+document.getElementById("phone").value = "";
+document.getElementById("extra").value = "";
+document.getElementById("location").value = "";
+document.getElementById("extraAmenities").value = "";
+document.getElementById("images").value = "";
+
+document
+.querySelectorAll(".amenity")
+.forEach(a => a.checked = false);
+
+document.getElementById("preview").innerHTML = "";
+
+document.getElementById("locStatus").innerHTML =
+"No location selected";
+
+lat = "";
+lng = "";
+
+setTimeout(() => {
+
+document.getElementById("progressWrapper").style.display = "none";
+
+document.getElementById("progressFill").style.width = "0%";
+
+},2000);
+
+}
+catch(err){
+
+alert("Upload failed: " + err.message);
+
+updateProgress(0,"Upload failed");
+
+}
 
 uploadBtn.disabled = false;
-  <button onclick="logout()" style="background:#333;margin-top:10px;">
-Logout
-</button>
+
 }
 
 </script>
