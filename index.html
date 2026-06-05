@@ -16,9 +16,6 @@ body{margin:0;font-family:Arial;background:#f6f6f6;}
 
 header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
 
-.controls{padding:10px;display:flex;gap:10px;flex-wrap:wrap;}
-input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
-
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
 
 .card{background:#fff;border-radius:10px;overflow:hidden;}
@@ -30,19 +27,16 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 .mapbtn{background:#007bff;color:#fff;}
 .photos{background:#333;color:#fff;}
 
-/* MODALS */
+/* MAP */
 .modal,.photoModal{
-  display:none;
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
   background:#000;
 }
 
-.photoModal img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
+.photoModal img{width:100%;height:100%;object-fit:contain;}
+.backBtn{
+  position:absolute;top:10px;left:10px;
+  background:white;padding:6px 10px;border-radius:6px;
 }
 </style>
 </head>
@@ -51,97 +45,88 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 
 <header>🏠 DeKUT Housing</header>
 
-<div class="controls">
-<input id="search" placeholder="Search...">
-</div>
-
 <div class="grid" id="list"></div>
 
-<!-- MAP MODAL -->
+<!-- MAP -->
 <div class="modal" id="mapModal"></div>
 
-<!-- PHOTO MODAL -->
+<!-- PHOTOS -->
 <div class="photoModal" id="photoModal">
+<div class="backBtn" onclick="closePhotos()">⬅ Back</div>
 <img id="photoView">
 </div>
 
 <script>
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-  authDomain: "dekut-housing.firebaseapp.com",
-  databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
-  projectId: "dekut-housing",
-  storageBucket: "dekut-housing.appspot.com",
-  messagingSenderId: "784034754945",
-  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
-let dataStore = {};
-let imgs = [];
-let index = 0;
+let data={};
 
-/* LOAD DATA */
-db.ref("properties").on("value", snap=>{
-  dataStore = snap.val() || {};
+/* LOAD */
+db.ref("properties").on("value",snap=>{
+  data=snap.val()||{};
   render();
 });
 
 /* RENDER */
 function render(){
-  let list = document.getElementById("list");
-  list.innerHTML = "";
+  let list=document.getElementById("list");
+  list.innerHTML="";
 
-  for(let id in dataStore){
-    let p = dataStore[id];
-    let img = p.images?.[0] || "";
+  for(let id in data){
+    let p=data[id];
+    let img=p.images?.[0]||"";
 
-    list.innerHTML += `
+    list.innerHTML+=`
       <div class="card">
 
-        ${img ? `<img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>` : ""}
+        ${img?`<img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>`:""}
 
         <div style="padding:10px">
-          <b>${p.type}</b><br>
-          KSh ${p.rent}<br>
-          ${p.location}<br>
-          ${p.amenities || ""}<br>
+
+          <b>🏠 ${p.type}</b><br>
+          💰 KSh ${p.rent}<br>
+          📍 ${p.location}<br>
+          📏 ${p.distance||""} KM from DeKUT<br>
+          🧰 ${p.amenities||""}<br>
 
           <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
           <button class="call" onclick="call('${p.phone}')">Call</button>
-          <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">View Map</button>
+          <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">View on Map</button>
           <button class="photos" onclick='openPhotos(${JSON.stringify(p.images||[])})'>Photos</button>
+
         </div>
 
       </div>
     `;
-
-    if(p.lat && p.lng){
-      L.marker([p.lat,p.lng]).addTo(map)
-        .bindPopup(`<b>${p.type}</b><br>KSh ${p.rent}`);
-    }
   }
 }
 
 /* WHATSAPP */
-function wa(n){ window.open("https://wa.me/"+n,"_blank"); }
+function wa(n){window.open("https://wa.me/"+n,"_blank");}
 
 /* CALL */
-function call(n){ window.location.href="tel:"+n; }
+function call(n){window.location.href="tel:"+n;}
 
 /* MAP */
-let map;
 function openMap(lat,lng){
-
-  let modal = document.getElementById("mapModal");
-  modal.style.display = "block";
-  modal.innerHTML = "<div id='map' style='width:100%;height:100%'></div>";
+  let m=document.getElementById("mapModal");
+  m.style.display="block";
+  m.innerHTML="<div id='map' style='width:100%;height:100%'></div>";
 
   setTimeout(()=>{
-    map = L.map("map").setView([lat,lng],16);
+    let map=L.map("map").setView([lat,lng],16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
       attribution:"© OpenStreetMap"
@@ -151,47 +136,45 @@ function openMap(lat,lng){
   },100);
 }
 
-document.getElementById("mapModal").onclick = ()=>mapModal.style.display="none";
+document.getElementById("mapModal").onclick=()=>mapModal.style.display="none";
 
-/* PHOTO SWIPE */
-let startX = 0;
+/* PHOTOS */
+let imgs=[],index=0,startX=0;
 
 function openPhotos(images){
-  if(!images || !images.length) return;
+  imgs=images||[];
+  index=0;
+  if(!imgs.length)return;
 
-  imgs = images;
-  index = 0;
+  photoModal.style.display="block";
+  photoView.src=imgs[0];
+}
 
-  document.getElementById("photoModal").style.display="block";
-  document.getElementById("photoView").src = imgs[0];
+function closePhotos(){
+  photoModal.style.display="none";
 }
 
 /* SWIPE */
-document.getElementById("photoModal").addEventListener("touchstart",e=>{
-  startX = e.touches[0].clientX;
+photoModal.addEventListener("touchstart",e=>{
+  startX=e.touches[0].clientX;
 });
 
-document.getElementById("photoModal").addEventListener("touchend",e=>{
-  let endX = e.changedTouches[0].clientX;
+photoModal.addEventListener("touchend",e=>{
+  let endX=e.changedTouches[0].clientX;
 
-  if(endX < startX - 50) next();
-  if(endX > startX + 50) prev();
+  if(endX<startX-50) next();
+  if(endX>startX+50) prev();
 });
 
 function next(){
-  index = (index+1)%imgs.length;
-  photoView.src = imgs[index];
+  index=(index+1)%imgs.length;
+  photoView.src=imgs[index];
 }
 
 function prev(){
-  index = (index-1+imgs.length)%imgs.length;
-  photoView.src = imgs[index];
+  index=(index-1+imgs.length)%imgs.length;
+  photoView.src=imgs[index];
 }
-
-/* CLOSE PHOTO */
-document.getElementById("photoModal").onclick = ()=>{
-  document.getElementById("photoModal").style.display="none";
-};
 
 </script>
 
