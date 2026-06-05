@@ -12,10 +12,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f5f5;}
+body{margin:0;font-family:Arial;background:#f6f6f6;}
+
 header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
 
-.controls{padding:10px;display:flex;gap:10px;}
+.controls{padding:10px;display:flex;gap:10px;flex-wrap:wrap;}
 input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
@@ -23,25 +24,14 @@ input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 .card{background:#fff;border-radius:10px;overflow:hidden;}
 .card img{width:100%;height:180px;object-fit:cover;}
 
-.price{color:green;font-weight:bold;}
 button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
-
 .whatsapp{background:#25D366;color:#fff;}
 .call{background:#ff9800;color:#fff;}
 .mapbtn{background:#007bff;color:#fff;}
 .photos{background:#333;color:#fff;}
 
-/* MAP MODAL */
-.modal{
-  display:none;
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:#000;
-}
-
-/* PHOTO MODAL */
-.photoModal{
+/* MODALS */
+.modal,.photoModal{
   display:none;
   position:fixed;
   top:0;left:0;
@@ -70,7 +60,7 @@ button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 <!-- MAP MODAL -->
 <div class="modal" id="mapModal"></div>
 
-<!-- PHOTO SWIPE MODAL -->
+<!-- PHOTO MODAL -->
 <div class="photoModal" id="photoModal">
 <img id="photoView">
 </div>
@@ -90,11 +80,13 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let allData = [];
+let dataStore = {};
+let imgs = [];
+let index = 0;
 
 /* LOAD DATA */
 db.ref("properties").on("value", snap=>{
-  allData = snap.val() || {};
+  dataStore = snap.val() || {};
   render();
 });
 
@@ -103,8 +95,8 @@ function render(){
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  for(let id in allData){
-    let p = allData[id];
+  for(let id in dataStore){
+    let p = dataStore[id];
     let img = p.images?.[0] || "";
 
     list.innerHTML += `
@@ -116,6 +108,7 @@ function render(){
           <b>${p.type}</b><br>
           KSh ${p.rent}<br>
           ${p.location}<br>
+          ${p.amenities || ""}<br>
 
           <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
           <button class="call" onclick="call('${p.phone}')">Call</button>
@@ -125,31 +118,29 @@ function render(){
 
       </div>
     `;
+
+    if(p.lat && p.lng){
+      L.marker([p.lat,p.lng]).addTo(map)
+        .bindPopup(`<b>${p.type}</b><br>KSh ${p.rent}`);
+    }
   }
 }
 
 /* WHATSAPP */
-function wa(num){
-  window.open("https://wa.me/"+num,"_blank");
-}
+function wa(n){ window.open("https://wa.me/"+n,"_blank"); }
 
 /* CALL */
-function call(num){
-  window.location.href = "tel:"+num;
-}
+function call(n){ window.location.href="tel:"+n; }
 
-/* ---------------- MAP MODAL ---------------- */
+/* MAP */
 let map;
-
 function openMap(lat,lng){
+
   let modal = document.getElementById("mapModal");
   modal.style.display = "block";
-  modal.innerHTML = "";
+  modal.innerHTML = "<div id='map' style='width:100%;height:100%'></div>";
 
   setTimeout(()=>{
-
-    modal.innerHTML = "<div id='map' style='width:100%;height:100%'></div>";
-
     map = L.map("map").setView([lat,lng],16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
@@ -157,62 +148,49 @@ function openMap(lat,lng){
     }).addTo(map);
 
     L.marker([lat,lng]).addTo(map);
-
   },100);
 }
 
-document.getElementById("mapModal").onclick = function(){
-  this.style.display="none";
-};
+document.getElementById("mapModal").onclick = ()=>mapModal.style.display="none";
 
-/* ---------------- PHOTO SWIPE ---------------- */
-let imgs = [];
-let index = 0;
+/* PHOTO SWIPE */
 let startX = 0;
 
 function openPhotos(images){
-  if(!images || images.length==0) return;
+  if(!images || !images.length) return;
 
   imgs = images;
   index = 0;
 
-  let modal = document.getElementById("photoModal");
-  modal.style.display = "block";
-
+  document.getElementById("photoModal").style.display="block";
   document.getElementById("photoView").src = imgs[0];
 }
 
 /* SWIPE */
-document.getElementById("photoModal").addEventListener("touchstart", e=>{
+document.getElementById("photoModal").addEventListener("touchstart",e=>{
   startX = e.touches[0].clientX;
 });
 
-document.getElementById("photoModal").addEventListener("touchend", e=>{
+document.getElementById("photoModal").addEventListener("touchend",e=>{
   let endX = e.changedTouches[0].clientX;
 
-  if(endX < startX - 50){
-    next();
-  }
-  if(endX > startX + 50){
-    prev();
-  }
+  if(endX < startX - 50) next();
+  if(endX > startX + 50) prev();
 });
 
 function next(){
-  if(imgs.length==0) return;
   index = (index+1)%imgs.length;
-  document.getElementById("photoView").src = imgs[index];
+  photoView.src = imgs[index];
 }
 
 function prev(){
-  if(imgs.length==0) return;
   index = (index-1+imgs.length)%imgs.length;
-  document.getElementById("photoView").src = imgs[index];
+  photoView.src = imgs[index];
 }
 
 /* CLOSE PHOTO */
-document.getElementById("photoModal").onclick = function(){
-  this.style.display="none";
+document.getElementById("photoModal").onclick = ()=>{
+  document.getElementById("photoModal").style.display="none";
 };
 
 </script>
