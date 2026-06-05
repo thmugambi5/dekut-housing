@@ -82,143 +82,82 @@ const db = firebase.database();
 
 let userGlobal = null;
 
-/* 🔐 ADMIN SECURITY */
-auth.onAuthStateChanged(async user=>{
+/* GET URL TOKEN */
+function getToken(){
+  return new URLSearchParams(window.location.search).get("token");
+}
 
-  try{
+/* MAIN AUTH CHECK */
+auth.onAuthStateChanged(async user => {
 
-    if(!user){
-      window.location.href="admin-login.html";
+  try {
+
+    if (!user) {
+      window.location.href = "admin-login.html";
       return;
     }
 
     userGlobal = user;
 
-    const urlToken =
-      new URLSearchParams(window.location.search)
-      .get("token");
-
-    if(!urlToken){
-      await auth.signOut();
-      window.location.href="admin-login.html";
-      return;
-    }
-
-    /* VERIFY ADMIN RECORD */
-    const adminSnap =
-      await db.ref("admins/" + user.uid).once("value");
-
-    if(!adminSnap.exists()){
-      alert("FAILED: admin record missing");
+    const urlToken = getToken();
+    if (!urlToken) {
       await auth.signOut();
       return;
     }
 
-    /* VERIFY SESSION */
-   const sessionSnap =
-  await db.ref("adminSessions/" + user.uid).once("value");
+    /* STEP 1: CHECK ADMIN EXISTS */
+    const adminSnap = await db.ref("admins/" + user.uid).once("value");
 
-if(!sessionSnap.exists()){
-  alert("Session missing");
-  await auth.signOut();
-  return;
-}
+    if (!adminSnap.exists()) {
+      alert("Not an admin account");
+      await auth.signOut();
+      return;
+    }
 
-const session = sessionSnap.val();
+    /* STEP 2: CHECK SESSION */
+    const sessionSnap = await db.ref("adminSessions/" + user.uid).once("value");
 
-console.log("SESSION:", session.token);
-console.log("URL:", urlToken);
+    if (!sessionSnap.exists()) {
+      alert("Session missing");
+      await auth.signOut();
+      return;
+    }
 
-if(String(session.token) !== String(urlToken)){
-  alert("FAILED: token mismatch");
-  await auth.signOut();
-  return;
-}
-    /* SESSION EXPIRY (24 HOURS) */
+    const session = sessionSnap.val();
+
+    /* SAFETY CONVERSION */
+    const dbToken = String(session.token || "");
+    const localToken = String(urlToken || "");
+
+    console.log("DB TOKEN:", dbToken);
+    console.log("URL TOKEN:", localToken);
+
+    if (dbToken !== localToken) {
+      alert("Session expired or invalid login");
+      await auth.signOut();
+      return;
+    }
+
+    /* STEP 3: EXPIRY CHECK */
     const SESSION_LIMIT = 24 * 60 * 60 * 1000;
 
-    if(Date.now() - session.createdAt > SESSION_LIMIT){
-
+    if (Date.now() - session.createdAt > SESSION_LIMIT) {
       await db.ref("adminSessions/" + user.uid).remove();
       await auth.signOut();
-
-      window.location.href="admin-login.html";
+      window.location.href = "admin-login.html";
       return;
     }
 
-    /* ACCESS GRANTED */
-    document.getElementById("lockScreen").style.display="none";
-    document.querySelector(".main").style.display="block";
+    /* SUCCESS */
+    document.getElementById("lockScreen").style.display = "none";
+    document.querySelector(".main").style.display = "block";
 
-  }
-  catch(error){
-
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     await auth.signOut();
-    window.location.href="admin-login.html";
-
+    window.location.href = "admin-login.html";
   }
-
 });
-
-/* LOGOUT */
-async function logout(){
-
-  try{
-
-    if(userGlobal){
-      await db.ref("adminSessions/" + userGlobal.uid).remove();
-    }
-
-    await auth.signOut();
-
-  }catch(e){
-    console.error(e);
-  }
-
-  window.location.href="admin-login.html";
-}
-
-/* DATA */
-db.ref("pendingProperties").on("value",snap=>{
-  render(snap.val() || {});
-});
-
-function render(data){
-
-  let list = document.getElementById("list");
-  list.innerHTML = "";
-
-  for(let id in data){
-
-    let p = data[id];
-
-    list.innerHTML += `
-      <div class="card">
-        <b>${p.type || ""}</b><br>
-        📍 ${p.location || ""}<br>
-        💰 KSh ${p.rent || ""}<br>
-      </div>
-    `;
-  }
-}
-
-/* SHOW PENDING */
-function showPending(){
-  db.ref("pendingProperties")
-  .once("value",snap=>{
-    render(snap.val() || {});
-  });
-}
-
-/* SHOW APPROVED */
-function showApproved(){
-  db.ref("properties")
-  .once("value",snap=>{
-    render(snap.val() || {});
-  });
-}
-
 </script>
 
 </body>
