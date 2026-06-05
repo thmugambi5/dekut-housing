@@ -103,38 +103,31 @@ auth.onAuthStateChanged(async user=>{
     const adminSnap =
       await db.ref("admins/" + user.uid).once("value");
 
-    if(!adminSnap.exists()){
-      await auth.signOut();
-      window.location.href="admin-login.html";
-      return;
-    }
+if(!adminSnap.exists()){
+  alert("FAILED: admin record missing");
+  await auth.signOut();
+  return;
+}
 
-    /* VERIFY SESSION EXISTS */
-    const sessionSnap =
-      await db.ref("adminSessions/" + user.uid).once("value");
+if(!sessionSnap.exists()){
+  alert("FAILED: session missing");
+  await auth.signOut();
+  return;
+}
 
-    if(!sessionSnap.exists()){
-      await auth.signOut();
-      window.location.href="admin-login.html";
-      return;
-    }
+if(!urlToken){
+  alert("FAILED: token missing from URL");
+  await auth.signOut();
+  return;
+}
 
-    const session = sessionSnap.val();
-
-    /* VERIFY TOKEN */
-    const urlToken =
-      new URLSearchParams(window.location.search).get("token");
-
-    if(!urlToken){
-      await auth.signOut();
-      window.location.href="admin-login.html";
-      return;
-    }
-
-    if(session.token !== urlToken){
-      await auth.signOut();
-      window.location.href="admin-login.html";
-      return;
+if(session.token !== urlToken){
+  alert("FAILED: token mismatch");
+  console.log("DB token:", session.token);
+  console.log("URL token:", urlToken);
+  await auth.signOut();
+  return;
+}
     }
 
     /* SESSION EXPIRY (24 HOURS) */
