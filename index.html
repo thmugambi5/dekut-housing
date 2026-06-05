@@ -12,25 +12,48 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;}
+body{margin:0;font-family:Arial;background:#f5f5f5;}
 header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
-#map{height:45vh;}
-.controls{padding:10px;display:flex;gap:10px;flex-wrap:wrap;}
+
+.controls{padding:10px;display:flex;gap:10px;}
 input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
-.card{background:#fff;padding:10px;border-radius:10px;}
+
+.card{background:#fff;border-radius:10px;overflow:hidden;}
+.card img{width:100%;height:180px;object-fit:cover;}
+
 .price{color:green;font-weight:bold;}
-img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
-button{margin:3px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
+button{margin:4px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
+
 .whatsapp{background:#25D366;color:#fff;}
+.call{background:#ff9800;color:#fff;}
 .mapbtn{background:#007bff;color:#fff;}
-.galleryBtn{background:#333;color:#fff;}
-.galleryModal{
-  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,0.9);justify-content:center;align-items:center;
+.photos{background:#333;color:#fff;}
+
+/* MAP MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:#000;
 }
-.galleryBox{text-align:center;color:#fff;}
-.galleryBox img{max-width:90%;max-height:80vh;}
+
+/* PHOTO MODAL */
+.photoModal{
+  display:none;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:#000;
+}
+
+.photoModal img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
 </style>
 </head>
 
@@ -38,29 +61,18 @@ button{margin:3px;padding:6px;border:none;border-radius:6px;cursor:pointer;}
 
 <header>🏠 DeKUT Housing</header>
 
-<div id="map"></div>
-
 <div class="controls">
 <input id="search" placeholder="Search...">
-<select id="typeFilter">
-<option value="">All Types</option>
-<option>Bedsitter</option>
-<option>Single Room</option>
-<option>One Bedroom</option>
-</select>
 </div>
 
 <div class="grid" id="list"></div>
 
-<!-- IMAGE SWIPE MODAL -->
-<div class="galleryModal" id="gallery">
-  <div class="galleryBox">
-    <button onclick="prev()">⬅</button>
-    <img id="gimg">
-    <button onclick="next()">➡</button>
-    <br><br>
-    <button onclick="closeGallery()">Close</button>
-  </div>
+<!-- MAP MODAL -->
+<div class="modal" id="mapModal"></div>
+
+<!-- PHOTO SWIPE MODAL -->
+<div class="photoModal" id="photoModal">
+<img id="photoView">
 </div>
 
 <script>
@@ -78,75 +90,130 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let map = L.map("map").setView([-0.39,37.79],13);
+let allData = [];
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-  attribution:"© OpenStreetMap"
-}).addTo(map);
-
-let galleryImages = [];
-let index = 0;
-
-function openGallery(imgs){
-  galleryImages = imgs;
-  index = 0;
-  document.getElementById("gallery").style.display="flex";
-  document.getElementById("gimg").src = imgs[0];
-}
-
-function next(){
-  index = (index+1)%galleryImages.length;
-  gimg.src = galleryImages[index];
-}
-
-function prev(){
-  index = (index-1+galleryImages.length)%galleryImages.length;
-  gimg.src = galleryImages[index];
-}
-
-function closeGallery(){
-  document.getElementById("gallery").style.display="none";
-}
-
-function wa(phone){
-  window.open("https://wa.me/"+phone,"_blank");
-}
-
-function goMap(lat,lng){
-  map.setView([lat,lng],17);
-}
-
+/* LOAD DATA */
 db.ref("properties").on("value", snap=>{
+  allData = snap.val() || {};
+  render();
+});
 
-  let data = snap.val();
+/* RENDER */
+function render(){
   let list = document.getElementById("list");
   list.innerHTML = "";
 
-  for(let id in data){
-    let p = data[id];
-
-    let imgs = p.images?.[0] || "";
+  for(let id in allData){
+    let p = allData[id];
+    let img = p.images?.[0] || "";
 
     list.innerHTML += `
       <div class="card">
-        ${imgs?`<img src="${imgs}">`:""}
-        <b>${p.type}</b><br>
-        KSh ${p.rent}<br>
-        ${p.location}<br>
 
-        <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
-        <button class="mapbtn" onclick="goMap(${p.lat},${p.lng})">View Map</button>
-        <button class="galleryBtn" onclick='openGallery(${JSON.stringify(p.images||[])})'>Photos</button>
+        ${img ? `<img src="${img}" onclick='openPhotos(${JSON.stringify(p.images||[])})'>` : ""}
+
+        <div style="padding:10px">
+          <b>${p.type}</b><br>
+          KSh ${p.rent}<br>
+          ${p.location}<br>
+
+          <button class="whatsapp" onclick="wa('${p.phone}')">WhatsApp</button>
+          <button class="call" onclick="call('${p.phone}')">Call</button>
+          <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">View Map</button>
+          <button class="photos" onclick='openPhotos(${JSON.stringify(p.images||[])})'>Photos</button>
+        </div>
+
       </div>
     `;
-
-    if(p.lat && p.lng){
-      L.marker([p.lat,p.lng]).addTo(map)
-      .bindPopup(`<b>${p.type}</b><br>KSh ${p.rent}`);
-    }
   }
+}
 
+/* WHATSAPP */
+function wa(num){
+  window.open("https://wa.me/"+num,"_blank");
+}
+
+/* CALL */
+function call(num){
+  window.location.href = "tel:"+num;
+}
+
+/* ---------------- MAP MODAL ---------------- */
+let map;
+
+function openMap(lat,lng){
+  let modal = document.getElementById("mapModal");
+  modal.style.display = "block";
+  modal.innerHTML = "";
+
+  setTimeout(()=>{
+
+    modal.innerHTML = "<div id='map' style='width:100%;height:100%'></div>";
+
+    map = L.map("map").setView([lat,lng],16);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      attribution:"© OpenStreetMap"
+    }).addTo(map);
+
+    L.marker([lat,lng]).addTo(map);
+
+  },100);
+}
+
+document.getElementById("mapModal").onclick = function(){
+  this.style.display="none";
+};
+
+/* ---------------- PHOTO SWIPE ---------------- */
+let imgs = [];
+let index = 0;
+let startX = 0;
+
+function openPhotos(images){
+  if(!images || images.length==0) return;
+
+  imgs = images;
+  index = 0;
+
+  let modal = document.getElementById("photoModal");
+  modal.style.display = "block";
+
+  document.getElementById("photoView").src = imgs[0];
+}
+
+/* SWIPE */
+document.getElementById("photoModal").addEventListener("touchstart", e=>{
+  startX = e.touches[0].clientX;
 });
+
+document.getElementById("photoModal").addEventListener("touchend", e=>{
+  let endX = e.changedTouches[0].clientX;
+
+  if(endX < startX - 50){
+    next();
+  }
+  if(endX > startX + 50){
+    prev();
+  }
+});
+
+function next(){
+  if(imgs.length==0) return;
+  index = (index+1)%imgs.length;
+  document.getElementById("photoView").src = imgs[index];
+}
+
+function prev(){
+  if(imgs.length==0) return;
+  index = (index-1+imgs.length)%imgs.length;
+  document.getElementById("photoView").src = imgs[index];
+}
+
+/* CLOSE PHOTO */
+document.getElementById("photoModal").onclick = function(){
+  this.style.display="none";
+};
 
 </script>
 
