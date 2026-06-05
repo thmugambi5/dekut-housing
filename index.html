@@ -1,336 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Marketplace Pro</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeKUT Housing Pro</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<style>
-body { margin:0; font-family:Arial; background:#f7f7f7; }
+<!-- FIREBASE -->
+<script type="module">
 
-/* HEADER */
-header {
-    background:white;
-    padding:15px;
-    position:sticky;
-    top:0;
-    z-index:10;
-    border-bottom:1px solid #ddd;
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-.top-bar {
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-}
+import {
+getFirestore, collection, addDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-input, select, button {
-    padding:10px;
-    border-radius:20px;
-    border:1px solid #ddd;
-}
+/* YOUR FIREBASE CONFIG (replace later) */
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_ID",
+  appId: "YOUR_APP_ID"
+};
 
-button {
-    cursor:pointer;
-    background:#ff385c;
-    color:white;
-    border:none;
-}
-
-/* GRID */
-.container { padding:20px; }
-.grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-    gap:15px;
-}
-
-/* CARD */
-.card {
-    background:white;
-    border-radius:15px;
-    overflow:hidden;
-    box-shadow:0 2px 10px rgba(0,0,0,0.08);
-}
-
-.card img {
-    width:100%;
-    height:160px;
-    object-fit:cover;
-}
-
-.content { padding:10px; }
-
-.title { font-weight:bold; }
-.price { color:green; font-weight:bold; }
-
-.meta { font-size:13px; color:#555; }
-
-.actions {
-    display:flex;
-    justify-content:space-between;
-    margin-top:10px;
-}
-
-.whatsapp {
-    background:#25D366;
-    color:white;
-    padding:8px;
-    border-radius:10px;
-    text-decoration:none;
-    flex:1;
-    text-align:center;
-    margin-right:5px;
-}
-
-.heart {
-    background:#eee;
-    padding:8px;
-    border-radius:10px;
-    cursor:pointer;
-}
-
-/* MAP */
-#map {
-    height:500px;
-    display:none;
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
 
 /* LOGIN */
-#loginBox {
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.7);
-    display:flex;
-    justify-content:center;
-    align-items:center;
+window.login = async function(){
+    let email = document.getElementById("email").value;
+    let pass = document.getElementById("pass").value;
+
+    await signInWithEmailAndPassword(auth,email,pass);
+    document.getElementById("auth").style.display="none";
+    loadListings();
 }
 
-.login-card {
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    text-align:center;
-}
-</style>
-</head>
+/* REGISTER */
+window.register = async function(){
+    let email = document.getElementById("email").value;
+    let pass = document.getElementById("pass").value;
 
-<body>
-
-<!-- LOGIN -->
-<div id="loginBox">
-    <div class="login-card">
-        <h3>Login</h3>
-        <button onclick="login('student')">Student</button>
-        <button onclick="login('landlord')">Landlord</button>
-    </div>
-</div>
-
-<header>
-<h2>🏠 DeKUT Housing Pro</h2>
-
-<div class="top-bar">
-
-<input id="search" placeholder="Search..." onkeyup="applyFilters()">
-
-<select id="rentFilter" onchange="applyFilters()">
-<option value="">Rent</option>
-<option value="low">Under 5k</option>
-<option value="mid">5k-10k</option>
-<option value="high">10k+</option>
-</select>
-
-<select id="typeFilter" onchange="applyFilters()">
-<option value="">Type</option>
-<option value="bedsitter">Bedsitter</option>
-<option value="one">One Bedroom</option>
-<option value="shared">Shared</option>
-</select>
-
-<button onclick="toggleView()">🗺 Map/Grid</button>
-
-<button onclick="showFavorites()">❤️ Favorites</button>
-
-<a href="https://forms.gle/9tXRvLYXDdDVy3hL7" target="_blank">
-+ Post
-</a>
-
-</div>
-</header>
-
-<div class="container">
-<div id="map"></div>
-<div id="grid" class="grid">Loading...</div>
-</div>
-
-<script>
-
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
-
-let allData = [];
-let map;
-let markers = [];
-let isMap = false;
-let userType = "";
-let favorites = JSON.parse(localStorage.getItem("fav") || "[]");
-
-/* LOGIN */
-function login(type){
-    userType = type;
-    document.getElementById("loginBox").style.display = "none";
+    await createUserWithEmailAndPassword(auth,email,pass);
 }
 
-/* CSV */
-function parseCSV(text){
-    return text.trim().split("\n").slice(1).map(r=>{
-        const c=r.split(",");
-        return {
-            type:c[2],
-            rent:parseInt(c[3]),
-            location:c[4],
-            distance:c[5],
-            gender:c[6],
-            amenities:c[7],
-            phone:c[8],
-            image:c[11]
-        };
-    });
+/* LOGOUT */
+window.logout = async function(){
+    await signOut(auth);
+    document.getElementById("auth").style.display="block";
 }
 
-/* LOAD */
-async function loadData(){
-    let res = await fetch(SHEET_URL);
-    let text = await res.text();
-    allData = parseCSV(text);
-    render(allData);
-}
-
-/* RENDER */
-function render(data){
-    let grid=document.getElementById("grid");
-    grid.innerHTML="";
-
-    data.forEach((item,i)=>{
-
-        let fav = favorites.includes(i);
-
-        let img=item.image||"";
-        if(img.includes("drive.google")){
-            let id=img.match(/[-\w]{25,}/);
-            if(id) img=`https://lh3.googleusercontent.com/d/${id[0]}`;
-        }
-
-        let phone=item.phone.replace(/\D/g,"");
-        if(phone.startsWith("0")) phone="254"+phone.slice(1);
-
-        grid.innerHTML+=`
-        <div class="card">
-
-        ${img?`<img src="${img}">`:``}
-
-        <div class="content">
-            <div class="title">${item.type}</div>
-            <div class="price">KSh ${item.rent}</div>
-
-            <div class="meta">${item.location}</div>
-            <div class="meta">${item.distance}</div>
-
-            <div class="actions">
-
-                <a class="whatsapp" href="https://wa.me/${phone}" target="_blank">Chat</a>
-
-                <div class="heart" onclick="toggleFav(${i})">
-                    ${fav?"❤️":"🤍"}
-                </div>
-
-            </div>
-        </div>
-
-        </div>`;
-    });
-}
-
-/* FILTER */
-function applyFilters(){
-    let s=document.getElementById("search").value.toLowerCase();
-    let r=document.getElementById("rentFilter").value;
-    let t=document.getElementById("typeFilter").value;
-
-    let f=allData.filter(x=>{
-        let okSearch=(x.location+x.type).toLowerCase().includes(s);
-
-        let okRent=true;
-        if(r=="low") okRent=x.rent<5000;
-        if(r=="mid") okRent=x.rent>=5000&&x.rent<=10000;
-        if(r=="high") okRent=x.rent>10000;
-
-        let okType=!t||x.type.toLowerCase().includes(t);
-
-        return okSearch&&okRent&&okType;
+/* ADD PROPERTY (LANDLORD) */
+window.addProperty = async function(){
+    await addDoc(collection(db,"properties"),{
+        type: document.getElementById("type").value,
+        rent: document.getElementById("rent").value,
+        location: document.getElementById("location").value,
+        lat: parseFloat(document.getElementById("lat").value),
+        lng: parseFloat(document.getElementById("lng").value),
+        phone: document.getElementById("phone").value
     });
 
-    render(f);
+    alert("Property added");
 }
 
-/* FAVORITES */
-function toggleFav(i){
-    if(favorites.includes(i)){
-        favorites=favorites.filter(x=>x!=i);
-    }else{
-        favorites.push(i);
-    }
-    localStorage.setItem("fav",JSON.stringify(favorites));
-    render(allData);
-}
+/* LOAD PROPERTIES */
+window.loadListings = async function(){
 
-function showFavorites(){
-    let f=allData.filter((_,i)=>favorites.includes(i));
-    render(f);
-}
-
-/* MAP */
-function toggleView(){
-    isMap=!isMap;
-
-    document.getElementById("grid").style.display=isMap?"none":"grid";
-    document.getElementById("map").style.display=isMap?"block":"none";
-
-    if(isMap) initMap();
-}
-
-function initMap(){
-    if(map) return;
-
-    map=L.map('map').setView([-0.39,37.81],13);
+    let snap = await getDocs(collection(db,"properties"));
+    let map = L.map('map').setView([-0.39,37.81],13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
         attribution:'© OpenStreetMap'
     }).addTo(map);
 
-    allData.forEach(item=>{
+    snap.forEach(doc=>{
 
-        let lat=-0.39+(Math.random()*0.02);
-        let lng=37.81+(Math.random()*0.02);
+        let d = doc.data();
 
-        let marker=L.marker([lat,lng]).addTo(map);
-
-        marker.bindPopup(`
-            <b>${item.type}</b><br>
-            KSh ${item.rent}<br>
-            ${item.location}
+        L.marker([d.lat,d.lng])
+        .addTo(map)
+        .bindPopup(`
+            <b>${d.type}</b><br>
+            KSh ${d.rent}<br>
+            ${d.location}
         `);
     });
 }
 
-loadData();
-
 </script>
+
+<style>
+body{font-family:Arial;margin:0;background:#f7f7f7;}
+#auth, #dashboard{padding:20px;}
+input{display:block;margin:5px;padding:10px;}
+button{padding:10px;margin:5px;}
+#map{height:500px;}
+</style>
+
+</head>
+
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+<h2>Login</h2>
+<input id="email" placeholder="email">
+<input id="pass" type="password" placeholder="password">
+
+<button onclick="login()">Login</button>
+<button onclick="register()">Register</button>
+</div>
+
+<!-- LANDLORD DASHBOARD -->
+<div id="dashboard">
+<h2>Landlord Dashboard</h2>
+
+<input id="type" placeholder="Type">
+<input id="rent" placeholder="Rent">
+<input id="location" placeholder="Location">
+<input id="lat" placeholder="Latitude">
+<input id="lng" placeholder="Longitude">
+<input id="phone" placeholder="Phone">
+
+<button onclick="addProperty()">Add Property</button>
+<button onclick="logout()">Logout</button>
+
+<div id="map"></div>
+</div>
 
 </body>
 </html>
