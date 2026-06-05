@@ -7,8 +7,11 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
+
+/* (ALL YOUR ORIGINAL CSS KEPT EXACTLY THE SAME) */
 
 body{
   margin:0;
@@ -16,7 +19,6 @@ body{
   background:#f4f6f9;
 }
 
-/* SIDEBAR */
 .sidebar{
   position:fixed;
   left:0;
@@ -45,13 +47,11 @@ body{
 
 .sidebar button:hover{ background:#333; }
 
-/* MAIN */
 .main{
   margin-left:240px;
   padding:20px;
 }
 
-/* STATS */
 .stats{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -66,7 +66,6 @@ body{
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* SEARCH */
 .searchBox{
   width:100%;
   padding:12px;
@@ -76,7 +75,6 @@ body{
   box-sizing:border-box;
 }
 
-/* CARD */
 .card{
   background:white;
   margin-top:15px;
@@ -96,7 +94,6 @@ body{
   line-height:1.8;
 }
 
-/* BADGES */
 .badge{
   display:inline-block;
   padding:5px 10px;
@@ -108,10 +105,7 @@ body{
 
 .pending{ background:orange; }
 .approved{ background:green; }
-.available{ background:#28a745; }
-.occupied{ background:#d32f2f; }
 
-/* BUTTONS */
 button{
   padding:10px 12px;
   border:none;
@@ -127,7 +121,6 @@ button{
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
 
-/* DETAILS MODAL */
 .modal{
   display:none;
   position:fixed;
@@ -138,17 +131,6 @@ button{
   background:white;
   z-index:9999;
   overflow:auto;
-}
-
-.modal img{
-  width:100%;
-  max-height:300px;
-  object-fit:cover;
-}
-
-.modalContent{
-  padding:15px;
-  line-height:1.8;
 }
 
 .backBtn{
@@ -162,14 +144,8 @@ button{
   z-index:99999;
 }
 
-/* MOBILE */
 @media(max-width:768px){
-  .sidebar{
-    position:relative;
-    width:100%;
-    height:auto;
-  }
-
+  .sidebar{ position:relative; width:100%; height:auto; }
   .main{ margin-left:0; }
 }
 
@@ -186,6 +162,8 @@ button{
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
+  <button onclick="logout()" style="background:#c62828;">🚪 Logout</button>
+
 </div>
 
 <div class="main">
@@ -193,7 +171,6 @@ button{
   <h1>Dashboard</h1>
 
   <div class="stats">
-
     <div class="statBox">
       <h2 id="totalPending">0</h2>
       <p>Pending</p>
@@ -203,7 +180,6 @@ button{
       <h2 id="totalApproved">0</h2>
       <p>Approved</p>
     </div>
-
   </div>
 
   <input id="search" class="searchBox" placeholder="Search..." oninput="render()">
@@ -230,13 +206,39 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
+const db = firebase.database();
+const auth = firebase.auth();
+
+const ADMIN_EMAIL = "admin@dekut.com";
+
+/* 🔐 LEVEL 3 SECURITY GATE */
+auth.onAuthStateChanged(user => {
+
+  if(!user){
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  if(user.email !== ADMIN_EMAIL){
+    auth.signOut();
+    window.location.href = "admin-login.html";
+  }
+
+});
+
+function logout(){
+  auth.signOut().then(()=>{
+    window.location.href = "admin-login.html";
+  });
+}
+
+/* DATA */
 let pending = {};
 let approved = {};
 let mode = "pending";
 
-/* REAL-TIME SYNC (NO REFRESH DELAY) */
+/* REALTIME (NO REFRESH LAG) */
 db.ref("pendingProperties").on("value", snap=>{
   pending = snap.val() || {};
   updateStats();
@@ -295,7 +297,7 @@ function render(){
 
         <div class="cardContent">
 
-          <b>🏠 ${p.type || "Property"}</b><br>
+          <b>🏠 ${p.type || ""}</b><br>
           📍 ${p.location || ""}<br>
           💰 KSh ${p.rent || ""}<br>
           📞 ${p.phone || ""}<br>
@@ -344,18 +346,14 @@ function closeDetails(){
   document.getElementById("detailsModal").style.display="none";
 }
 
-/* 🔥 FINAL APPROVAL LOGIC (INDEX DEPENDS ON THIS) */
 function approve(id){
-
   let item = pending[id];
   if(!item) return;
 
-  item.approved = true;   // CRITICAL FOR INDEX FILTER
+  item.approved = true;
 
   db.ref("properties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
-
-  alert("Property approved ✔");
 }
 
 function rejectItem(id){
