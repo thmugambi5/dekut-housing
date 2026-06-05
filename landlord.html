@@ -2,27 +2,28 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard</title>
+<title>Landlord Upload</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f7f7f7;margin:0;padding:20px;}
-.card{max-width:600px;margin:auto;background:#fff;padding:20px;border-radius:12px;}
-input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;}
+body{font-family:Arial;background:#f5f5f5;margin:0;padding:15px;}
+.card{max-width:650px;margin:auto;background:#fff;padding:15px;border-radius:12px;}
+input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc;}
 button{background:#ff385c;color:#fff;border:none;cursor:pointer;}
-img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
-#preview{display:flex;flex-wrap:wrap;}
-#locStatus{font-size:13px;color:green;}
+small{color:gray;}
+.preview{display:flex;flex-wrap:wrap;}
+.preview img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
+.amenitiesBox{background:#f1f1f1;padding:10px;border-radius:8px;margin:10px 0;}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-<h2>🏠 Landlord Upload</h2>
+<h2>🏠 Landlord Form</h2>
 
 <select id="type">
 <option>Bedsitter</option>
@@ -43,15 +44,32 @@ img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
 <option>Mixed</option>
 </select>
 
-<input id="amenities" placeholder="Amenities">
 <input id="phone" placeholder="Phone / WhatsApp">
 <input id="extra" placeholder="Extra Information">
 
-<button onclick="getLocation()">📍 Share My Location</button>
+<button onclick="getLocation()">📍 Share Location</button>
 <p id="locStatus">No location selected</p>
 
+<!-- AMENITIES -->
+<div class="amenitiesBox">
+<b>Amenities</b><br>
+
+<label><input type="checkbox" class="amenity" value="WiFi"> WiFi</label><br>
+<label><input type="checkbox" class="amenity" value="Water"> Water</label><br>
+<label><input type="checkbox" class="amenity" value="Electricity"> Electricity</label><br>
+<label><input type="checkbox" class="amenity" value="Furnished"> Furnished</label><br>
+<label><input type="checkbox" class="amenity" value="Parking"> Parking</label><br>
+<label><input type="checkbox" class="amenity" value="Security"> Security</label><br>
+<label><input type="checkbox" class="amenity" value="Balcony"> Balcony</label><br>
+
+</div>
+
+<input id="extraAmenities" placeholder="Other amenities (optional)">
+<small>Add anything not listed above</small>
+
+<br><br>
 <input type="file" id="images" multiple>
-<div id="preview"></div>
+<div class="preview" id="preview"></div>
 
 <button onclick="upload()">Upload Property</button>
 </div>
@@ -73,7 +91,7 @@ const db = firebase.database();
 
 let lat = "", lng = "";
 
-// GPS
+/* LOCATION */
 function getLocation(){
   navigator.geolocation.getCurrentPosition(pos=>{
     lat = pos.coords.latitude;
@@ -82,9 +100,9 @@ function getLocation(){
   });
 }
 
-// images
+/* IMAGE PREVIEW */
 function toBase64(file){
-  return new Promise((res,rej)=>{
+  return new Promise((res)=>{
     let r = new FileReader();
     r.onload = ()=>res(r.result);
     r.readAsDataURL(file);
@@ -93,7 +111,8 @@ function toBase64(file){
 
 document.getElementById("images").onchange = async e=>{
   let preview = document.getElementById("preview");
-  preview.innerHTML="";
+  preview.innerHTML = "";
+
   for(let f of e.target.files){
     let img = document.createElement("img");
     img.src = await toBase64(f);
@@ -101,10 +120,11 @@ document.getElementById("images").onchange = async e=>{
   }
 };
 
+/* UPLOAD */
 async function upload(){
 
   if(!lat || !lng){
-    alert("Share location first");
+    alert("Please share location first");
     return;
   }
 
@@ -115,22 +135,35 @@ async function upload(){
     images.push(await toBase64(f));
   }
 
+  /* AMENITIES COLLECT */
+  let selectedAmenities = [];
+  document.querySelectorAll(".amenity:checked").forEach(a=>{
+    selectedAmenities.push(a.value);
+  });
+
+  let extraA = document.getElementById("extraAmenities").value;
+
+  let amenitiesFinal = selectedAmenities.join(", ");
+  if(extraA){
+    amenitiesFinal += (amenitiesFinal ? ", " : "") + extraA;
+  }
+
   db.ref("properties").push({
     type: type.value,
     rent: rent.value,
     location: location.value,
     distance: distance.value,
     gender: gender.value,
-    amenities: amenities.value,
     phone: phone.value,
     extra: extra.value,
+    amenities: amenitiesFinal,
     lat,
     lng,
     images,
     createdAt: Date.now()
   });
 
-  alert("Uploaded ✔");
+  alert("Uploaded successfully ✔");
 }
 
 </script>
