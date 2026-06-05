@@ -3,28 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <title>Landlord Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+font-family:Arial;
+background:#f4f4f4;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+
+.box{
+background:white;
+padding:20px;
+border-radius:12px;
+width:320px;
+box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+input,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+button{
+background:#28a745;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+button:hover{
+background:#1e7e34;
+}
+
+#msg{
+font-size:13px;
+margin-top:10px;
+text-align:center;
+}
+</style>
 </head>
 
 <body>
 
+<div class="box">
+
 <h2>Landlord Login</h2>
 
-<input id="email" placeholder="Email"><br><br>
-<input id="password" type="password"><br><br>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 
 <button onclick="login()">Login</button>
+
+<div id="msg"></div>
+
+</div>
 
 <script>
 
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+authDomain: "dekut-housing.firebaseapp.com",
+databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
+projectId: "dekut-housing",
+storageBucket: "dekut-housing.appspot.com",
+messagingSenderId: "784034754945",
+appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -36,28 +91,51 @@ async function login(){
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
+const msg = document.getElementById("msg");
 
-try {
-
-const cred = await auth.signInWithEmailAndPassword(email, password);
-
-const user = cred.user;
-
-/* VERIFY LANDLORD EXISTS */
-const snap = await db.ref("landlords/" + user.uid).once("value");
-
-if(!snap.exists()){
-await auth.signOut();
-alert("Not a registered landlord");
+if(!email || !password){
+msg.innerText = "Fill all fields";
 return;
 }
 
-window.location.href = "landlord-dashboard.html";
+try{
 
-} catch(e){
-alert(e.message);
+msg.innerText = "Logging in...";
+
+const result = await auth.signInWithEmailAndPassword(email, password);
+const user = result.user;
+
+/* 🔐 CHECK IF LANDLORD EXISTS */
+const landlordSnap = await db.ref("landlords/" + user.uid).once("value");
+
+if(!landlordSnap.exists()){
+await auth.signOut();
+msg.innerText = "Account not registered as landlord";
+return;
 }
+
+msg.innerText = "Login successful";
+
+setTimeout(()=>{
+window.location.href = "landlord-dashboard.html";
+},800);
+
+}catch(err){
+msg.innerText = err.message;
 }
+
+}
+
+/* AUTO LOGIN */
+auth.onAuthStateChanged(async user => {
+if(!user) return;
+
+const snap = await db.ref("landlords/" + user.uid).once("value");
+
+if(snap.exists()){
+window.location.href = "landlord-dashboard.html";
+}
+});
 
 </script>
 
