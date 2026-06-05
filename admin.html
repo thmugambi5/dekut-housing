@@ -130,6 +130,8 @@ body{
 
 .pending{ background:orange; }
 .approved{ background:green; }
+.rejected{ background:#b91c1c; }
+.suspended{ background:#6b7280; }
 .available{ background:#28a745; }
 .occupied{ background:#d32f2f; }
 
@@ -148,6 +150,12 @@ button{
 .delete{ background:#e74c3c; color:white; }
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
+.suspend{ background:#6b7280; color:white; }
+.restore{ background:#0f766e; color:white; }
+.trustGrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0; }
+.trustItem{ background:#f1f5f9; border-radius:8px; padding:10px; }
+.trustPass{ color:#166534; font-weight:bold; }
+.trustFail{ color:#b91c1c; font-weight:bold; }
 
 /* DETAILS MODAL */
 .modal{
@@ -204,6 +212,7 @@ button{
 
   <button onclick="showPending()">🟡 Pending</button>
   <button onclick="showApproved()">🟢 Approved</button>
+  <button onclick="showRejected()">Rejected</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
   <button onclick="logout()" style="background:#c62828;">
@@ -226,6 +235,11 @@ button{
     <div class="statBox">
       <h2 id="totalApproved">0</h2>
       <p>Approved</p>
+    </div>
+
+    <div class="statBox">
+      <h2 id="totalRejected">0</h2>
+      <p>Rejected</p>
     </div>
 
   </div>
@@ -260,21 +274,22 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-const ADMIN_EMAIL = "admin@dekut.com";
-
 let pending = {};
 let approved = {};
+let rejected = {};
 let mode = "pending";
 
 /* 🔐 HARD SECURITY GATE */
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(user.email !== ADMIN_EMAIL){
+  const adminSnap = await db.ref("admins/" + user.uid).once("value");
+
+  if(!adminSnap.exists()){
     auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -304,6 +319,12 @@ function startRealtime(){
     render();
   });
 
+  db.ref("rejectedProperties").on("value", snap=>{
+    rejected = snap.val() || {};
+    updateStats();
+    render();
+  });
+
 }
 
 function logout(){
@@ -318,10 +339,14 @@ function updateStats(){
 
   document.getElementById("totalApproved").innerText =
     Object.keys(approved).length;
+
+  document.getElementById("totalRejected").innerText =
+    Object.keys(rejected).length;
 }
 
 function showPending(){ mode="pending"; render(); }
 function showApproved(){ mode="approved"; render(); }
+function showRejected(){ mode="rejected"; render(); }
 function loadAll(){ mode="all"; render(); }
 
 function safe(obj){
@@ -337,19 +362,22 @@ function render(){
   let source =
     mode==="pending" ? pending :
     mode==="approved" ? approved :
-    {...pending, ...approved};
+    mode==="rejected" ? rejected :
+    {...pending, ...approved, ...rejected};
 
   for(let id in source){
 
     let p = source[id];
 
     let text =
-      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
+      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")+" "+(p.landlordEmail||"")).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
     let img = p.images?.[0] || "";
     let isPending = pending[id] ? true : false;
+    let isRejected = rejected[id] ? true : false;
+    let isSuspended = p.listingState === "suspended";
 
     list.innerHTML += `
       <div class="card">
@@ -363,8 +391,8 @@ function render(){
           💰 KSh ${p.rent || ""}<br>
           📞 ${p.phone || ""}<br>
 
-          <span class="badge ${isPending ? "pending" : "approved"}">
-            ${isPending ? "Pending" : "Approved"}
+          <span class="badge ${isRejected ? "rejected" : isPending ? "pending" : isSuspended ? "suspended" : "approved"}">
+            ${isRejected ? "Rejected" : isPending ? "Pending" : isSuspended ? "Suspended" : "Approved"}
           </span>
 
           <br><br>
@@ -376,7 +404,15 @@ function render(){
             <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
           ` : ""}
 
-          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
+          ${!isPending && !isRejected ? `
+            ${isSuspended ? `
+              <button class="restore" onclick="restoreItem('${id}')">Restore</button>
+            ` : `
+              <button class="suspend" onclick="suspendItem('${id}')">Suspend</button>
+            `}
+          ` : ""}
+
+          ${!isRejected ? `<button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>` : ""}
 
         </div>
 
@@ -388,12 +424,37 @@ function render(){
 /* DETAILS */
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
+  const hasGps = !!(p.lat && p.lng);
+  const hasPhotos = Array.isArray(p.images) && p.images.length > 0;
+  const hasKenyanPhone = /^\+254\d{9}$/.test(p.phone || "");
+  const hasLandlord = !!p.landlordUid;
 
   document.getElementById("detailsContent").innerHTML = `
     <div class="modalContent">
-      <h2>${p.type}</h2>
-      <p>${p.location}</p>
-      <p>${p.rent}</p>
+      <h2>${p.type || "Property"}</h2>
+      ${p.images?.[0] ? `<img src="${p.images[0]}" style="width:100%;max-height:320px;object-fit:cover;border-radius:12px;">` : ""}
+      <p><b>Location:</b> ${p.location || ""}</p>
+      <p><b>Rent:</b> KSh ${p.rent || ""}</p>
+      <p><b>Deposit:</b> KSh ${p.deposit || ""}</p>
+      <p><b>Availability:</b> ${p.status || p.availability || ""}</p>
+      <p><b>Rooms:</b> ${p.roomsAvailable || ""}</p>
+      <p><b>Occupants:</b> ${p.gender || ""}</p>
+      <p><b>Utilities:</b> ${p.utilities || ""}</p>
+      <p><b>Amenities:</b> ${p.amenities || ""}</p>
+      <p><b>Description:</b> ${p.extra || ""}</p>
+      <p><b>Landlord:</b> ${p.landlordEmail || "Not recorded"}</p>
+      <p><b>Phone:</b> ${p.phone || ""}</p>
+      <p><b>Review Status:</b> ${p.reviewStatus || ""}</p>
+      ${p.rejectReason ? `<p><b>Reject Reason:</b> ${p.rejectReason}</p>` : ""}
+      ${p.suspendReason ? `<p><b>Suspension Reason:</b> ${p.suspendReason}</p>` : ""}
+
+      <h3>Trust Checks</h3>
+      <div class="trustGrid">
+        <div class="trustItem"><span class="${hasGps ? "trustPass" : "trustFail"}">${hasGps ? "OK" : "Missing"}</span><br>GPS location</div>
+        <div class="trustItem"><span class="${hasPhotos ? "trustPass" : "trustFail"}">${hasPhotos ? "OK" : "Missing"}</span><br>Property photos</div>
+        <div class="trustItem"><span class="${hasKenyanPhone ? "trustPass" : "trustFail"}">${hasKenyanPhone ? "OK" : "Check"}</span><br>Kenyan phone format</div>
+        <div class="trustItem"><span class="${hasLandlord ? "trustPass" : "trustFail"}">${hasLandlord ? "OK" : "Missing"}</span><br>Landlord account</div>
+      </div>
 
       <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">
         View Map
@@ -412,21 +473,61 @@ function approve(id){
 
   let item = pending[id];
   if(!item) return;
+  if(!confirm("Approve only after verifying photos, GPS location, phone number, and landlord identity.")) return;
 
   item.approved = true;
+  item.reviewStatus = "approved";
+  item.approvedAt = Date.now();
+  item.verifiedAt = Date.now();
+  item.adminVerified = true;
+  item.listingState = "active";
 
-  db.ref("properties/" + id).set(item);
+  const targetId = item.previousPropertyId || id;
+
+  db.ref("properties/" + targetId).set(item);
   db.ref("pendingProperties/" + id).remove();
 
 }
 
 function rejectItem(id){
+  const item = pending[id];
+  if(!item) return;
+
+  const reason = prompt("Why is this property rejected? This will be shown to the landlord.");
+  if(reason === null) return;
+
+  item.approved = false;
+  item.reviewStatus = "rejected";
+  item.rejectReason = reason.trim() || "Admin rejected this property.";
+  item.rejectedAt = Date.now();
+
+  db.ref("rejectedProperties/" + id).set(item);
   db.ref("pendingProperties/" + id).remove();
 }
 
 function deleteItem(id){
+  if(!confirm("Delete this listing permanently?")) return;
   db.ref("pendingProperties/" + id).remove();
   db.ref("properties/" + id).remove();
+}
+
+function suspendItem(id){
+  const reason = prompt("Why are you suspending this listing?");
+  if(reason === null) return;
+
+  db.ref("properties/" + id).update({
+    listingState: "suspended",
+    suspendReason: reason.trim() || "Suspended by admin.",
+    suspendedAt: Date.now()
+  });
+}
+
+function restoreItem(id){
+  db.ref("properties/" + id).update({
+    listingState: "active",
+    suspendReason: null,
+    restoredAt: Date.now()
+  });
 }
 
 function openMap(lat,lng){
