@@ -1,310 +1,334 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing Marketplace - Final</title>
+<title>DeKUT Housing Marketplace Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f7fb;}
+body { margin:0; font-family:Arial; background:#f7f7f7; }
 
-.container{max-width:1200px;margin:auto;padding:20px;}
-
-.topbar{
-display:flex;
-justify-content:space-between;
-align-items:center;
+/* HEADER */
+header {
+    background:white;
+    padding:15px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    border-bottom:1px solid #ddd;
 }
 
-.card{
-background:#fff;
-padding:15px;
-margin:10px 0;
-border-radius:12px;
-box-shadow:0 2px 10px rgba(0,0,0,0.08);
+.top-bar {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
 }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-gap:15px;
+input, select, button {
+    padding:10px;
+    border-radius:20px;
+    border:1px solid #ddd;
 }
 
-img{
-width:100%;
-height:180px;
-object-fit:cover;
-border-radius:10px;
+button {
+    cursor:pointer;
+    background:#ff385c;
+    color:white;
+    border:none;
 }
 
-button{
-padding:10px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-background:#2563eb;
-color:#fff;
-margin-top:5px;
+/* GRID */
+.container { padding:20px; }
+.grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:15px;
 }
 
-button:hover{background:#1d4ed8;}
-
-input{
-width:100%;
-padding:10px;
-margin:5px 0;
-border-radius:8px;
-border:1px solid #ddd;
+/* CARD */
+.card {
+    background:white;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-.badge{
-padding:4px 8px;
-border-radius:6px;
-background:green;
-color:#fff;
-font-size:12px;
+.card img {
+    width:100%;
+    height:160px;
+    object-fit:cover;
 }
 
-#map{
-height:300px;
-border-radius:10px;
-margin-top:10px;
+.content { padding:10px; }
+
+.title { font-weight:bold; }
+.price { color:green; font-weight:bold; }
+
+.meta { font-size:13px; color:#555; }
+
+.actions {
+    display:flex;
+    justify-content:space-between;
+    margin-top:10px;
 }
 
-.hidden{display:none;}
-.small{font-size:12px;color:gray;}
+.whatsapp {
+    background:#25D366;
+    color:white;
+    padding:8px;
+    border-radius:10px;
+    text-decoration:none;
+    flex:1;
+    text-align:center;
+    margin-right:5px;
+}
+
+.heart {
+    background:#eee;
+    padding:8px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+/* MAP */
+#map {
+    height:500px;
+    display:none;
+}
+
+/* LOGIN */
+#loginBox {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.7);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.login-card {
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    text-align:center;
+}
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<!-- TOP BAR -->
-<div class="topbar">
-<h2>🏠 Approved Properties</h2>
-<div>
-<button onclick="toggleLogin()">Login</button>
-<button onclick="logout()">Logout</button>
-</div>
-</div>
-
 <!-- LOGIN -->
-<div id="loginBox" class="card hidden">
-<h3>Login</h3>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p id="msg"></p>
+<div id="loginBox">
+    <div class="login-card">
+        <h3>Login</h3>
+        <button onclick="login('student')">Student</button>
+        <button onclick="login('landlord')">Landlord</button>
+    </div>
 </div>
 
-<!-- FILTERS -->
-<div class="card">
-<input id="search" placeholder="Search location..." oninput="load()">
-<input id="maxRent" type="number" placeholder="Max Rent" oninput="load()">
+<header>
+<h2>🏠 DeKUT Housing Pro</h2>
+
+<div class="top-bar">
+
+<input id="search" placeholder="Search..." onkeyup="applyFilters()">
+
+<select id="rentFilter" onchange="applyFilters()">
+<option value="">Rent</option>
+<option value="low">Under 5k</option>
+<option value="mid">5k-10k</option>
+<option value="high">10k+</option>
+</select>
+
+<select id="typeFilter" onchange="applyFilters()">
+<option value="">Type</option>
+<option value="bedsitter">Bedsitter</option>
+<option value="one">One Bedroom</option>
+<option value="shared">Shared</option>
+</select>
+
+<button onclick="toggleView()">🗺 Map/Grid</button>
+
+<button onclick="showFavorites()">❤️ Favorites</button>
+
+<a href="https://forms.gle/9tXRvLYXDdDVy3hL7" target="_blank">
++ Post
+</a>
+
 </div>
+</header>
 
-<!-- LIST -->
-<div id="list" class="grid"></div>
-
+<div class="container">
+<div id="map"></div>
+<div id="grid" class="grid">Loading...</div>
 </div>
 
 <script>
 
-const firebaseConfig={
-apiKey: "AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
-};
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxE0--jIiNLlvbAtp36NL4Mf78g9hFaxZeJSP5ESglOgV28VzIlfWqqJbSbJ2wIDZorSZ2JaSvvfYS/pub?output=csv";
 
-firebase.initializeApp(firebaseConfig);
-
-const auth=firebase.auth();
-const db=firebase.database();
-
-let currentUser=null;
-
-/* AUTH */
-auth.onAuthStateChanged(u=>{
-currentUser=u;
-});
+let allData = [];
+let map;
+let markers = [];
+let isMap = false;
+let userType = "";
+let favorites = JSON.parse(localStorage.getItem("fav") || "[]");
 
 /* LOGIN */
-function toggleLogin(){
-loginBox.classList.toggle("hidden");
+function login(type){
+    userType = type;
+    document.getElementById("loginBox").style.display = "none";
 }
 
-function login(){
-auth.signInWithEmailAndPassword(email.value,password.value)
-.catch(e=>msg.innerText=e.message);
+/* CSV */
+function parseCSV(text){
+    return text.trim().split("\n").slice(1).map(r=>{
+        const c=r.split(",");
+        return {
+            type:c[2],
+            rent:parseInt(c[3]),
+            location:c[4],
+            distance:c[5],
+            gender:c[6],
+            amenities:c[7],
+            phone:c[8],
+            image:c[11]
+        };
+    });
 }
 
-function logout(){
-auth.signOut();
+/* LOAD */
+async function loadData(){
+    let res = await fetch(SHEET_URL);
+    let text = await res.text();
+    allData = parseCSV(text);
+    render(allData);
 }
 
-/* DEKUT LOCATION */
-const dekut={lat:-0.3956,lng:36.9626};
+/* RENDER */
+function render(data){
+    let grid=document.getElementById("grid");
+    grid.innerHTML="";
 
-/* DISTANCE CALC */
-function distance(lat,lng){
-let R=6371;
-let dLat=(lat-dekut.lat)*Math.PI/180;
-let dLng=(lng-dekut.lng)*Math.PI/180;
+    data.forEach((item,i)=>{
 
-let a=
-Math.sin(dLat/2)**2 +
-Math.cos(lat*Math.PI/180) *
-Math.cos(dekut.lat*Math.PI/180) *
-Math.sin(dLng/2)**2;
+        let fav = favorites.includes(i);
 
-return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
+        let img=item.image||"";
+        if(img.includes("drive.google")){
+            let id=img.match(/[-\w]{25,}/);
+            if(id) img=`https://lh3.googleusercontent.com/d/${id[0]}`;
+        }
+
+        let phone=item.phone.replace(/\D/g,"");
+        if(phone.startsWith("0")) phone="254"+phone.slice(1);
+
+        grid.innerHTML+=`
+        <div class="card">
+
+        ${img?`<img src="${img}">`:``}
+
+        <div class="content">
+            <div class="title">${item.type}</div>
+            <div class="price">KSh ${item.rent}</div>
+
+            <div class="meta">${item.location}</div>
+            <div class="meta">${item.distance}</div>
+
+            <div class="actions">
+
+                <a class="whatsapp" href="https://wa.me/${phone}" target="_blank">Chat</a>
+
+                <div class="heart" onclick="toggleFav(${i})">
+                    ${fav?"❤️":"🤍"}
+                </div>
+
+            </div>
+        </div>
+
+        </div>`;
+    });
 }
 
-/* LOAD PROPERTIES */
-function load(){
+/* FILTER */
+function applyFilters(){
+    let s=document.getElementById("search").value.toLowerCase();
+    let r=document.getElementById("rentFilter").value;
+    let t=document.getElementById("typeFilter").value;
 
-db.ref("approvedProperties").once("value").then(s=>{
-let data=s.val()||{};
-let html="";
+    let f=allData.filter(x=>{
+        let okSearch=(x.location+x.type).toLowerCase().includes(s);
 
-let search=(search.value||"").toLowerCase();
-let max=Number(maxRent.value||999999);
+        let okRent=true;
+        if(r=="low") okRent=x.rent<5000;
+        if(r=="mid") okRent=x.rent>=5000&&x.rent<=10000;
+        if(r=="high") okRent=x.rent>10000;
 
-for(let id in data){
-let p=data[id];
-if(!p) continue;
+        let okType=!t||x.type.toLowerCase().includes(t);
 
-if(search && !p.location.toLowerCase().includes(search)) continue;
-if(p.rent > max) continue;
+        return okSearch&&okRent&&okType;
+    });
 
-let dist=(p.lat && p.lng) ? distance(p.lat,p.lng) : "N/A";
-
-html+=`
-<div class="card">
-
-<img src="${(p.images||[])[0]||''}">
-
-<h3>${p.name}</h3>
-
-<p>${p.location}</p>
-<p>KES ${p.rent}</p>
-<p>${dist} km from DeKUT</p>
-
-<button onclick='viewProperty("${id}",JSON.stringify(p))'>View</button>
-<button onclick='chat("${id}")'>💬 Chat</button>
-<button onclick='wishlist("${id}")'>⭐ Wishlist</button>
-<button onclick='rate("${id}")'>⭐ Rate</button>
-
-</div>`;
+    render(f);
 }
 
-list.innerHTML=html;
-});
+/* FAVORITES */
+function toggleFav(i){
+    if(favorites.includes(i)){
+        favorites=favorites.filter(x=>x!=i);
+    }else{
+        favorites.push(i);
+    }
+    localStorage.setItem("fav",JSON.stringify(favorites));
+    render(allData);
 }
 
-/* VIEW PROPERTY FULL PAGE */
-function viewProperty(id,p){
-
-p=JSON.parse(p);
-
-document.body.innerHTML=`
-<div class="container">
-
-<button onclick="location.reload()">⬅ Back</button>
-
-<div class="card">
-
-<h2>${p.name}</h2>
-
-<div class="grid">
-${(p.images||[]).map(i=>`<img src="${i}">`).join("")}
-</div>
-
-<p><b>Location:</b> ${p.location}</p>
-<p><b>Rent:</b> KES ${p.rent}</p>
-<p><b>Phone:</b> ${p.phone}</p>
-<p><b>Description:</b> ${p.description||""}</p>
-
-<div id="map"></div>
-
-</div>
-
-</div>
-`;
-
-let map=L.map('map').setView([p.lat||dekut.lat,p.lng||dekut.lng],14);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-L.marker([p.lat,p.lng]).addTo(map);
-L.marker([dekut.lat,dekut.lng]).addTo(map);
+function showFavorites(){
+    let f=allData.filter((_,i)=>favorites.includes(i));
+    render(f);
 }
 
-/* CHAT (LOGIN REQUIRED, PROPERTY SPECIFIC) */
-function chat(propertyId){
+/* MAP */
+function toggleView(){
+    isMap=!isMap;
 
-if(!currentUser){
-alert("Login required to chat");
-return;
+    document.getElementById("grid").style.display=isMap?"none":"grid";
+    document.getElementById("map").style.display=isMap?"block":"none";
+
+    if(isMap) initMap();
 }
 
-let msg=prompt("Enter message to landlord:");
-if(!msg) return;
+function initMap(){
+    if(map) return;
 
-db.ref("chats/"+propertyId).push({
-userId:currentUser.uid,
-message:msg,
-time:Date.now()
-});
+    map=L.map('map').setView([-0.39,37.81],13);
 
-alert("Message sent");
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© OpenStreetMap'
+    }).addTo(map);
+
+    allData.forEach(item=>{
+
+        let lat=-0.39+(Math.random()*0.02);
+        let lng=37.81+(Math.random()*0.02);
+
+        let marker=L.marker([lat,lng]).addTo(map);
+
+        marker.bindPopup(`
+            <b>${item.type}</b><br>
+            KSh ${item.rent}<br>
+            ${item.location}
+        `);
+    });
 }
 
-/* WISHLIST */
-function wishlist(propertyId){
-
-if(!currentUser){
-alert("Login required for wishlist");
-return;
-}
-
-db.ref("wishlists/"+currentUser.uid+"/"+propertyId).set(true);
-
-alert("Saved to wishlist");
-}
-
-/* RATING (1 PER USER PER PROPERTY) */
-function rate(propertyId){
-
-if(!currentUser){
-alert("Login required to rate");
-return;
-}
-
-let rating=prompt("Rate property (1-5)");
-rating=Number(rating);
-
-if(rating<1||rating>5) return;
-
-db.ref("ratings/"+propertyId+"/"+currentUser.uid).set({
-rating:rating,
-time:Date.now()
-});
-
-alert("Rating submitted");
-}
-
-/* INIT */
-load();
+loadData();
 
 </script>
 
