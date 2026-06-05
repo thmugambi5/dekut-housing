@@ -2,196 +2,69 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Form</title>
+<title>Dekut Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{
-    font-family:Arial;
-    background:#f5f5f5;
-    margin:0;
-    padding:15px;
+body{font-family:Arial;background:#f5f5f5;margin:0;padding:10px;}
+
+.container{max-width:900px;margin:auto;}
+
+.filters{
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+
+input,select{
+  padding:8px;
+  margin:5px;
+  border-radius:6px;
+  border:1px solid #ccc;
 }
 
 .card{
-    max-width:650px;
-    margin:auto;
-    background:#fff;
-    padding:15px;
-    border-radius:12px;
+  background:#fff;
+  margin:10px 0;
+  padding:10px;
+  border-radius:10px;
 }
 
-input,select,button{
-    width:100%;
-    padding:10px;
-    margin:8px 0;
-    border-radius:8px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
+img{
+  width:100%;
+  max-height:200px;
+  object-fit:cover;
+  border-radius:10px;
 }
 
-button{
-    background:#ff385c;
-    color:#fff;
-    border:none;
-    cursor:pointer;
-}
-
-.amenitiesBox{
-    background:#f1f1f1;
-    padding:12px;
-    border-radius:8px;
-    margin:10px 0;
-}
-
-.amenity-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:6px 0;
-}
-
-.amenity-item input{
-    width:auto;
-}
-
-small{
-    color:gray;
-    display:block;
-    margin-top:3px;
-}
-
-.warning{
-    color:#c62828;
-    font-weight:bold;
-}
-
-.preview{
-    display:flex;
-    flex-wrap:wrap;
-}
-
-.preview img{
-    width:70px;
-    height:70px;
-    object-fit:cover;
-    margin:5px;
-    border-radius:8px;
-}
-
-label{
-    font-weight:bold;
-}
+small{color:gray;}
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="container">
 
-<h2>🏠 Landlord Form</h2>
+<h2>🏠 Dekut Housing Listings</h2>
 
-<label>🏠 House Type</label>
-<select id="type">
-<option>Bedsitter</option>
-<option>Single Room</option>
-<option>One Bedroom</option>
-<option>Shared Bedsitter</option>
-<option>Shared Single Room</option>
-</select>
+<!-- FILTERS -->
+<div class="filters">
 
-<label>💰 Monthly Rent (KSh)</label>
-<input id="rent" type="number" placeholder="e.g. 5500">
+<input id="minRent" type="number" placeholder="Min Rent">
+<input id="maxRent" type="number" placeholder="Max Rent">
 
-<label>💳 Deposit Amount (KSh)</label>
-<input id="deposit" type="number" placeholder="e.g. 3000">
+<input id="maxDistance" type="number" placeholder="Max Distance (km)">
 
-<label>👥 Preferred Occupants</label>
-<select id="gender">
-<option>Any Gender</option>
-<option>Male Only</option>
-<option>Female Only</option>
-<option>Mixed</option>
-</select>
-
-<label>📌 Availability Status</label>
-<select id="availability">
-<option>Available</option>
-<option>Occupied</option>
-</select>
-
-<label>🚪 Number of Rooms Available</label>
-<input id="roomsAvailable" type="number" placeholder="e.g. 2">
-
-<label>💡 Utilities Included In Rent?</label>
-<select id="utilities">
-<option>Yes</option>
-<option>No</option>
-<option>Partially Included</option>
-</select>
-
-<label>📞 Contact Number</label>
-<input id="phone" placeholder="e.g. 254712345678">
-
-<label>📝 Property Description</label>
-<input id="extra" placeholder="e.g. Spacious rooms, tiled floors">
-
-<div class="amenitiesBox">
-<b>🧰 Amenities</b>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="WiFi"><label>WiFi</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Water"><label>Water</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Electricity"><label>Electricity</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Furnished"><label>Furnished</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Parking"><label>Parking</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Security"><label>Security</label>
-</div>
-
-<div class="amenity-item">
-<input type="checkbox" class="amenity" value="Balcony"><label>Balcony</label>
-</div>
+<button onclick="applyFilters()">Apply Filters</button>
+<button onclick="resetFilters()">Reset</button>
 
 </div>
 
-<label>➕ Other Amenities</label>
-<input id="extraAmenities" placeholder="e.g. CCTV, Laundry Area">
-
-<label>📸 Property Photos</label>
-<input type="file" id="images" multiple accept="image/*">
-
-<div class="preview" id="preview"></div>
-
-<label>📍 Property Location</label>
-<input id="location" placeholder="e.g. Bomas, Embassy, Nyeri View">
-
-<small class="warning">
-⚠️ Stand inside the property before sharing location.
-</small>
-
-<button onclick="getLocation()">📍 Share Location</button>
-
-<p id="locStatus">No location selected</p>
-
-<button onclick="upload()">Upload Property</button>
+<div id="listings"></div>
 
 </div>
 
@@ -202,121 +75,95 @@ const firebaseConfig = {
   authDomain: "dekut-housing.firebaseapp.com",
   databaseURL: "https://dekut-housing-default-rtdb.firebaseio.com",
   projectId: "dekut-housing",
-  storageBucket: "dekut-housing.appspot.com",
-  messagingSenderId: "784034754945",
-  appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let lat = "";
-let lng = "";
-
 const DEKUT_LAT = -0.3977905;
 const DEKUT_LNG = 36.9608515;
 
-function calculateDistance(lat1, lon1, lat2, lon2){
-    const R = 6371;
+let allProperties = [];
 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+/* DISTANCE CALC */
+function distance(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
 
-    const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI/180) *
-        Math.cos(lat2 * Math.PI/180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return (R * c).toFixed(1);
+  return (2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);
 }
 
-function getLocation(){
-    navigator.geolocation.getCurrentPosition(pos=>{
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-        document.getElementById("locStatus").innerText = "Location captured ✔";
-    });
+/* LOAD DATA */
+db.ref("properties").on("value", snap=>{
+  allProperties = [];
+
+  snap.forEach(child=>{
+    let p = child.val();
+
+    if(p.lat && p.lng){
+      p.distance = distance(p.lat,p.lng,DEKUT_LAT,DEKUT_LNG);
+    } else {
+      p.distance = 999;
+    }
+
+    allProperties.push(p);
+  });
+
+  render(allProperties);
+});
+
+/* RENDER */
+function render(list){
+  let box = document.getElementById("listings");
+  box.innerHTML = "";
+
+  list.forEach(p=>{
+    let div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <h3>${p.type} - KSh ${p.rent}</h3>
+      <small>📍 ${p.location || "N/A"} | 📏 ${p.distance} km from DeKUT</small>
+      <p>🧰 ${p.amenities || "None"}</p>
+
+      ${p.images && p.images[0] ? `<img src="${p.images[0]}">` : ""}
+    `;
+
+    box.appendChild(div);
+  });
 }
 
-function toBase64(file){
-    return new Promise(res=>{
-        let r = new FileReader();
-        r.onload = ()=>res(r.result);
-        r.readAsDataURL(file);
-    });
+/* FILTER */
+function applyFilters(){
+
+  let min = parseInt(document.getElementById("minRent").value) || 0;
+  let max = parseInt(document.getElementById("maxRent").value) || 999999;
+  let dist = parseFloat(document.getElementById("maxDistance").value) || 999;
+
+  let filtered = allProperties.filter(p=>{
+    return (
+      parseInt(p.rent || 0) >= min &&
+      parseInt(p.rent || 0) <= max &&
+      parseFloat(p.distance || 999) <= dist
+    );
+  });
+
+  render(filtered);
 }
 
-document.getElementById("images").onchange = async e=>{
-    let preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    for(let f of e.target.files){
-        let img = document.createElement("img");
-        img.src = await toBase64(f);
-        preview.appendChild(img);
-    }
-};
-
-async function upload(){
-
-    const typeVal = document.getElementById("type").value || "";
-    const rentVal = document.getElementById("rent").value || "";
-    const depositVal = document.getElementById("deposit").value || "";
-    const genderVal = document.getElementById("gender").value || "";
-    const availabilityVal = document.getElementById("availability").value || "";
-    const roomsVal = document.getElementById("roomsAvailable").value || "";
-    const utilitiesVal = document.getElementById("utilities").value || "";
-    const phoneVal = document.getElementById("phone").value || "";
-    const extraVal = document.getElementById("extra").value || "";
-    const locationVal = document.getElementById("location").value || "";
-
-    if(!lat || !lng){
-        alert("Please share location first");
-        return;
-    }
-
-    let files = document.getElementById("images").files;
-    let images = [];
-
-    for(let f of files){
-        images.push(await toBase64(f));
-    }
-
-    let selected = [];
-    document.querySelectorAll(".amenity:checked").forEach(a=>{
-        selected.push(a.value);
-    });
-
-    let extraA = document.getElementById("extraAmenities").value || "";
-
-    let amenities = selected.join(", ");
-    if(extraA) amenities += (amenities ? ", " : "") + extraA;
-
-    const distance = calculateDistance(lat,lng,DEKUT_LAT,DEKUT_LNG);
-
-    db.ref("properties").push({
-        type: typeVal,
-        rent: rentVal,
-        deposit: depositVal,
-        gender: genderVal,
-        availability: availabilityVal,
-        roomsAvailable: roomsVal,
-        utilities: utilitiesVal,
-        phone: phoneVal,
-        extra: extraVal,
-        location: locationVal,
-        amenities,
-        lat,
-        lng,
-        distance,
-        images,
-        createdAt: Date.now()
-    });
-
-    alert("Property uploaded ✔");
+/* RESET */
+function resetFilters(){
+  document.getElementById("minRent").value = "";
+  document.getElementById("maxRent").value = "";
+  document.getElementById("maxDistance").value = "";
+  render(allProperties);
 }
 
 </script>
