@@ -2,41 +2,32 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DeKUT Housing</title>
+<title>DeKUT Housing Map</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f7f7f7;margin:0;}
-header{background:#fff;padding:15px;text-align:center;font-weight:bold;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;padding:15px;}
-
-.card{
-  background:#fff;
-  border-radius:12px;
-  padding:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
-
-img{
-  width:100%;
-  height:160px;
-  object-fit:cover;
-  border-radius:10px;
-}
-
-.meta{font-size:13px;color:#555;}
+body{margin:0;font-family:Arial;}
+header{padding:10px;background:#fff;text-align:center;font-weight:bold;}
+#map{height:50vh;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:10px;}
+.card{background:#fff;padding:10px;border-radius:10px;}
+img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
 .price{color:green;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
-<header>🏠 DeKUT Housing Listings</header>
+<header>🏠 DeKUT Housing Map</header>
 
-<div id="grid" class="grid">Loading...</div>
+<div id="map"></div>
+<div class="grid" id="list"></div>
 
 <script>
 
@@ -53,33 +44,51 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// MAP INIT
+let map = L.map("map").setView([-0.390, 37.790], 13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap"
+}).addTo(map);
+
 db.ref("properties").on("value", snap => {
+
   let data = snap.val();
-  let grid = document.getElementById("grid");
-  grid.innerHTML = "";
+  let list = document.getElementById("list");
+  list.innerHTML = "";
 
   for(let id in data){
     let p = data[id];
 
+    // LIST VIEW
     let imgs = "";
     if(p.images){
-      p.images.forEach(img=>{
-        imgs += `<img src="${img}">`;
-      });
+      imgs = `<img src="${p.images[0]}">`;
     }
 
-    grid.innerHTML += `
+    list.innerHTML += `
       <div class="card">
         ${imgs}
-        <h3>${p.type}</h3>
+        <b>${p.type}</b><br>
         <div class="price">KSh ${p.rent}</div>
-        <div class="meta">${p.location}</div>
-        <div class="meta">${p.distance} KM from DeKUT</div>
-        <div class="meta">${p.gender}</div>
-        <div class="meta">${p.amenities}</div>
-        <div class="meta">${p.phone}</div>
+        <div>${p.location}</div>
+        <div>${p.distance} KM</div>
+        <div>${p.phone}</div>
       </div>
     `;
+
+    // MAP MARKER
+    if(p.lat && p.lng){
+
+      let marker = L.marker([p.lat, p.lng]).addTo(map);
+
+      marker.bindPopup(`
+        <b>${p.type}</b><br>
+        KSh ${p.rent}<br>
+        ${p.location}<br>
+        ${p.phone}
+      `);
+    }
   }
 });
 
