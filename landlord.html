@@ -22,9 +22,11 @@ img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
 <body>
 
 <div class="card">
-<h2>🏠 Add Property</h2>
+<h2>🏠 Landlord Property Upload</h2>
 
+<!-- ORIGINAL QUESTIONS RESTORED -->
 <select id="type">
+<option value="">Select Property Type</option>
 <option>Bedsitter</option>
 <option>Single Room</option>
 <option>One Bedroom</option>
@@ -32,17 +34,32 @@ img{width:70px;height:70px;object-fit:cover;margin:5px;border-radius:8px;}
 <option>Shared Single Room</option>
 </select>
 
-<input id="rent" placeholder="Rent (KSh)">
-<input id="location" placeholder="Location">
-<input id="distance" type="number" step="0.1" placeholder="Distance from DeKUT (KM)">
-<input id="phone" placeholder="Phone / WhatsApp">
-<input id="amenities" placeholder="Amenities">
+<input id="rent" type="number" placeholder="Monthly Rent (KSh)">
 
+<input id="location" placeholder="Location (Estate / Area Name)">
+
+<input id="distance" type="number" step="0.1" placeholder="Distance from DeKUT (KM)">
+
+<select id="gender">
+<option value="">Preferred Gender</option>
+<option>Any Gender</option>
+<option>Male Only</option>
+<option>Female Only</option>
+<option>Mixed</option>
+</select>
+
+<input id="amenities" placeholder="Amenities (Water, WiFi, Parking, etc)">
+
+<input id="phone" placeholder="Phone / WhatsApp Number">
+
+<input id="extra" placeholder="Extra Information (optional)">
+
+<!-- GPS LOCATION -->
 <button onclick="getLocation()">📍 Share My Location</button>
 <p id="locStatus">No location selected</p>
 
+<!-- IMAGES -->
 <input type="file" id="images" multiple>
-
 <div id="preview"></div>
 
 <button onclick="upload()">Upload Property</button>
@@ -67,7 +84,7 @@ const db = firebase.database();
 let lat = "";
 let lng = "";
 
-// GET LOCATION
+// LOCATION FUNCTION
 function getLocation(){
 
   if(!navigator.geolocation){
@@ -79,13 +96,11 @@ function getLocation(){
 
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
-
       lat = pos.coords.latitude;
       lng = pos.coords.longitude;
 
       document.getElementById("locStatus").innerText =
         "Location captured ✔";
-
     },
     ()=>{
       document.getElementById("locStatus").innerText =
@@ -94,7 +109,7 @@ function getLocation(){
   );
 }
 
-// base64 image
+// IMAGE → BASE64
 function toBase64(file){
   return new Promise((res,rej)=>{
     const r = new FileReader();
@@ -104,7 +119,7 @@ function toBase64(file){
   });
 }
 
-// preview
+// PREVIEW
 document.getElementById("images").onchange = async function(e){
   let preview = document.getElementById("preview");
   preview.innerHTML = "";
@@ -117,7 +132,7 @@ document.getElementById("images").onchange = async function(e){
   }
 };
 
-// upload
+// UPLOAD (SAFE)
 async function upload(){
 
   if(!lat || !lng){
@@ -137,8 +152,10 @@ async function upload(){
     rent: document.getElementById("rent").value || "",
     location: document.getElementById("location").value || "",
     distance: document.getElementById("distance").value || "",
-    phone: document.getElementById("phone").value || "",
+    gender: document.getElementById("gender").value || "",
     amenities: document.getElementById("amenities").value || "",
+    phone: document.getElementById("phone").value || "",
+    extra: document.getElementById("extra").value || "",
     lat: lat,
     lng: lng,
     images: images,
@@ -147,7 +164,7 @@ async function upload(){
 
   db.ref("properties").push(data);
 
-  alert("Property uploaded ✔");
+  alert("Property uploaded successfully ✔");
 }
 
 </script>
