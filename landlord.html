@@ -748,7 +748,7 @@ DEKUT_LNG
 updateProgress(85,"Saving property to database...");
 
 /* SAVE */
-await db.ref("pendingProperties").push({
+const newPropertyRef = await db.ref("pendingProperties").push({
 
 type: typeVal,
 rent: rentVal,
@@ -779,6 +779,15 @@ landlordEmail: currentLandlord.email,
 
 createdAt: Date.now()
 
+});
+
+await db.ref("notifications/admin").push({
+type: "property_upload",
+propertyId: newPropertyRef.key,
+title: "New property uploaded",
+body: typeVal + " in " + locationVal + " is waiting for approval.",
+read: false,
+createdAt: Date.now()
 });
 
 updateProgress(100,"Upload completed successfully");
