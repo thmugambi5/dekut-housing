@@ -13,6 +13,7 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
@@ -23,6 +24,28 @@ body{
 margin:0;
 font-family:Arial;
 background:#f6f6f6;
+color:#111;
+}
+
+body.dark{
+background:#111827;
+color:#f8fafc;
+}
+
+body.dark header,
+body.dark .filters,
+body.dark .card,
+body.dark .sideMenu,
+body.dark .detailsContent,
+body.dark .chatModal{
+background:#1f2937;
+color:#f8fafc;
+}
+
+body.dark .sideMenu a,
+body.dark .sideMenu button{
+background:#374151;
+color:#f8fafc;
 }
 
 header{
@@ -37,24 +60,64 @@ top:0;
 z-index:1000;
 }
 
-.adminBtn{
-float:right;
-background:black;
+.menuBtn{
+position:absolute;
+left:10px;
+top:8px;
+background:#111;
 color:white;
-padding:8px 12px;
+width:42px;
+height:42px;
 border-radius:8px;
-border:none;
-cursor:pointer;
+font-size:22px;
+line-height:1;
 }
 
-.landlordBtn{
-float:left;
-background:#0f766e;
-color:white;
-padding:8px 12px;
+.sideMenu{
+position:fixed;
+top:0;
+left:-280px;
+width:260px;
+height:100%;
+background:white;
+z-index:10001;
+box-shadow:4px 0 18px rgba(0,0,0,0.18);
+padding:18px;
+transition:left 0.2s ease;
+}
+
+.sideMenu.open{
+left:0;
+}
+
+.sideMenu h2{
+margin:0 0 14px;
+}
+
+.sideMenu a,
+.sideMenu button{
+display:block;
+width:100%;
+margin:8px 0;
+padding:12px;
 border-radius:8px;
-border:none;
-cursor:pointer;
+background:#f1f5f9;
+color:#111;
+text-align:left;
+text-decoration:none;
+font-weight:bold;
+}
+
+.menuOverlay{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.35);
+z-index:10000;
+}
+
+.menuOverlay.open{
+display:block;
 }
 
 .filters{
@@ -124,6 +187,12 @@ font-weight:bold;
 .mapbtn{background:#007bff;color:white;}
 .detailsbtn{background:#111;color:white;width:100%;margin-top:10px;}
 .photosbtn{background:#333;color:white;}
+.wishlist{background:#e11d48;color:white;}
+.ratingbtn{background:#facc15;color:#111;}
+.chatbtn{background:#0f766e;color:white;}
+.miniActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.miniActions button{flex:1;min-width:110px;}
+.ratingLine{color:#92400e;font-weight:bold;margin-top:6px;}
 
 .badge{
 display:inline-block;
@@ -199,6 +268,56 @@ padding:15px;
 line-height:1.9;
 }
 
+.chatModal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:white;
+z-index:10000;
+overflow:auto;
+}
+
+.chatBox{
+max-width:720px;
+margin:60px auto 20px;
+padding:14px;
+}
+
+.messages{
+background:#f8fafc;
+border-radius:10px;
+padding:12px;
+height:55vh;
+overflow:auto;
+}
+
+.message{
+margin:8px 0;
+line-height:1.4;
+}
+
+.message b{
+display:block;
+font-size:12px;
+color:#64748b;
+}
+
+.chatInput{
+display:flex;
+gap:8px;
+margin-top:10px;
+}
+
+.chatInput input{
+flex:1;
+padding:12px;
+border:1px solid #cbd5e1;
+border-radius:8px;
+}
+
 #map{width:100%;height:100%;}
 
 @media(max-width:640px){
@@ -206,13 +325,6 @@ header{
 font-size:18px;
 padding:12px 8px 52px;
 }
-.landlordBtn,.adminBtn{
-position:absolute;
-bottom:10px;
-float:none;
-}
-.landlordBtn{left:10px;}
-.adminBtn{right:10px;}
 .filters{
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -238,10 +350,23 @@ height:200px;
 <body>
 
 <header>
+<button class="menuBtn" onclick="toggleMenu()">☰</button>
 🏠 DeKUT Housing
-<button class="landlordBtn" onclick="goLandlord()">Landlord</button>
-<button class="adminBtn" onclick="goAdmin()">Admin</button>
 </header>
+
+<div id="menuOverlay" class="menuOverlay" onclick="closeMenu()"></div>
+<nav id="sideMenu" class="sideMenu">
+<h2>Menu</h2>
+<a href="index.html">Home</a>
+<button onclick="browseProperties()">Browse Properties</button>
+<a href="landlord-signup.html">Landlord Signup</a>
+<a href="user-login.html">User Login</a>
+<button onclick="showWishlist()">Wishlist</button>
+<button onclick="openAllHousesMap()">Map View</button>
+<button onclick="toggleTheme()">Dark / Light Mode</button>
+<button onclick="contactUs()">Contact Us</button>
+<button onclick="closeMenu()">Close</button>
+</nav>
 
 <div style="text-align:center;padding:10px;">
 <button class="mapbtn" onclick="openAllHousesMap()">🗺 View All Houses on Map</button>
@@ -300,6 +425,18 @@ height:200px;
 <div class="detailsContent" id="detailsContent"></div>
 </div>
 
+<div class="chatModal" id="chatModal">
+<div class="backBtn" onclick="closeChat()">Back</div>
+<div class="chatBox">
+<h2 id="chatTitle">Property Chat</h2>
+<div class="messages" id="chatMessages"></div>
+<div class="chatInput">
+<input id="chatInput" placeholder="Type your message">
+<button class="chatbtn" onclick="sendChatMessage()">Send</button>
+</div>
+</div>
+</div>
+
 <script>
 
 /* FIREBASE */
@@ -314,19 +451,72 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
-
-function goAdmin(){
-window.location.href="admin-login.html";
-}
 
 function goLandlord(){
 window.location.href="landlord-login.html";
 }
 
+function goUser(){
+window.location.href="user-login.html";
+}
+
+function toggleMenu(){
+document.getElementById("sideMenu").classList.add("open");
+document.getElementById("menuOverlay").classList.add("open");
+}
+
+function closeMenu(){
+document.getElementById("sideMenu").classList.remove("open");
+document.getElementById("menuOverlay").classList.remove("open");
+}
+
+function browseProperties(){
+closeMenu();
+document.getElementById("searchBox").focus();
+document.getElementById("list").scrollIntoView({behavior:"smooth"});
+}
+
+function contactUs(){
+closeMenu();
+alert("Contact DeKUT Housing support: support@dekuthousing.com");
+}
+
+function toggleTheme(){
+document.body.classList.toggle("dark");
+localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+closeMenu();
+}
+
+if(localStorage.getItem("theme") === "dark"){
+document.body.classList.add("dark");
+}
+
+function requireUser(){
+if(currentUser) return true;
+alert("Please login or create a user account first.");
+window.location.href = "user-login.html";
+return false;
+}
+
 /* DATA */
 let data = {};
 let filteredArray = [];
+let currentUser = null;
+let wishlist = {};
+let ratings = {};
+let activeChat = null;
+let activeChatMessagesRef = null;
+const DEKUT_LAT = -0.3977905;
+const DEKUT_LNG = 36.9608515;
+
+const propertyIcon = L.divIcon({
+className: "propertyMapIcon",
+html: "<div style='font-size:28px'>🏠</div>",
+iconSize: [32,32],
+iconAnchor: [16,32]
+});
 
 /* INFINITE SCROLL CONTROL */
 let renderIndex = 0;
@@ -339,6 +529,26 @@ data = snap.val() || {};
 applyFilters();   // re-filter instantly on update
 });
 
+db.ref("ratings").on("value", snap=>{
+ratings = snap.val() || {};
+applyFilters();
+});
+
+auth.onAuthStateChanged(user=>{
+if(user){
+currentUser = user;
+db.ref("wishlists/" + user.uid).on("value", snap=>{
+wishlist = snap.val() || {};
+applyFilters();
+});
+return;
+}
+
+currentUser = null;
+wishlist = {};
+applyFilters();
+});
+
 /* SAFE */
 function safe(obj){
 return encodeURIComponent(JSON.stringify(obj));
@@ -348,9 +558,13 @@ return encodeURIComponent(JSON.stringify(obj));
 function applyFilters(){
 
 let search = document.getElementById("searchBox").value.toLowerCase();
+let typeFilter = document.getElementById("typeFilter").value;
+let availabilityFilter = document.getElementById("availabilityFilter").value;
+let amenityFilter = document.getElementById("amenityFilter").value.toLowerCase();
 let min = parseInt(document.getElementById("minRent").value) || 0;
 let max = parseInt(document.getElementById("maxRent").value) || 999999;
 let dist = parseFloat(document.getElementById("maxDist").value) || 999;
+let sortBy = document.getElementById("sortBy").value;
 
 filteredArray = [];
 
@@ -360,16 +574,21 @@ let p = data[id];
 
 /* 🔥 ONLY APPROVED APPEAR */
 if(p.approved !== true) continue;
+if(p.listingState === "suspended") continue;
 
 let rent = parseInt(p.rent || 0);
 let distance = parseFloat(p.distance || 999);
 
 let text = ((p.type||"")+" "+(p.location||"")+" "+(p.amenities||"")).toLowerCase();
+let amenitiesText = (p.amenities || "").toLowerCase();
 
 if(
 rent>=min &&
 rent<=max &&
 distance<=dist &&
+(!typeFilter || p.type === typeFilter) &&
+(!availabilityFilter || (p.status || p.availability) === availabilityFilter) &&
+(!amenityFilter || amenitiesText.includes(amenityFilter)) &&
 (search==="" || text.includes(search))
 ){
 filteredArray.push({id,...p});
@@ -377,11 +596,187 @@ filteredArray.push({id,...p});
 
 }
 
+filteredArray.sort((a,b)=>{
+if(sortBy === "rentLow") return (parseInt(a.rent || 0) - parseInt(b.rent || 0));
+if(sortBy === "distance") return (parseFloat(a.distance || 999) - parseFloat(b.distance || 999));
+return (b.createdAt || 0) - (a.createdAt || 0);
+});
+
 /* RESET INFINITE SCROLL */
 renderIndex = 0;
 document.getElementById("list").innerHTML = "";
 renderMore();
 
+}
+
+function getRatingSummary(propertyId){
+let propertyRatings = ratings[propertyId] || {};
+let values = Object.values(propertyRatings).map(item => Number(item.rating || 0)).filter(Boolean);
+if(values.length === 0) return "No ratings yet";
+let total = values.reduce((sum, rating) => sum + rating, 0);
+return (total / values.length).toFixed(1) + " stars (" + values.length + ")";
+}
+
+function isWishlisted(propertyId){
+return wishlist[propertyId] === true;
+}
+
+function toggleWishlist(propertyId){
+if(!requireUser()) return;
+
+let ref = db.ref("wishlists/" + currentUser.uid + "/" + propertyId);
+if(isWishlisted(propertyId)){
+ref.remove();
+}else{
+ref.set(true);
+}
+}
+
+function showWishlist(){
+closeMenu();
+if(!requireUser()) return;
+
+filteredArray = [];
+for(let id in data){
+let p = data[id];
+if(wishlist[id] === true && p.approved === true && p.listingState !== "suspended"){
+filteredArray.push({id,...p});
+}
+}
+
+renderIndex = 0;
+document.getElementById("list").innerHTML = "";
+renderMore();
+document.getElementById("list").scrollIntoView({behavior:"smooth"});
+}
+
+function rateProperty(propertyId){
+if(!requireUser()) return;
+
+let value = prompt("Rate this property from 1 to 5");
+if(value === null) return;
+
+let rating = Number(value);
+if(!Number.isInteger(rating) || rating < 1 || rating > 5){
+alert("Please enter a whole number from 1 to 5.");
+return;
+}
+
+db.ref("ratings/" + propertyId + "/" + currentUser.uid).set({
+rating,
+createdAt: Date.now()
+});
+}
+
+function getChatId(propertyId){
+return propertyId + "_" + currentUser.uid;
+}
+
+function openChat(encoded){
+if(!requireUser()) return;
+
+let p = JSON.parse(decodeURIComponent(encoded));
+if(!p.landlordUid){
+alert("This listing does not have a landlord account attached yet.");
+return;
+}
+
+activeChat = {
+id: getChatId(p.id),
+propertyId: p.id,
+propertyTitle: p.type || "Property",
+propertyLocation: p.location || "",
+landlordUid: p.landlordUid,
+landlordEmail: p.landlordEmail || "",
+userUid: currentUser.uid,
+userEmail: currentUser.email || ""
+};
+
+document.getElementById("chatTitle").innerText =
+"Chat about " + activeChat.propertyTitle + " - " + activeChat.propertyLocation;
+
+document.getElementById("chatModal").style.display = "block";
+
+db.ref("chats/" + activeChat.id).update({
+propertyId: activeChat.propertyId,
+propertyTitle: activeChat.propertyTitle,
+propertyLocation: activeChat.propertyLocation,
+landlordUid: activeChat.landlordUid,
+landlordEmail: activeChat.landlordEmail,
+userUid: activeChat.userUid,
+userEmail: activeChat.userEmail,
+updatedAt: Date.now()
+});
+
+if(activeChatMessagesRef){
+activeChatMessagesRef.off();
+}
+
+activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
+activeChatMessagesRef.on("value", snap=>{
+let messages = snap.val() || {};
+renderChatMessages(messages);
+});
+}
+
+function renderChatMessages(messages){
+let rows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+let box = document.getElementById("chatMessages");
+
+if(rows.length === 0){
+box.innerHTML = "<div class='message'>No messages yet. Start the conversation.</div>";
+return;
+}
+
+box.innerHTML = rows.map(m=>`
+<div class="message">
+<b>${m.senderRole === "user" ? "You" : "Landlord"}</b>
+${m.text || ""}
+</div>
+`).join("");
+
+box.scrollTop = box.scrollHeight;
+}
+
+function sendChatMessage(){
+if(!requireUser() || !activeChat) return;
+
+let input = document.getElementById("chatInput");
+let text = input.value.trim();
+if(!text) return;
+
+db.ref("chats/" + activeChat.id + "/messages").push({
+senderUid: currentUser.uid,
+senderRole: "user",
+text,
+createdAt: Date.now()
+});
+
+db.ref("chats/" + activeChat.id).update({
+lastMessage: text,
+updatedAt: Date.now()
+});
+
+db.ref("notifications/landlords/" + activeChat.landlordUid).push({
+type: "message",
+chatId: activeChat.id,
+propertyId: activeChat.propertyId,
+title: "New message from user",
+body: text,
+read: false,
+createdAt: Date.now()
+});
+
+input.value = "";
+}
+
+function closeChat(){
+document.getElementById("chatModal").style.display = "none";
+if(activeChatMessagesRef){
+activeChatMessagesRef.off();
+activeChatMessagesRef = null;
+}
+activeChat = null;
 }
 
 /* INFINITE SCROLL RENDER */
@@ -398,6 +793,8 @@ nextItems.forEach(p=>{
 
 let img = p.images?.[0] || "";
 let statusClass = (p.status||"").toLowerCase()==="available" ? "available":"occupied";
+let ratingSummary = getRatingSummary(p.id);
+let saved = isWishlisted(p.id);
 
 list.innerHTML += `
 <div class="card">
@@ -411,8 +808,15 @@ ${img?`<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
 🧰 ${p.amenities||""}<br>
 📏 ${p.distance||""} KM<br>
 💰 KSh ${p.rent||""}<br>
+<div class="ratingLine">Rating: ${ratingSummary}</div>
 
 <div class="badge ${statusClass}">${p.status||""}</div>
+
+<div class="miniActions">
+<button class="wishlist" onclick="toggleWishlist('${p.id}')">${saved ? "Saved" : "Wishlist"}</button>
+<button class="ratingbtn" onclick="rateProperty('${p.id}')">Rate</button>
+<button class="chatbtn" onclick='openChat("${safe(p)}")'>Chat</button>
+</div>
 
 <button class="detailsbtn" onclick='openDetails("${safe(p)}")'>
 View Details
@@ -442,6 +846,10 @@ document.getElementById("searchBox").value="";
 document.getElementById("minRent").value="";
 document.getElementById("maxRent").value="";
 document.getElementById("maxDist").value="";
+document.getElementById("typeFilter").value="";
+document.getElementById("availabilityFilter").value="";
+document.getElementById("amenityFilter").value="";
+document.getElementById("sortBy").value="newest";
 applyFilters();
 }
 
@@ -475,7 +883,7 @@ Call Landlord
 WhatsApp
 </button>
 
-<button class="mapbtn" onclick="closeDetails(); openMap(${p.lat},${p.lng})">
+<button class="mapbtn" onclick='closeDetails(); openMap("${safe(p)}")'>
 View Map
 </button>
 
@@ -499,13 +907,37 @@ document.getElementById("photoModal").style.display="block";
 }
 
 /* MAP */
-function openMap(lat,lng){
+function routeToProperty(lat,lng){
+if(!navigator.geolocation){
+window.open("https://www.google.com/maps/dir/?api=1&destination="+lat+","+lng);
+return;
+}
+
+navigator.geolocation.getCurrentPosition(pos=>{
+window.open("https://www.google.com/maps/dir/?api=1&origin="+pos.coords.latitude+","+pos.coords.longitude+"&destination="+lat+","+lng);
+},()=>{
+window.open("https://www.google.com/maps/dir/?api=1&destination="+lat+","+lng);
+});
+}
+
+function routeFromDekut(lat,lng){
+window.open("https://www.google.com/maps/dir/?api=1&origin="+DEKUT_LAT+","+DEKUT_LNG+"&destination="+lat+","+lng);
+}
+
+function openMap(encoded){
+let p = JSON.parse(decodeURIComponent(encoded));
+let lat = Number(p.lat);
+let lng = Number(p.lng);
 
 document.getElementById("mapModal").style.display="block";
 
 document.getElementById("mapModal").innerHTML=`
 <div id="map"></div>
-<div class="backBtn" onclick="closeMap()">⬅ Back</div>
+<div class="backBtn" onclick="closeMap()">Back</div>
+<div style="position:absolute;right:10px;top:10px;z-index:99999;">
+<button class="mapbtn" onclick="routeToProperty(${lat},${lng})">Route From My Location</button>
+<button class="mapbtn" onclick="routeFromDekut(${lat},${lng})">Route From DeKUT</button>
+</div>
 `;
 
 setTimeout(()=>{
@@ -514,21 +946,31 @@ let map=L.map("map").setView([lat,lng],15);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-L.marker([lat,lng]).addTo(map);
+L.marker([lat,lng], {icon: propertyIcon})
+.addTo(map)
+.bindPopup(`
+<b>${p.type || "Property"}</b><br>
+${p.location || ""}<br>
+KSh ${p.rent || ""}<br>
+<button onclick="routeToProperty(${lat},${lng})">Route From Me</button>
+<button onclick="routeFromDekut(${lat},${lng})">Route From DeKUT</button>
+`)
+.openPopup();
 
 },100);
 }
 
 function openAllHousesMap(){
+closeMenu();
 document.getElementById("mapModal").style.display="block";
 document.getElementById("mapModal").innerHTML=`
 <div id="map"></div>
-<div class="backBtn" onclick="closeMap()">â¬… Back</div>
+<div class="backBtn" onclick="closeMap()">Back</div>
 `;
 
 setTimeout(()=>{
 
-let map=L.map("map").setView([-0.3977,36.9608],14);
+let map=L.map("map").setView([DEKUT_LAT,DEKUT_LNG],14);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
@@ -537,8 +979,18 @@ let markers=L.markerClusterGroup();
 for(let id in data){
 let p=data[id];
 
-if(p.approved && p.lat && p.lng){
-markers.addLayer(L.marker([p.lat,p.lng]));
+if(p.approved && p.listingState !== "suspended" && p.lat && p.lng){
+let lat = Number(p.lat);
+let lng = Number(p.lng);
+markers.addLayer(
+L.marker([lat,lng], {icon: propertyIcon}).bindPopup(`
+<b>${p.type || "Property"}</b><br>
+${p.location || ""}<br>
+KSh ${p.rent || ""}<br>
+<button onclick="routeToProperty(${lat},${lng})">Route From Me</button>
+<button onclick="routeFromDekut(${lat},${lng})">Route From DeKUT</button>
+`)
+);
 }
 }
 
