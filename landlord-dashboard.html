@@ -57,6 +57,13 @@ button,a.button{
 .empty{text-align:center;color:#64748b;padding:24px}
 .cardActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .reason{background:#fee2e2;color:#7f1d1d;border-radius:8px;padding:8px;margin-top:10px}
+.sectionTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.chatThread{border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px}
+.messages{background:#f8fafc;border-radius:8px;padding:10px;max-height:220px;overflow:auto}
+.message{margin:8px 0;line-height:1.4}
+.message b{display:block;font-size:12px;color:#64748b}
+.chatReply{display:flex;gap:8px;margin-top:8px}
+.chatReply input{flex:1;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
 @media(max-width:640px){
   header{display:block}
   .actions{margin-top:12px}
@@ -86,8 +93,15 @@ button,a.button{
     <div class="stat"><strong id="totalCount">0</strong>Total uploads</div>
   </section>
 
-  <h2>Your Properties</h2>
+  <div class="sectionTitle">
+    <h2>Your Properties</h2>
+    <button class="light" onclick="toggleChats()">Messages</button>
+  </div>
   <div id="list" class="grid"></div>
+  <section id="chatPanel" style="display:none;margin-top:22px">
+    <h2>Student Messages</h2>
+    <div id="chatList"></div>
+  </section>
 </main>
 
 <script>
@@ -109,6 +123,8 @@ let currentUser = null;
 let pending = {};
 let approved = {};
 let rejected = {};
+let chats = {};
+let chatsOpen = false;
 
 auth.onAuthStateChanged(user=>{
   if(!user){
@@ -132,6 +148,10 @@ function startRealtime(){
   db.ref("rejectedProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
     rejected = snap.val() || {};
     render();
+  });
+  db.ref("chats").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
+    chats = snap.val() || {};
+    renderChats();
   });
 }
 
@@ -250,9 +270,91 @@ function sendApprovedEditForReview(id){
     updatedAt: Date.now()
   };
 
-  db.ref("pendingProperties").push(updated).then(()=>{
+  db.ref("pendingProperties").push(updated).then(ref=>{
+    db.ref("notifications/admin").push({
+      type: "property_edit",
+      propertyId: ref.key,
+      previousPropertyId: id,
+      title: "Approved property edited",
+      body: (p.type || "Property") + " in " + (p.location || "") + " needs edit approval.",
+      read: false,
+      createdAt: Date.now()
+    });
     alert("Edit sent to admin for review. The current approved listing stays live until admin approves the update.");
   });
+}
+
+function toggleChats(){
+  chatsOpen = !chatsOpen;
+  document.getElementById("chatPanel").style.display = chatsOpen ? "block" : "none";
+  renderChats();
+}
+
+function renderChats(){
+  const chatList = document.getElementById("chatList");
+  if(!chatList) return;
+
+  const rows = Object.entries(chats)
+    .map(([id, chat])=>({id, ...chat}))
+    .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
+
+  if(rows.length === 0){
+    chatList.innerHTML = "<div class='card empty'>No student messages yet.</div>";
+    return;
+  }
+
+  chatList.innerHTML = rows.map(chat=>{
+    const messages = chat.messages || {};
+    const messageRows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+    return `
+      <article class="card chatThread">
+        <strong>${chat.propertyTitle || "Property chat"}</strong><br>
+        <span style="color:#64748b">${chat.propertyLocation || ""}</span>
+        <div class="messages">
+          ${messageRows.map(m=>`
+            <div class="message">
+              <b>${m.senderRole === "landlord" ? "You" : "Student"}</b>
+              ${m.text || ""}
+            </div>
+          `).join("")}
+        </div>
+        <div class="chatReply">
+          <input id="reply-${chat.id}" placeholder="Reply to student">
+          <button class="primary" onclick="sendReply('${chat.id}')">Send</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function sendReply(chatId){
+  const input = document.getElementById("reply-" + chatId);
+  const text = input.value.trim();
+  if(!text) return;
+  const chat = chats[chatId] || {};
+
+  db.ref("chats/" + chatId + "/messages").push({
+    senderUid: currentUser.uid,
+    senderRole: "landlord",
+    text,
+    createdAt: Date.now()
+  });
+  db.ref("chats/" + chatId).update({
+    updatedAt: Date.now(),
+    lastMessage: text
+  });
+  if(chat.userUid){
+    db.ref("notifications/users/" + chat.userUid).push({
+      type: "message",
+      chatId,
+      propertyId: chat.propertyId || "",
+      title: "New landlord reply",
+      body: text,
+      read: false,
+      createdAt: Date.now()
+    });
+  }
+  input.value = "";
 }
 
 function logout(){
