@@ -129,6 +129,7 @@ body{
 }
 
 .pending{ background:orange; }
+.pendingEdit{ background:#7c3aed; }
 .approved{ background:green; }
 .rejected{ background:#b91c1c; }
 .suspended{ background:#6b7280; }
@@ -156,6 +157,9 @@ button{
 .trustItem{ background:#f1f5f9; border-radius:8px; padding:10px; }
 .trustPass{ color:#166534; font-weight:bold; }
 .trustFail{ color:#b91c1c; font-weight:bold; }
+.messages{background:#f8fafc;border-radius:8px;padding:10px;max-height:260px;overflow:auto;margin-top:10px}
+.message{margin:8px 0;line-height:1.4}
+.message b{display:block;font-size:12px;color:#64748b}
 
 /* DETAILS MODAL */
 .modal{
@@ -213,6 +217,7 @@ button{
   <button onclick="showPending()">🟡 Pending</button>
   <button onclick="showApproved()">🟢 Approved</button>
   <button onclick="showRejected()">Rejected</button>
+  <button onclick="showChats()">Chats</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
   <button onclick="logout()" style="background:#c62828;">
@@ -277,6 +282,7 @@ const auth = firebase.auth();
 let pending = {};
 let approved = {};
 let rejected = {};
+let chats = {};
 let mode = "pending";
 
 /* 🔐 HARD SECURITY GATE */
@@ -325,6 +331,11 @@ function startRealtime(){
     render();
   });
 
+  db.ref("chats").on("value", snap=>{
+    chats = snap.val() || {};
+    if(mode === "chats") render();
+  });
+
 }
 
 function logout(){
@@ -347,6 +358,7 @@ function updateStats(){
 function showPending(){ mode="pending"; render(); }
 function showApproved(){ mode="approved"; render(); }
 function showRejected(){ mode="rejected"; render(); }
+function showChats(){ mode="chats"; render(); }
 function loadAll(){ mode="all"; render(); }
 
 function safe(obj){
@@ -358,6 +370,11 @@ function render(){
   let q = document.getElementById("search").value.toLowerCase();
   let list = document.getElementById("list");
   list.innerHTML = "";
+
+  if(mode === "chats"){
+    renderChats(q, list);
+    return;
+  }
 
   let source =
     mode==="pending" ? pending :
@@ -487,6 +504,43 @@ function approve(id){
   db.ref("properties/" + targetId).set(item);
   db.ref("pendingProperties/" + id).remove();
 
+}
+
+function renderChats(q, list){
+  const rows = Object.entries(chats)
+    .map(([id, chat])=>({id, ...chat}))
+    .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
+
+  rows.forEach(chat=>{
+    const text = ((chat.propertyTitle || "") + " " + (chat.propertyLocation || "") + " " + (chat.landlordEmail || "")).toLowerCase();
+    if(q && !text.includes(q)) return;
+
+    const messages = chat.messages || {};
+    const messageRows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+
+    list.innerHTML += `
+      <div class="card">
+        <div class="cardContent">
+          <b>${chat.propertyTitle || "Property chat"}</b><br>
+          ${chat.propertyLocation || ""}<br>
+          Landlord: ${chat.landlordEmail || chat.landlordUid || ""}<br>
+          Student: ${chat.userName || chat.userUid || ""}
+          <div class="messages">
+            ${messageRows.map(m=>`
+              <div class="message">
+                <b>${m.senderRole || "user"}</b>
+                ${m.text || ""}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  if(!list.innerHTML){
+    list.innerHTML = "<div class='card'><div class='cardContent'>No chats found.</div></div>";
+  }
 }
 
 function rejectItem(id){
