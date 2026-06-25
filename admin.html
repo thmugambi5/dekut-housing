@@ -283,6 +283,7 @@ let pending = {};
 let approved = {};
 let rejected = {};
 let chats = {};
+let ratings = {};
 let mode = "pending";
 
 /* 🔐 HARD SECURITY GATE */
@@ -336,6 +337,11 @@ function startRealtime(){
     if(mode === "chats") render();
   });
 
+  db.ref("ratings").on("value", snap=>{
+    ratings = snap.val() || {};
+    render();
+  });
+
 }
 
 function logout(){
@@ -363,6 +369,39 @@ function loadAll(){ mode="all"; render(); }
 
 function safe(obj){
   return encodeURIComponent(JSON.stringify(obj));
+}
+
+function getRatingSummary(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const values = Object.values(propertyRatings).map(item=>Number(item.rating || 0)).filter(Boolean);
+  if(values.length === 0) return "No ratings yet";
+  const total = values.reduce((sum, rating)=>sum + rating, 0);
+  const avg = total / values.length;
+  return renderStars(avg) + " " + avg.toFixed(1) + " (" + values.length + ")";
+}
+
+function renderStars(value){
+  const rounded = Math.round(Number(value || 0));
+  let stars = "";
+  for(let i = 1; i <= 5; i++){
+    stars += i <= rounded ? "★" : "☆";
+  }
+  return stars;
+}
+
+function getRatingComments(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  return Object.entries(propertyRatings)
+    .map(([uid,item])=>({uid,...item}))
+    .sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0))
+    .map(item=>`
+      <div style="border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0;">
+        <p><b>${item.userName || item.userEmail || "User"}:</b> ${renderStars(item.rating)} ${item.comment || "No comment"}</p>
+        <button class="view" onclick="editRating('${propertyId}','${item.uid}')">Edit</button>
+        <button class="delete" onclick="deleteRating('${propertyId}','${item.uid}')">Delete</button>
+      </div>
+    `)
+    .join("");
 }
 
 function render(){
@@ -395,6 +434,7 @@ function render(){
     let isPending = pending[id] ? true : false;
     let isRejected = rejected[id] ? true : false;
     let isSuspended = p.listingState === "suspended";
+    let ratingSummary = getRatingSummary(id);
 
     list.innerHTML += `
       <div class="card">
@@ -414,7 +454,9 @@ function render(){
 
           <br><br>
 
-          <button class="view" onclick='openDetails("${safe(p)}")'>View</button>
+          <div><b>Rating:</b> ${ratingSummary}</div>
+
+          <button class="view" onclick='openDetails("${safe({id,...p})}")'>View</button>
 
           ${isPending ? `
             <button class="approve" onclick="approve('${id}')">✔ Approve</button>
@@ -441,6 +483,7 @@ function render(){
 /* DETAILS */
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
+  const ratingSummary = getRatingSummary(p.id);
   const hasGps = !!(p.lat && p.lng);
   const hasPhotos = Array.isArray(p.images) && p.images.length > 0;
   const hasKenyanPhone = /^\+254\d{9}$/.test(p.phone || "");
@@ -457,7 +500,11 @@ function openDetails(encoded){
       <p><b>Rooms:</b> ${p.roomsAvailable || ""}</p>
       <p><b>Occupants:</b> ${p.gender || ""}</p>
       <p><b>Utilities:</b> ${p.utilities || ""}</p>
+      ${p.includedUtilities ? `<p><b>Utilities Included In Rent:</b> ${p.includedUtilities}</p>` : ""}
       <p><b>Amenities:</b> ${p.amenities || ""}</p>
+      <p><b>Rating:</b> ${ratingSummary}</p>
+      <h3>Ratings & Comments</h3>
+      ${getRatingComments(p.id) || "<p>No ratings yet.</p>"}
       <p><b>Description:</b> ${p.extra || ""}</p>
       <p><b>Landlord:</b> ${p.landlordEmail || "Not recorded"}</p>
       <p><b>Phone:</b> ${p.phone || ""}</p>
@@ -480,6 +527,34 @@ function openDetails(encoded){
   `;
 
   document.getElementById("detailsModal").style.display="block";
+}
+
+function editRating(propertyId, uid){
+  const item = ratings[propertyId]?.[uid];
+  if(!item) return;
+
+  const ratingValue = prompt("Edit rating from 1 to 5", item.rating || "");
+  if(ratingValue === null) return;
+
+  const rating = Number(ratingValue);
+  if(!Number.isInteger(rating) || rating < 1 || rating > 5){
+    alert("Please enter a whole number from 1 to 5.");
+    return;
+  }
+
+  const comment = prompt("Edit comment", item.comment || "");
+  if(comment === null) return;
+
+  db.ref("ratings/" + propertyId + "/" + uid).update({
+    rating,
+    comment: comment.trim(),
+    moderatedAt: Date.now()
+  });
+}
+
+function deleteRating(propertyId, uid){
+  if(!confirm("Delete this rating/comment?")) return;
+  db.ref("ratings/" + propertyId + "/" + uid).remove();
 }
 
 function closeDetails(){
