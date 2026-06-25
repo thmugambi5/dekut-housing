@@ -25,6 +25,7 @@ margin:0;
 font-family:Arial;
 background:#f6f6f6;
 color:#111;
+padding-bottom:76px;
 }
 
 body.dark{
@@ -156,21 +157,64 @@ padding:14px;
 
 .card{
 background:#fff;
-border-radius:14px;
+border-radius:12px;
 overflow:hidden;
-box-shadow:0 2px 10px rgba(0,0,0,0.08);
+box-shadow:0 10px 28px rgba(15,23,42,0.08);
+border:1px solid rgba(15,23,42,0.06);
 }
 
 .card img{
 width:100%;
-height:220px;
+height:190px;
 object-fit:cover;
 cursor:pointer;
 }
 
 .cardContent{
-padding:12px;
-line-height:1.7;
+padding:14px;
+line-height:1.45;
+}
+
+.cardType{
+font-size:14px;
+font-weight:800;
+margin-bottom:6px;
+color:#475569;
+}
+
+.cardName{
+font-size:19px;
+font-weight:900;
+margin-bottom:6px;
+color:#0f172a;
+}
+
+.cardPrice{
+font-size:20px;
+font-weight:900;
+color:#15803d;
+margin-bottom:6px;
+}
+
+.cardLocation{
+color:#475569;
+font-weight:700;
+margin-bottom:10px;
+}
+
+.cardDetail{
+color:#64748b;
+font-size:14px;
+font-weight:700;
+margin-bottom:8px;
+}
+
+.cardMetaRow{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+margin-top:10px;
 }
 
 button{
@@ -190,9 +234,140 @@ font-weight:bold;
 .wishlist{background:#e11d48;color:white;}
 .ratingbtn{background:#facc15;color:#111;}
 .chatbtn{background:#0f766e;color:white;}
-.miniActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.miniActions button{flex:1;min-width:110px;}
+.detailsActions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:16px 0;}
+.detailsActions button{width:100%;margin:0;}
 .ratingLine{color:#92400e;font-weight:bold;margin-top:6px;}
+.stars{color:#f59e0b;letter-spacing:1px;}
+
+.bottomNav{
+position:fixed;
+left:0;
+right:0;
+bottom:0;
+height:66px;
+background:white;
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:4px;
+padding:8px;
+box-shadow:0 -10px 30px rgba(15,23,42,0.14);
+z-index:9000;
+}
+
+.bottomNav button{
+margin:0;
+padding:6px 4px;
+border-radius:8px;
+background:#f8fafc;
+color:#334155;
+font-size:12px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:2px;
+}
+
+.bottomNav span{
+font-size:18px;
+line-height:1;
+}
+
+.ratingModal{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(15,23,42,0.65);
+z-index:10060;
+padding:18px;
+}
+
+.ratingBox{
+background:white;
+max-width:440px;
+margin:80px auto;
+border-radius:12px;
+padding:18px;
+box-shadow:0 22px 60px rgba(15,23,42,0.3);
+}
+
+.starPicker{
+display:flex;
+gap:6px;
+justify-content:center;
+margin:12px 0;
+}
+
+.starPicker button{
+background:#f8fafc;
+color:#f59e0b;
+font-size:30px;
+line-height:1;
+padding:8px 10px;
+margin:0;
+}
+
+.starPicker button.selected{
+background:#fef3c7;
+}
+
+.ratingBox textarea{
+width:100%;
+min-height:90px;
+border:1px solid #cbd5e1;
+border-radius:8px;
+padding:10px;
+font:inherit;
+resize:vertical;
+}
+
+.toast{
+position:fixed;
+right:18px;
+bottom:18px;
+width:min(360px,calc(100vw - 36px));
+background:linear-gradient(135deg,#111827,#1f2937);
+color:white;
+padding:15px 16px 15px 52px;
+border-radius:14px;
+box-shadow:0 18px 45px rgba(15,23,42,0.28);
+z-index:20000;
+line-height:1.45;
+font-weight:700;
+opacity:0;
+transform:translateY(14px);
+pointer-events:none;
+transition:opacity .22s ease, transform .22s ease;
+border:1px solid rgba(255,255,255,0.16);
+}
+
+.toast::before{
+content:"!";
+position:absolute;
+left:16px;
+top:50%;
+transform:translateY(-50%);
+width:24px;
+height:24px;
+border-radius:999px;
+display:grid;
+place-items:center;
+background:rgba(255,255,255,0.18);
+font-weight:900;
+}
+
+.toast.show{
+opacity:1;
+transform:translateY(0);
+pointer-events:auto;
+}
+
+.toast.success{background:linear-gradient(135deg,#15803d,#166534);}
+.toast.warning{background:linear-gradient(135deg,#b45309,#92400e);}
+.toast.error{background:linear-gradient(135deg,#dc2626,#991b1b);}
+.toast.success::before{content:"OK";}
+.toast.warning::before{content:"i";}
+.toast.error::before{content:"x";}
 
 .badge{
 display:inline-block;
@@ -217,6 +392,10 @@ background:black;
 z-index:9999;
 }
 
+.photoModal{
+z-index:10050;
+}
+
 .backBtn{
 position:absolute;
 top:10px;
@@ -235,6 +414,7 @@ height:100%;
 overflow-x:auto;
 white-space:nowrap;
 scroll-snap-type:x mandatory;
+scroll-behavior:smooth;
 }
 
 .photoSlide{
@@ -242,6 +422,7 @@ display:inline-block;
 width:100%;
 height:100%;
 scroll-snap-align:start;
+position:relative;
 }
 
 .photoSlide img{
@@ -250,22 +431,106 @@ height:100%;
 object-fit:contain;
 }
 
+.photoCount{
+position:absolute;
+right:14px;
+bottom:14px;
+background:rgba(15,23,42,0.78);
+color:white;
+padding:6px 10px;
+border-radius:999px;
+font-weight:bold;
+font-size:13px;
+}
+
 .detailsContent{
-background:white;
-width:100%;
-height:100%;
+background:#f8fafc;
+width:min(920px,100%);
+min-height:100%;
+margin:0 auto;
 overflow:auto;
+box-shadow:0 0 40px rgba(15,23,42,0.25);
 }
 
 .detailsImage{
 width:100%;
-height:300px;
+height:320px;
 object-fit:cover;
 }
 
 .detailsBody{
-padding:15px;
-line-height:1.9;
+padding:18px;
+line-height:1.65;
+}
+
+.detailsTitle{
+font-size:26px;
+line-height:1.2;
+margin:4px 0 10px;
+color:#0f172a;
+}
+
+.detailsPrice{
+font-size:24px;
+font-weight:900;
+color:#15803d;
+margin-bottom:4px;
+}
+
+.detailsLocation{
+font-weight:800;
+color:#334155;
+margin-bottom:12px;
+}
+
+.detailsGrid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:10px;
+margin:14px 0;
+}
+
+.detailItem{
+background:white;
+border:1px solid #e2e8f0;
+border-radius:8px;
+padding:10px;
+}
+
+.detailItem b{
+display:block;
+font-size:12px;
+text-transform:uppercase;
+color:#64748b;
+margin-bottom:4px;
+}
+
+.detailHint{
+display:block;
+font-size:12px;
+color:#94a3b8;
+margin-bottom:6px;
+line-height:1.35;
+}
+
+.detailValue{
+display:block;
+font-weight:800;
+color:#0f172a;
+word-break:break-word;
+}
+
+.detailsSection{
+background:white;
+border:1px solid #e2e8f0;
+border-radius:8px;
+padding:12px;
+margin-top:12px;
+}
+
+.detailsSection h3{
+margin:0 0 8px;
+font-size:16px;
 }
 
 .chatModal{
@@ -414,6 +679,16 @@ height:200px;
 
 <div class="grid" id="list"></div>
 
+<nav class="bottomNav">
+<button onclick="browseProperties()"><span>Home</span>Houses</button>
+<button onclick="focusSearch()"><span>Search</span>Search</button>
+<button onclick="openAllHousesMap()"><span>Map</span>Map</button>
+<button onclick="showWishlist()"><span>Wish</span>Wishlist</button>
+<button onclick="toggleMenu()"><span>Menu</span>Menu</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
 <div class="modal" id="mapModal"></div>
 
 <div class="photoModal" id="photoModal">
@@ -423,6 +698,24 @@ height:200px;
 
 <div class="detailsModal" id="detailsModal">
 <div class="detailsContent" id="detailsContent"></div>
+</div>
+
+<div class="ratingModal" id="ratingModal">
+<div class="ratingBox">
+<h2>Rate Property</h2>
+<div class="starPicker" id="starPicker">
+<button onclick="selectRating(1)">☆</button>
+<button onclick="selectRating(2)">☆</button>
+<button onclick="selectRating(3)">☆</button>
+<button onclick="selectRating(4)">☆</button>
+<button onclick="selectRating(5)">☆</button>
+</div>
+<textarea id="ratingComment" placeholder="Leave a comment about this property (optional)"></textarea>
+<div class="detailsActions">
+<button class="ratingbtn" onclick="submitRating()">Submit rating</button>
+<button class="detailsbtn" onclick="closeRatingModal()">Cancel</button>
+</div>
+</div>
 </div>
 
 <div class="chatModal" id="chatModal">
@@ -478,9 +771,15 @@ document.getElementById("searchBox").focus();
 document.getElementById("list").scrollIntoView({behavior:"smooth"});
 }
 
+function focusSearch(){
+closeMenu();
+document.getElementById("searchBox").focus();
+document.querySelector(".filters").scrollIntoView({behavior:"smooth"});
+}
+
 function contactUs(){
 closeMenu();
-alert("Contact DeKUT Housing support: support@dekuthousing.com");
+showToast("Contact DeKUT Housing support: support@dekuthousing.com", "success");
 }
 
 function toggleTheme(){
@@ -493,21 +792,37 @@ if(localStorage.getItem("theme") === "dark"){
 document.body.classList.add("dark");
 }
 
-function requireUser(){
+function requireUser(action){
 if(currentUser) return true;
-alert("Please login or create a user account first.");
-window.location.href = "user-login.html";
+let feature = action || "this feature";
+showToast("Please create an account or login first to use " + feature + ".", "warning");
+clearTimeout(window.loginRedirectTimer);
+window.loginRedirectTimer = setTimeout(()=> window.location.href = "user-signup.html", 1800);
 return false;
+}
+
+function showToast(message, type="success"){
+let toast = document.getElementById("toast");
+toast.className = "toast " + type + " show";
+toast.innerText = message;
+clearTimeout(window.toastTimer);
+window.toastTimer = setTimeout(()=>{
+toast.className = "toast";
+},3200);
 }
 
 /* DATA */
 let data = {};
 let filteredArray = [];
 let currentUser = null;
+let currentUserProfile = null;
 let wishlist = {};
 let ratings = {};
 let activeChat = null;
 let activeChatMessagesRef = null;
+let userNotificationsRef = null;
+let activeRatingPropertyId = null;
+let selectedRating = 0;
 const DEKUT_LAT = -0.3977905;
 const DEKUT_LNG = 36.9608515;
 
@@ -537,14 +852,30 @@ applyFilters();
 auth.onAuthStateChanged(user=>{
 if(user){
 currentUser = user;
+db.ref("users/" + user.uid).once("value").then(snap=>{
+currentUserProfile = snap.val() || {};
+});
 db.ref("wishlists/" + user.uid).on("value", snap=>{
 wishlist = snap.val() || {};
 applyFilters();
+});
+if(userNotificationsRef) userNotificationsRef.off();
+const notifyFrom = Date.now();
+userNotificationsRef = db.ref("notifications/users/" + user.uid).orderByChild("createdAt").startAt(notifyFrom);
+userNotificationsRef.on("child_added", snap=>{
+let note = snap.val() || {};
+showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
+db.ref("notifications/users/" + user.uid + "/" + snap.key).update({read:true});
 });
 return;
 }
 
 currentUser = null;
+currentUserProfile = null;
+if(userNotificationsRef){
+userNotificationsRef.off();
+userNotificationsRef = null;
+}
 wishlist = {};
 applyFilters();
 });
@@ -614,27 +945,62 @@ let propertyRatings = ratings[propertyId] || {};
 let values = Object.values(propertyRatings).map(item => Number(item.rating || 0)).filter(Boolean);
 if(values.length === 0) return "No ratings yet";
 let total = values.reduce((sum, rating) => sum + rating, 0);
-return (total / values.length).toFixed(1) + " stars (" + values.length + ")";
+let avg = total / values.length;
+return "<span class='stars'>" + renderStars(avg) + "</span> " + avg.toFixed(1) + " (" + values.length + ")";
+}
+
+function renderStars(value){
+let rounded = Math.round(Number(value || 0));
+let stars = "";
+for(let i = 1; i <= 5; i++){
+stars += i <= rounded ? "★" : "☆";
+}
+return stars;
+}
+
+function getRatingComments(propertyId){
+let propertyRatings = ratings[propertyId] || {};
+return Object.values(propertyRatings)
+.filter(item => item.comment)
+.sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0))
+.map(item=>`
+<div class="message">
+<b>${item.userName || "User"} rated <span class="stars">${renderStars(item.rating)}</span></b>
+${item.comment}
+</div>
+`).join("");
 }
 
 function isWishlisted(propertyId){
 return wishlist[propertyId] === true;
 }
 
-function toggleWishlist(propertyId){
-if(!requireUser()) return;
+function toggleWishlist(propertyId, button){
+if(!requireUser("wishlist")) return;
 
 let ref = db.ref("wishlists/" + currentUser.uid + "/" + propertyId);
 if(isWishlisted(propertyId)){
-ref.remove();
+ref.remove()
+.then(()=>{
+wishlist[propertyId] = false;
+if(button) button.innerText = "Add to wishlist";
+showToast("Removed from wishlist.", "success");
+})
+.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
 }else{
-ref.set(true);
+ref.set(true)
+.then(()=>{
+wishlist[propertyId] = true;
+if(button) button.innerText = "Wishlisted";
+showToast("Property added to wishlist successfully.", "success");
+})
+.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
 }
 }
 
 function showWishlist(){
 closeMenu();
-if(!requireUser()) return;
+if(!requireUser("wishlist")) return;
 
 filteredArray = [];
 for(let id in data){
@@ -651,21 +1017,54 @@ document.getElementById("list").scrollIntoView({behavior:"smooth"});
 }
 
 function rateProperty(propertyId){
-if(!requireUser()) return;
+if(!requireUser("rating")) return;
 
-let value = prompt("Rate this property from 1 to 5");
-if(value === null) return;
+activeRatingPropertyId = propertyId;
+selectedRating = 0;
+document.getElementById("ratingComment").value = "";
+updateStarPicker();
+document.getElementById("ratingModal").style.display = "block";
+}
 
-let rating = Number(value);
-if(!Number.isInteger(rating) || rating < 1 || rating > 5){
-alert("Please enter a whole number from 1 to 5.");
+function selectRating(value){
+selectedRating = value;
+updateStarPicker();
+}
+
+function updateStarPicker(){
+let buttons = document.querySelectorAll("#starPicker button");
+buttons.forEach((button,index)=>{
+button.innerText = index < selectedRating ? "★" : "☆";
+button.classList.toggle("selected", index < selectedRating);
+});
+}
+
+function closeRatingModal(){
+document.getElementById("ratingModal").style.display = "none";
+activeRatingPropertyId = null;
+selectedRating = 0;
+}
+
+function submitRating(){
+if(!requireUser("rating") || !activeRatingPropertyId) return;
+if(!selectedRating){
+showToast("Please choose a star rating first.", "warning");
 return;
 }
 
-db.ref("ratings/" + propertyId + "/" + currentUser.uid).set({
-rating,
+let comment = document.getElementById("ratingComment").value.trim();
+db.ref("ratings/" + activeRatingPropertyId + "/" + currentUser.uid).set({
+rating: selectedRating,
+comment,
+userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "User",
+userEmail: currentUser.email || "",
 createdAt: Date.now()
-});
+})
+.then(()=>{
+closeRatingModal();
+showToast("Rating submitted successfully.", "success");
+})
+.catch(()=> showToast("Please login or sign up first to access rating.", "warning"));
 }
 
 function getChatId(propertyId){
@@ -673,23 +1072,24 @@ return propertyId + "_" + currentUser.uid;
 }
 
 function openChat(encoded){
-if(!requireUser()) return;
+if(!requireUser("chat")) return;
 
 let p = JSON.parse(decodeURIComponent(encoded));
 if(!p.landlordUid){
-alert("This listing does not have a landlord account attached yet.");
+showToast("This listing does not have a landlord account attached yet.", "error");
 return;
 }
 
 activeChat = {
 id: getChatId(p.id),
 propertyId: p.id,
-propertyTitle: p.type || "Property",
+propertyTitle: p.propertyName || p.houseName || p.type || "Property",
 propertyLocation: p.location || "",
 landlordUid: p.landlordUid,
 landlordEmail: p.landlordEmail || "",
 userUid: currentUser.uid,
-userEmail: currentUser.email || ""
+userEmail: currentUser.email || "",
+userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "Student"
 };
 
 document.getElementById("chatTitle").innerText =
@@ -705,8 +1105,9 @@ landlordUid: activeChat.landlordUid,
 landlordEmail: activeChat.landlordEmail,
 userUid: activeChat.userUid,
 userEmail: activeChat.userEmail,
+userName: activeChat.userName,
 updatedAt: Date.now()
-});
+}).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
 
 if(activeChatMessagesRef){
 activeChatMessagesRef.off();
@@ -739,7 +1140,7 @@ box.scrollTop = box.scrollHeight;
 }
 
 function sendChatMessage(){
-if(!requireUser() || !activeChat) return;
+if(!requireUser("chat") || !activeChat) return;
 
 let input = document.getElementById("chatInput");
 let text = input.value.trim();
@@ -748,9 +1149,10 @@ if(!text) return;
 db.ref("chats/" + activeChat.id + "/messages").push({
 senderUid: currentUser.uid,
 senderRole: "user",
+senderName: activeChat.userName,
 text,
 createdAt: Date.now()
-});
+}).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
 
 db.ref("chats/" + activeChat.id).update({
 lastMessage: text,
@@ -761,8 +1163,8 @@ db.ref("notifications/landlords/" + activeChat.landlordUid).push({
 type: "message",
 chatId: activeChat.id,
 propertyId: activeChat.propertyId,
-title: "New message from user",
-body: text,
+title: "New message from " + activeChat.userName,
+body: activeChat.userName + ": " + text,
 read: false,
 createdAt: Date.now()
 });
@@ -792,9 +1194,26 @@ let nextItems = filteredArray.slice(renderIndex, renderIndex + PAGE_SIZE);
 nextItems.forEach(p=>{
 
 let img = p.images?.[0] || "";
-let statusClass = (p.status||"").toLowerCase()==="available" ? "available":"occupied";
-let ratingSummary = getRatingSummary(p.id);
-let saved = isWishlisted(p.id);
+let statusClass = (p.status||p.availability||"").toLowerCase()==="available" ? "available":"occupied";
+
+list.innerHTML += `
+<div class="card">
+
+${img?`<img src="${img}" onclick='openDetails("${safe(p)}")'>`:``}
+
+<div class="cardContent">
+<div class="cardName">${p.propertyName||p.houseName||p.type||"Property"}</div>
+<div class="cardType">${p.type||""}</div>
+<div class="cardPrice">KSh ${p.rent||""}</div>
+<div class="cardLocation">${p.location||""}</div>
+<div class="cardDetail">${p.distance ? p.distance + " KM from DeKUT" : ""}</div>
+<div class="cardMetaRow">
+<div class="badge ${statusClass}">${p.status||p.availability||""}</div>
+</div>
+<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>View Details</button>
+</div>
+</div>`;
+return;
 
 list.innerHTML += `
 <div class="card">
@@ -813,7 +1232,7 @@ ${img?`<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
 <div class="badge ${statusClass}">${p.status||""}</div>
 
 <div class="miniActions">
-<button class="wishlist" onclick="toggleWishlist('${p.id}')">${saved ? "Saved" : "Wishlist"}</button>
+<button class="wishlist" onclick="toggleWishlist('${p.id}', this)">${saved ? "Wishlisted" : "Add to wishlist"}</button>
 <button class="ratingbtn" onclick="rateProperty('${p.id}')">Rate</button>
 <button class="chatbtn" onclick='openChat("${safe(p)}")'>Chat</button>
 </div>
@@ -854,14 +1273,101 @@ applyFilters();
 }
 
 /* DETAILS */
+function detailValue(value, fallback="Not provided"){
+if(value === undefined || value === null || value === "") return fallback;
+return value;
+}
+
+function detailItem(label, hint, value){
+return `
+<div class="detailItem">
+<b>${label}</b>
+<span class="detailHint">${hint}</span>
+<span class="detailValue">${detailValue(value)}</span>
+</div>`;
+}
+
 function openDetails(encoded){
 
 let p = JSON.parse(decodeURIComponent(encoded));
+let ratingSummary = getRatingSummary(p.id);
+let saved = isWishlisted(p.id);
+let statusClass = (p.status||p.availability||"").toLowerCase()==="available" ? "available":"occupied";
+
+document.getElementById("detailsContent").innerHTML=`
+<div class="backBtn" onclick="closeDetails()">Back</div>
+
+${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
+
+<div class="detailsBody">
+<h2 class="detailsTitle">${p.propertyName || p.houseName || p.type || "Property"}</h2>
+<div class="detailsPrice">KSh ${p.rent || ""}</div>
+<div class="detailsLocation">${p.location || ""}</div>
+<div class="badge ${statusClass}">${p.status || p.availability || ""}</div>
+<div class="ratingLine">Rating: ${ratingSummary}</div>
+
+<div class="detailsActions">
+<button class="wishlist" onclick="toggleWishlist('${p.id}', this)">${saved ? "Wishlisted" : "Add to wishlist"}</button>
+<button class="ratingbtn" onclick="rateProperty('${p.id}')">Rate</button>
+<button class="chatbtn" onclick='closeDetails(); openChat("${safe(p)}")'>Chat</button>
+</div>
+
+<div class="detailsGrid">
+${detailItem("House / apartment name", "Name the landlord gave this property.", p.propertyName || p.houseName)}
+${detailItem("House type", "The kind of unit being advertised.", p.type)}
+${detailItem("Monthly rent", "Amount paid for rent each month.", p.rent ? "KSh " + p.rent : "")}
+${detailItem("Deposit amount", "One-time deposit requested before moving in.", p.deposit ? "KSh " + p.deposit : "")}
+${detailItem("Location name", "Area or estate where the property is located.", p.location)}
+${detailItem("Distance from DeKUT", "Approximate distance calculated from DeKUT.", p.distance ? p.distance + " KM" : "")}
+${detailItem("Availability status", "Whether the room is currently available or occupied.", p.status || p.availability)}
+${detailItem("Rooms available", "Number of rooms the landlord says are available.", p.roomsAvailable)}
+${detailItem("Preferred occupants", "Who the landlord prefers for this listing.", p.gender)}
+${detailItem("Utilities included in rent?", "Whether rent covers utilities fully, partly, or not at all.", p.utilities)}
+${detailItem("Utilities included when partial", "If partially included, these are the utilities covered by rent.", p.includedUtilities)}
+${detailItem("Maximum occupants", "For shared listings, the maximum number of people allowed.", p.maxOccupants)}
+${detailItem("Shared rent arrangement", "For shared listings, whether rent is per person or shared among occupants.", p.sharedRentType)}
+${detailItem("Photos uploaded", "Number of property photos provided by the landlord.", Array.isArray(p.images) ? p.images.length : 0)}
+${detailItem("GPS latitude", "Captured map latitude for the property.", p.lat)}
+${detailItem("GPS longitude", "Captured map longitude for the property.", p.lng)}
+${detailItem("Landlord phone", "Phone number provided for calls or WhatsApp.", p.phone)}
+${detailItem("Landlord email", "Email address attached to the landlord account.", p.landlordEmail)}
+${detailItem("Admin review status", "Approval state of this listing.", p.reviewStatus)}
+</div>
+
+<div class="detailsSection">
+<h3>Available utilities and amenities</h3>
+<div class="detailHint">Facilities or utilities the landlord selected, plus any extra amenities they typed.</div>
+${p.amenities || "No amenities listed."}
+</div>
+
+<div class="detailsSection">
+<h3>Property description</h3>
+<div class="detailHint">Extra explanation written by the landlord about the house or room.</div>
+${p.extra || "No description added."}
+</div>
+
+<div class="detailsSection">
+<h3>Rating comments</h3>
+<div class="detailHint">Comments left by users after rating this property.</div>
+${getRatingComments(p.id) || "No comments yet."}
+</div>
+
+<div class="detailsActions">
+${Array.isArray(p.images) && p.images.length ? `<button class="photosbtn" onclick='openPhotos("${safe(p.images||[])}")'>View Photos</button>` : ""}
+<button class="call" onclick="window.location.href='tel:${p.phone || ""}'">Call Landlord</button>
+<button class="whatsapp" onclick="window.open('https://wa.me/${String(p.phone || "").replace(/\D/g,"")}')">WhatsApp</button>
+<button class="mapbtn" onclick='closeDetails(); openMap("${safe(p)}")'>View Map</button>
+</div>
+
+</div>`;
+
+document.getElementById("detailsModal").style.display="block";
+return;
 
 document.getElementById("detailsContent").innerHTML=`
 <div class="backBtn" onclick="closeDetails()">⬅ Back</div>
 
-${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
+${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
 
 <div class="detailsBody">
 
@@ -896,14 +1402,23 @@ document.getElementById("detailsModal").style.display="block";
 function openPhotos(encoded){
 
 let imgs = JSON.parse(decodeURIComponent(encoded));
+if(!Array.isArray(imgs) || imgs.length === 0){
+showToast("No property photos available yet.", "warning");
+return;
+}
 let c = document.getElementById("photoContainer");
 c.innerHTML="";
 
-imgs.forEach(i=>{
-c.innerHTML += `<div class="photoSlide"><img src="${i}"></div>`;
+imgs.forEach((i,index)=>{
+c.innerHTML += `
+<div class="photoSlide">
+<img src="${i}">
+<div class="photoCount">${index + 1} / ${imgs.length}</div>
+</div>`;
 });
 
 document.getElementById("photoModal").style.display="block";
+c.scrollLeft = 0;
 }
 
 /* MAP */
