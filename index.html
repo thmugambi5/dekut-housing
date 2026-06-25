@@ -247,7 +247,7 @@ bottom:0;
 height:66px;
 background:white;
 display:grid;
-grid-template-columns:repeat(5,1fr);
+grid-template-columns:repeat(3,1fr);
 gap:4px;
 padding:8px;
 box-shadow:0 -10px 30px rgba(15,23,42,0.14);
@@ -446,10 +446,13 @@ font-size:13px;
 .detailsContent{
 background:#f8fafc;
 width:min(920px,100%);
-min-height:100%;
+height:100vh;
 margin:0 auto;
-overflow:auto;
+overflow-y:auto;
+overflow-x:hidden;
 box-shadow:0 0 40px rgba(15,23,42,0.25);
+padding-bottom:96px;
+scroll-behavior:smooth;
 }
 
 .detailsImage{
@@ -459,7 +462,7 @@ object-fit:cover;
 }
 
 .detailsBody{
-padding:18px;
+padding:18px 18px 120px;
 line-height:1.65;
 }
 
@@ -540,47 +543,144 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:white;
+background:#efeae2;
 z-index:10000;
-overflow:auto;
+overflow:hidden;
 }
 
 .chatBox{
-max-width:720px;
-margin:60px auto 20px;
-padding:14px;
+max-width:760px;
+height:100vh;
+margin:0 auto;
+display:flex;
+flex-direction:column;
+background:#efeae2;
+box-shadow:0 0 40px rgba(15,23,42,0.22);
+}
+
+.chatHeader{
+background:#075e54;
+color:white;
+padding:12px 14px;
+display:flex;
+align-items:center;
+gap:10px;
+box-shadow:0 2px 10px rgba(15,23,42,0.18);
+}
+
+.chatHeader .backBtn{
+position:static;
+background:#128c7e;
+color:white;
+margin:0;
+padding:8px 10px;
+}
+
+.chatAvatar{
+width:38px;
+height:38px;
+border-radius:50%;
+background:#25d366;
+display:grid;
+place-items:center;
+font-weight:900;
+}
+
+.chatHeading{
+flex:1;
+min-width:0;
+}
+
+.chatHeading h2{
+font-size:16px;
+margin:0;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+.chatHeading small{
+display:block;
+opacity:.86;
+margin-top:2px;
 }
 
 .messages{
-background:#f8fafc;
-border-radius:10px;
-padding:12px;
-height:55vh;
+flex:1;
+background:#efeae2;
+background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.28) 25%,transparent 25%);
+background-size:32px 32px;
+padding:16px 12px;
 overflow:auto;
 }
 
 .message{
+max-width:min(76%,520px);
 margin:8px 0;
-line-height:1.4;
+line-height:1.35;
+padding:8px 10px;
+border-radius:8px;
+box-shadow:0 1px 2px rgba(15,23,42,0.14);
+clear:both;
+word-wrap:break-word;
 }
 
 .message b{
 display:block;
 font-size:12px;
-color:#64748b;
+color:#667781;
+margin-bottom:3px;
+}
+
+.message.received{
+background:white;
+float:left;
+border-top-left-radius:2px;
+}
+
+.message.sent{
+background:#dcf8c6;
+float:right;
+border-top-right-radius:2px;
+}
+
+.message.emptyChat{
+float:none;
+max-width:100%;
+margin:20px auto;
+text-align:center;
+background:rgba(255,255,255,.85);
+color:#667781;
 }
 
 .chatInput{
 display:flex;
 gap:8px;
-margin-top:10px;
+padding:10px;
+background:#f0f2f5;
+align-items:center;
 }
 
 .chatInput input{
 flex:1;
 padding:12px;
-border:1px solid #cbd5e1;
-border-radius:8px;
+border:0;
+border-radius:999px;
+background:white;
+outline:none;
+font-size:15px;
+}
+
+.sendBtn{
+width:44px;
+height:44px;
+border-radius:50%;
+background:#128c7e;
+color:white;
+margin:0;
+font-size:18px;
+display:grid;
+place-items:center;
 }
 
 #map{width:100%;height:100%;}
@@ -623,10 +723,8 @@ height:200px;
 <nav id="sideMenu" class="sideMenu">
 <h2>Menu</h2>
 <a href="index.html">Home</a>
-<button onclick="browseProperties()">Browse Properties</button>
 <a href="landlord-signup.html">Landlord Signup</a>
 <a href="user-login.html">User Login</a>
-<button onclick="showWishlist()">Wishlist</button>
 <button onclick="openAllHousesMap()">Map View</button>
 <button onclick="toggleTheme()">Dark / Light Mode</button>
 <button onclick="contactUs()">Contact Us</button>
@@ -680,11 +778,9 @@ height:200px;
 <div class="grid" id="list"></div>
 
 <nav class="bottomNav">
-<button onclick="browseProperties()"><span>Home</span>Houses</button>
-<button onclick="focusSearch()"><span>Search</span>Search</button>
-<button onclick="openAllHousesMap()"><span>Map</span>Map</button>
+<button onclick="browseProperties()"><span>Home</span>Home</button>
 <button onclick="showWishlist()"><span>Wish</span>Wishlist</button>
-<button onclick="toggleMenu()"><span>Menu</span>Menu</button>
+<button onclick="openProfile()"><span>Profile</span>Profile</button>
 </nav>
 
 <div id="toast" class="toast"></div>
@@ -719,13 +815,19 @@ height:200px;
 </div>
 
 <div class="chatModal" id="chatModal">
-<div class="backBtn" onclick="closeChat()">Back</div>
 <div class="chatBox">
+<div class="chatHeader">
+<button class="backBtn" onclick="closeChat()">Back</button>
+<div class="chatAvatar">L</div>
+<div class="chatHeading">
 <h2 id="chatTitle">Property Chat</h2>
+<small>Landlord chat</small>
+</div>
+</div>
 <div class="messages" id="chatMessages"></div>
 <div class="chatInput">
 <input id="chatInput" placeholder="Type your message">
-<button class="chatbtn" onclick="sendChatMessage()">Send</button>
+<button class="sendBtn" onclick="sendChatMessage()">➤</button>
 </div>
 </div>
 </div>
@@ -777,6 +879,16 @@ document.getElementById("searchBox").focus();
 document.querySelector(".filters").scrollIntoView({behavior:"smooth"});
 }
 
+function openProfile(){
+closeMenu();
+if(!currentUser){
+showToast("Please create an account or login first to view your profile.", "warning");
+setTimeout(()=> window.location.href = "user-signup.html", 1200);
+return;
+}
+showToast("Profile: " + (currentUserProfile?.name || currentUser.email || "User"), "success");
+}
+
 function contactUs(){
 closeMenu();
 showToast("Contact DeKUT Housing support: support@dekuthousing.com", "success");
@@ -820,6 +932,7 @@ let wishlist = {};
 let ratings = {};
 let activeChat = null;
 let activeChatMessagesRef = null;
+let activeChatMessages = {};
 let userNotificationsRef = null;
 let activeRatingPropertyId = null;
 let selectedRating = 0;
@@ -1093,7 +1206,7 @@ userName: currentUserProfile?.name || currentUser.displayName || currentUser.ema
 };
 
 document.getElementById("chatTitle").innerText =
-"Chat about " + activeChat.propertyTitle + " - " + activeChat.propertyLocation;
+activeChat.propertyTitle + " - " + activeChat.propertyLocation;
 
 document.getElementById("chatModal").style.display = "block";
 
@@ -1116,27 +1229,58 @@ activeChatMessagesRef.off();
 activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
 activeChatMessagesRef.on("value", snap=>{
 let messages = snap.val() || {};
+activeChatMessages = messages;
 renderChatMessages(messages);
 });
 }
 
 function renderChatMessages(messages){
-let rows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+let rows = Object.entries(messages).map(([id,message])=>({id,...message})).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
 let box = document.getElementById("chatMessages");
 
 if(rows.length === 0){
-box.innerHTML = "<div class='message'>No messages yet. Start the conversation.</div>";
+box.innerHTML = "<div class='message emptyChat'>No messages yet. Start the conversation.</div>";
 return;
 }
 
 box.innerHTML = rows.map(m=>`
-<div class="message">
+<div class="message ${m.senderRole === "user" ? "sent" : "received"}">
 <b>${m.senderRole === "user" ? "You" : "Landlord"}</b>
 ${m.text || ""}
+${m.editedAt ? "<small>Edited</small>" : ""}
+${m.senderUid === currentUser?.uid ? `
+<div style="margin-top:6px;">
+<button onclick="editChatMessage('${m.id}')" style="padding:4px 8px;font-size:12px;">Edit</button>
+<button onclick="deleteChatMessage('${m.id}')" style="padding:4px 8px;font-size:12px;background:#ef4444;color:white;">Delete</button>
+</div>
+` : ""}
 </div>
 `).join("");
 
 box.scrollTop = box.scrollHeight;
+}
+
+function editChatMessage(messageId){
+if(!activeChat) return;
+const current = activeChatMessages[messageId]?.text || "";
+const text = prompt("Edit your message", current);
+if(text === null) return;
+const trimmed = text.trim();
+if(!trimmed) return;
+db.ref("chats/" + activeChat.id + "/messages/" + messageId).update({
+text: trimmed,
+editedAt: Date.now()
+});
+db.ref("chats/" + activeChat.id).update({
+lastMessage: trimmed,
+updatedAt: Date.now()
+});
+}
+
+function deleteChatMessage(messageId){
+if(!activeChat) return;
+if(!confirm("Delete this message?")) return;
+db.ref("chats/" + activeChat.id + "/messages/" + messageId).remove();
 }
 
 function sendChatMessage(){
@@ -1327,11 +1471,7 @@ ${detailItem("Utilities included when partial", "If partially included, these ar
 ${detailItem("Maximum occupants", "For shared listings, the maximum number of people allowed.", p.maxOccupants)}
 ${detailItem("Shared rent arrangement", "For shared listings, whether rent is per person or shared among occupants.", p.sharedRentType)}
 ${detailItem("Photos uploaded", "Number of property photos provided by the landlord.", Array.isArray(p.images) ? p.images.length : 0)}
-${detailItem("GPS latitude", "Captured map latitude for the property.", p.lat)}
-${detailItem("GPS longitude", "Captured map longitude for the property.", p.lng)}
 ${detailItem("Landlord phone", "Phone number provided for calls or WhatsApp.", p.phone)}
-${detailItem("Landlord email", "Email address attached to the landlord account.", p.landlordEmail)}
-${detailItem("Admin review status", "Approval state of this listing.", p.reviewStatus)}
 </div>
 
 <div class="detailsSection">
@@ -1362,6 +1502,7 @@ ${Array.isArray(p.images) && p.images.length ? `<button class="photosbtn" onclic
 </div>`;
 
 document.getElementById("detailsModal").style.display="block";
+document.getElementById("detailsContent").scrollTop = 0;
 return;
 
 document.getElementById("detailsContent").innerHTML=`
