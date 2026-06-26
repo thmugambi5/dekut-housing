@@ -38,20 +38,53 @@ body{
   display:none;
 }
 
-/* SIDEBAR */
-.sidebar{
-  position:fixed;
-  left:0;
+/* TOP MENU */
+.adminTopbar{
+  position:sticky;
   top:0;
-  width:220px;
-  height:100%;
-  background:#111;
-  color:white;
-  padding:20px;
-  overflow:auto;
+  z-index:5000;
+  background:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 18px;
+  box-shadow:0 2px 12px rgba(15,23,42,0.08);
 }
 
-.sidebar h2{ margin-top:0; }
+.adminTopbar h1{
+  margin:0;
+  font-size:22px;
+}
+
+.hamburger{
+  background:#111827;
+  color:white;
+  border-radius:10px;
+  width:46px;
+  height:42px;
+  font-size:22px;
+  line-height:1;
+}
+
+.sidebar{
+  position:fixed;
+  right:18px;
+  top:64px;
+  width:240px;
+  height:auto;
+  background:#111;
+  color:white;
+  padding:12px;
+  overflow:auto;
+  border-radius:14px;
+  box-shadow:0 18px 48px rgba(15,23,42,0.28);
+  z-index:6000;
+  display:none;
+}
+
+.sidebar.open{ display:block; }
+
+.sidebar h2{ margin:6px 8px 10px; font-size:17px; }
 
 .sidebar button{
   width:100%;
@@ -69,7 +102,6 @@ body{
 
 /* MAIN */
 .main{
-  margin-left:240px;
   padding:20px;
 }
 
@@ -160,6 +192,82 @@ button{
 .messages{background:#f8fafc;border-radius:8px;padding:10px;max-height:260px;overflow:auto;margin-top:10px}
 .message{margin:8px 0;line-height:1.4}
 .message b{display:block;font-size:12px;color:#64748b}
+.adminChatShell{
+  display:grid;
+  grid-template-columns:minmax(270px,360px) 1fr;
+  min-height:620px;
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+  box-shadow:0 12px 34px rgba(15,23,42,0.12);
+}
+.adminChatThreads{
+  background:#f8fafc;
+  border-right:1px solid #dbe5df;
+  overflow:auto;
+}
+.adminChatThread{
+  display:block;
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  border-radius:0;
+  padding:14px;
+  margin:0;
+}
+.adminChatThread.active,.adminChatThread:hover{background:#e7f7ee}
+.threadTitle{display:block;font-weight:bold;color:#172033}
+.threadMeta{display:block;color:#64748b;font-size:13px;margin-top:3px}
+.adminChatWindow{background:#efeae2;display:flex;flex-direction:column;min-width:0}
+.adminChatHeader{
+  background:#075e54;
+  color:white;
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.adminChatHeader strong{display:block}
+.adminChatHeader small{display:block;color:#dcfce7;margin-top:2px}
+.adminChatMessages{padding:16px;overflow:auto;flex:1}
+.adminBubble{
+  max-width:78%;
+  background:white;
+  border-radius:10px;
+  padding:9px 34px 9px 11px;
+  margin:8px 0;
+  line-height:1.45;
+  box-shadow:0 1px 2px rgba(15,23,42,0.1);
+  position:relative;
+}
+.adminBubble.landlord{margin-left:auto;background:#dcf8c6}
+.adminBubble b{display:block;color:#475569;font-size:12px;margin-bottom:3px}
+.adminBubble small{display:block;color:#64748b;margin-top:4px}
+.msgMenu{position:absolute;right:5px;top:3px}
+.msgMenu summary{list-style:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.msgMenu summary::-webkit-details-marker{display:none}
+.msgMenu[open] summary,.msgMenu summary:hover{background:rgba(0,0,0,.08)}
+.msgMenuList{position:absolute;right:0;top:26px;min-width:138px;background:white;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.22);padding:6px;z-index:20}
+.msgMenuList button{display:block;width:100%;margin:0;padding:9px 10px;border:0;border-radius:8px;background:white;color:#111827;text-align:left;font-weight:bold}
+.msgMenuList button:hover{background:#f1f5f9}
+.msgMenuList button.dangerText{color:#dc2626}
+.photoGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  margin:12px 0 18px;
+}
+.photoGrid img{
+  width:100%;
+  height:190px;
+  object-fit:cover;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(15,23,42,0.12);
+}
 
 /* DETAILS MODAL */
 .modal{
@@ -192,8 +300,11 @@ button{
 
 /* MOBILE */
 @media(max-width:768px){
-  .sidebar{ position:relative; width:100%; height:auto; }
-  .main{ margin-left:0; }
+  .sidebar{ right:10px; left:10px; top:62px; width:auto; }
+  .main{ padding:14px; }
+  .adminChatShell{grid-template-columns:1fr;min-height:calc(100vh - 160px)}
+  .adminChatThreads{max-height:260px;border-right:0;border-bottom:1px solid #dbe5df}
+  .adminChatHeader{display:block}
 }
 
 </style>
@@ -210,7 +321,12 @@ button{
 <!-- MAIN APP -->
 <div id="app">
 
-<div class="sidebar">
+<div class="adminTopbar">
+  <h1>Dashboard</h1>
+  <button class="hamburger" onclick="toggleAdminMenu()" aria-label="Open admin menu">☰</button>
+</div>
+
+<div class="sidebar" id="adminMenu">
 
   <h2>🏠 Admin Panel</h2>
 
@@ -227,8 +343,6 @@ button{
 </div>
 
 <div class="main">
-
-  <h1>Dashboard</h1>
 
   <div class="stats">
 
@@ -285,6 +399,7 @@ let rejected = {};
 let chats = {};
 let ratings = {};
 let mode = "pending";
+let activeAdminChatId = "";
 
 /* 🔐 HARD SECURITY GATE */
 auth.onAuthStateChanged(async user => {
@@ -350,6 +465,14 @@ function logout(){
   });
 }
 
+function toggleAdminMenu(){
+  document.getElementById("adminMenu").classList.toggle("open");
+}
+
+function closeAdminMenu(){
+  document.getElementById("adminMenu").classList.remove("open");
+}
+
 function updateStats(){
   document.getElementById("totalPending").innerText =
     Object.keys(pending).length;
@@ -361,11 +484,11 @@ function updateStats(){
     Object.keys(rejected).length;
 }
 
-function showPending(){ mode="pending"; render(); }
-function showApproved(){ mode="approved"; render(); }
-function showRejected(){ mode="rejected"; render(); }
-function showChats(){ mode="chats"; render(); }
-function loadAll(){ mode="all"; render(); }
+function showPending(){ mode="pending"; closeAdminMenu(); render(); }
+function showApproved(){ mode="approved"; closeAdminMenu(); render(); }
+function showRejected(){ mode="rejected"; closeAdminMenu(); render(); }
+function showChats(){ mode="chats"; closeAdminMenu(); render(); }
+function loadAll(){ mode="all"; closeAdminMenu(); render(); }
 
 function safe(obj){
   return encodeURIComponent(JSON.stringify(obj));
@@ -488,11 +611,17 @@ function openDetails(encoded){
   const hasPhotos = Array.isArray(p.images) && p.images.length > 0;
   const hasKenyanPhone = /^\+254\d{9}$/.test(p.phone || "");
   const hasLandlord = !!p.landlordUid;
+  const photoGrid = hasPhotos
+    ? `<h3>Uploaded Property Photos (${p.images.length})</h3>
+       <div class="photoGrid">
+         ${p.images.map((img, index)=>`<img src="${img}" alt="Property photo ${index + 1}">`).join("")}
+       </div>`
+    : "<p><b>Uploaded Property Photos:</b> No photos uploaded.</p>";
 
   document.getElementById("detailsContent").innerHTML = `
     <div class="modalContent">
       <h2>${p.type || "Property"}</h2>
-      ${p.images?.[0] ? `<img src="${p.images[0]}" style="width:100%;max-height:320px;object-fit:cover;border-radius:12px;">` : ""}
+      ${photoGrid}
       <p><b>Location:</b> ${p.location || ""}</p>
       <p><b>Rent:</b> KSh ${p.rent || ""}</p>
       <p><b>Deposit:</b> KSh ${p.deposit || ""}</p>
@@ -586,36 +715,113 @@ function renderChats(q, list){
     .map(([id, chat])=>({id, ...chat}))
     .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
 
-  rows.forEach(chat=>{
-    const text = ((chat.propertyTitle || "") + " " + (chat.propertyLocation || "") + " " + (chat.landlordEmail || "")).toLowerCase();
-    if(q && !text.includes(q)) return;
-
-    const messages = chat.messages || {};
-    const messageRows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
-
-    list.innerHTML += `
-      <div class="card">
-        <div class="cardContent">
-          <b>${chat.propertyTitle || "Property chat"}</b><br>
-          ${chat.propertyLocation || ""}<br>
-          Landlord: ${chat.landlordEmail || chat.landlordUid || ""}<br>
-          Student: ${chat.userName || chat.userUid || ""}
-          <div class="messages">
-            ${messageRows.map(m=>`
-              <div class="message">
-                <b>${m.senderRole || "user"}</b>
-                ${m.text || ""}
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      </div>
-    `;
+  const filtered = rows.filter(chat=>{
+    const text = [
+      chat.propertyTitle || "",
+      chat.propertyLocation || "",
+      chat.landlordEmail || "",
+      chat.landlordUid || "",
+      chat.userName || "",
+      chat.userEmail || "",
+      chat.userUid || "",
+      chat.lastMessage || ""
+    ].join(" ").toLowerCase();
+    return !q || text.includes(q);
   });
 
-  if(!list.innerHTML){
+  if(filtered.length === 0){
     list.innerHTML = "<div class='card'><div class='cardContent'>No chats found.</div></div>";
+    return;
   }
+
+  if(!activeAdminChatId || !filtered.some(chat=>chat.id === activeAdminChatId)){
+    activeAdminChatId = filtered[0].id;
+  }
+
+  const activeChat = filtered.find(chat=>chat.id === activeAdminChatId) || filtered[0];
+  const messages = Object.entries(activeChat.messages || {})
+    .map(([id, message])=>({id, ...message}))
+    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+  const studentName = activeChat.userName || activeChat.userEmail || activeChat.userUid || "Student";
+  const landlordName = activeChat.landlordEmail || activeChat.landlordUid || "Landlord";
+
+  list.innerHTML = `
+    <div class="adminChatShell">
+      <div class="adminChatThreads">
+        ${filtered.map(chat=>`
+          <button class="adminChatThread ${chat.id === activeAdminChatId ? "active" : ""}" onclick="selectAdminChat('${chat.id}')">
+            <span class="threadTitle">${chat.propertyTitle || "Property chat"}</span>
+            <span class="threadMeta">${chat.propertyLocation || "Location not recorded"}</span>
+            <span class="threadMeta">${chat.userName || chat.userEmail || "Student"} ↔ ${chat.landlordEmail || "Landlord"}</span>
+            <span class="threadMeta">${chat.lastMessage || "Open conversation"}</span>
+          </button>
+        `).join("")}
+      </div>
+      <div class="adminChatWindow">
+        <div class="adminChatHeader">
+          <div>
+            <strong>${activeChat.propertyTitle || "Property chat"}</strong>
+            <small>${activeChat.propertyLocation || ""}</small>
+            <small>User: ${studentName}</small>
+            <small>Landlord: ${landlordName}</small>
+          </div>
+          <button class="delete" onclick="deleteAdminChat('${activeChat.id}')">Delete Whole Chat</button>
+        </div>
+        <div class="adminChatMessages" id="adminChatMessages">
+          ${messages.length ? messages.map(m=>`
+            <div class="adminBubble ${m.senderRole === "landlord" ? "landlord" : ""}">
+              <b>${m.senderRole === "landlord" ? "Landlord" : "User"}: ${m.senderName || ""}</b>
+              ${m.text || ""}
+              ${m.editedAt ? "<small>Edited</small>" : ""}
+              <div class="adminChatTools">
+                <button class="delete" onclick="deleteAdminMessage('${activeChat.id}','${m.id}')">Delete Message</button>
+              </div>
+            </div>
+          `).join("") : "<div class='cardContent'>No messages in this chat.</div>"}
+        </div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(()=>{
+    const box = document.getElementById("adminChatMessages");
+    if(box) box.scrollTop = box.scrollHeight;
+  },0);
+}
+
+function selectAdminChat(chatId){
+  activeAdminChatId = chatId;
+  render();
+}
+
+function notifyChatUser(chat, title, body){
+  if(!chat || !chat.userUid) return Promise.resolve();
+  return db.ref("notifications/users/" + chat.userUid).push({
+    type: "admin_chat_moderation",
+    chatId: chat.id || "",
+    propertyId: chat.propertyId || "",
+    title,
+    body,
+    read: false,
+    createdAt: Date.now()
+  });
+}
+
+async function deleteAdminMessage(chatId, messageId){
+  const chat = chats[chatId];
+  if(!chat) return;
+  if(!confirm("Delete this single message from the chat?")) return;
+  await db.ref("chats/" + chatId + "/messages/" + messageId).remove();
+  await notifyChatUser({id:chatId, ...chat}, "Message removed by admin", "A message in your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
+}
+
+async function deleteAdminChat(chatId){
+  const chat = chats[chatId];
+  if(!chat) return;
+  if(!confirm("Delete this whole chat permanently?")) return;
+  await notifyChatUser({id:chatId, ...chat}, "Chat removed by admin", "Your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
+  await db.ref("chats/" + chatId).remove();
+  activeAdminChatId = "";
 }
 
 function rejectItem(id){
