@@ -11,9 +11,10 @@
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#172033}
+body{margin:0 0 78px;font-family:Arial,sans-serif;background:#f4f6f9;color:#172033}
 header{
-  background:white;
+  background:linear-gradient(135deg,#0f172a,#075985);
+  color:white;
   padding:14px 18px;
   display:flex;
   gap:10px;
@@ -58,16 +59,167 @@ button,a.button{
 .cardActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .reason{background:#fee2e2;color:#7f1d1d;border-radius:8px;padding:8px;margin-top:10px}
 .sectionTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.chatThread{border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px}
-.messages{background:#f8fafc;border-radius:8px;padding:10px;max-height:220px;overflow:auto}
-.message{margin:8px 0;line-height:1.4}
-.message b{display:block;font-size:12px;color:#64748b}
+.tabPanel{display:none}
+.tabPanel.active{display:block}
+.propertyTools{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.statusHint{
+  color:#64748b;
+  background:#e0f2fe;
+  border:1px solid #bae6fd;
+  border-radius:10px;
+  padding:10px 12px;
+}
+.aboutGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.aboutItem{background:white;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(15,23,42,0.08)}
+.aboutItem strong{display:block;margin-bottom:6px}
+.chatShell{
+  display:grid;
+  grid-template-columns:minmax(260px,330px) 1fr;
+  min-height:620px;
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 14px 40px rgba(15,23,42,0.12);
+}
+.chatThreads{
+  border-right:1px solid #dbe5df;
+  background:#f8fafc;
+  overflow:auto;
+}
+.chatThread{
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+}
+.chatThread.active,.chatThread:hover{background:#e7f7ee}
+.chatAvatar{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#16a34a;
+  color:white;
+  font-weight:bold;
+  margin-right:10px;
+  vertical-align:top;
+}
+.chatSummary{display:inline-block;width:calc(100% - 58px);vertical-align:top}
+.chatSummary strong{display:block;color:#172033}
+.chatSummary small{display:block;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatWindow{background:#efeae2;display:flex;flex-direction:column;min-width:0}
+.chatHeader{background:#075e54;color:white;padding:14px 16px}
+.chatHeader strong{display:block}
+.chatHeader small{color:#dcfce7}
+.messages{padding:16px;overflow:auto;flex:1}
+.message{max-width:78%;margin:8px 0;line-height:1.4;padding:9px 34px 9px 11px;border-radius:10px;background:white;box-shadow:0 1px 2px rgba(15,23,42,0.08);position:relative}
+.message.mine{margin-left:auto;background:#dcf8c6}
+.message b{display:block;font-size:12px;color:#64748b;margin-bottom:3px}
+.msgMenu{position:absolute;right:5px;top:3px}
+.msgMenu summary{list-style:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.msgMenu summary::-webkit-details-marker{display:none}
+.msgMenu[open] summary,.msgMenu summary:hover{background:rgba(0,0,0,.08)}
+.msgMenuList{position:absolute;right:0;top:26px;min-width:128px;background:white;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.22);padding:6px;z-index:20}
+.msgMenuList button{display:block;width:100%;margin:0;padding:9px 10px;border:0;border-radius:8px;background:white;color:#111827;text-align:left;font-weight:bold}
+.msgMenuList button:hover{background:#f1f5f9}
+.msgMenuList button.dangerText{color:#dc2626}
 .chatReply{display:flex;gap:8px;margin-top:8px}
-.chatReply input{flex:1;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+.chatWindow .chatReply{padding:12px;background:#f0f2f5;margin-top:0}
+.chatReply input{flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:999px}
+.chatReply button{width:auto;border-radius:999px;padding:12px 18px}
+.bottomNav{
+  position:fixed;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%);
+  width:min(540px,calc(100vw - 24px));
+  background:#0f172a;
+  border-radius:18px;
+  box-shadow:0 18px 45px rgba(15,23,42,0.28);
+  z-index:9000;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  padding:8px;
+  gap:6px;
+}
+.bottomNav button{
+  border-radius:12px;
+  background:transparent;
+  color:#cbd5e1;
+  padding:10px 6px;
+}
+.bottomNav button.active{background:white;color:#0f172a}
+.toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:min(360px,calc(100vw - 36px));
+  background:linear-gradient(135deg,#111827,#1f2937);
+  color:white;
+  padding:15px 16px;
+  border-radius:14px;
+  box-shadow:0 18px 45px rgba(15,23,42,0.28);
+  z-index:20000;
+  font-weight:bold;
+  opacity:0;
+  transform:translateY(14px);
+  pointer-events:none;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:linear-gradient(135deg,#15803d,#166534)}
+.toast.warning{background:linear-gradient(135deg,#b45309,#92400e)}
+.toast.error{background:linear-gradient(135deg,#dc2626,#991b1b)}
+.editModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.62);
+  z-index:10000;
+  padding:18px;
+  overflow:auto;
+}
+.editBox{
+  background:white;
+  max-width:820px;
+  margin:0 auto;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 22px 70px rgba(15,23,42,0.32);
+}
+.editGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.editBox label{display:block;font-weight:bold;margin:10px 0 6px}
+.editBox input,.editBox select,.editBox textarea{
+  width:100%;
+  padding:10px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font:inherit;
+}
+.editBox textarea{min-height:90px;resize:vertical}
+.amenityGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px}
+.amenityChoice{display:flex;gap:8px;align-items:center;background:#f8fafc;border-radius:8px;padding:8px}
+.amenityChoice input{width:auto}
+.formActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 @media(max-width:640px){
   header{display:block}
   .actions{margin-top:12px}
   button,a.button{width:100%;text-align:center}
+  .bottomNav button,.msgMenuList button,.chatReply button{width:auto}
+  .chatShell{grid-template-columns:1fr;min-height:calc(100vh - 190px)}
+  .chatThreads{max-height:250px;border-right:0;border-bottom:1px solid #dbe5df}
 }
 </style>
 </head>
@@ -76,33 +228,162 @@ button,a.button{
 <header>
   <div>
     <h1>Landlord Dashboard</h1>
-    <div id="who" style="color:#64748b;font-size:14px;margin-top:4px">Checking account...</div>
-  </div>
-  <div class="actions">
-    <a class="button primary" href="landlord.html">Upload Property</a>
-    <a class="button light" href="index.html">View Public Site</a>
-    <button class="danger" onclick="logout()">Logout</button>
+    <div id="who" style="color:#dbeafe;font-size:14px;margin-top:4px">Checking account...</div>
   </div>
 </header>
 
 <main class="wrap">
-  <section class="stats">
-    <div class="stat"><strong id="pendingCount">0</strong>Pending approval</div>
-    <div class="stat"><strong id="approvedCount">0</strong>Approved live houses</div>
-    <div class="stat"><strong id="rejectedCount">0</strong>Rejected</div>
-    <div class="stat"><strong id="totalCount">0</strong>Total uploads</div>
+  <section id="propertyPanel" class="tabPanel active">
+    <div class="propertyTools">
+      <div>
+        <h2 style="margin:0 0 6px">Property</h2>
+        <div class="statusHint">Current properties and edit requests appear here. Approved properties stay live while edited versions wait for admin approval.</div>
+      </div>
+      <a class="button primary" href="landlord.html">Add New Property</a>
+    </div>
+    <div id="list" class="grid"></div>
   </section>
 
-  <div class="sectionTitle">
-    <h2>Your Properties</h2>
-    <button class="light" onclick="toggleChats()">Messages</button>
-  </div>
-  <div id="list" class="grid"></div>
-  <section id="chatPanel" style="display:none;margin-top:22px">
-    <h2>Student Messages</h2>
+  <section id="messagesPanel" class="tabPanel">
+    <div class="sectionTitle">
+      <h2>Messages</h2>
+      <span style="color:#64748b">Student conversations</span>
+    </div>
     <div id="chatList"></div>
   </section>
+
+  <section id="aboutPanel" class="tabPanel">
+    <h2>About</h2>
+    <div class="aboutGrid">
+      <div class="aboutItem">
+        <strong>Profile</strong>
+        <span id="aboutEmail">Loading account...</span>
+      </div>
+      <div class="aboutItem">
+        <strong>Visit Site With Houses</strong>
+        <a class="button light" href="index.html">Open Public Site</a>
+      </div>
+      <div class="aboutItem">
+        <strong>Contact Us</strong>
+        <p style="margin:0;color:#64748b;line-height:1.5">For listing support, contact the DeKUT Housing admin team through the site support channel.</p>
+      </div>
+      <div class="aboutItem">
+        <strong>Account</strong>
+        <button class="danger" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </section>
 </main>
+
+<nav class="bottomNav">
+  <button id="navProperty" class="active" onclick="showTab('property')">Property</button>
+  <button id="navMessages" onclick="showTab('messages')">Messages</button>
+  <button id="navAbout" onclick="showTab('about')">About</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<div id="editModal" class="editModal">
+  <div class="editBox">
+    <h2 id="editTitle">Edit Property</h2>
+    <p style="color:#64748b;margin-top:0">Submit changes for admin review after updating the property details.</p>
+    <div class="editGrid">
+      <div>
+        <label>Apartment / House Name</label>
+        <input id="editPropertyName" placeholder="e.g. Green View Apartments">
+      </div>
+      <div>
+        <label>House Type</label>
+        <select id="editType" onchange="toggleEditSharedFields()">
+          <option>Bedsitter</option>
+          <option>Single Room</option>
+          <option>One Bedroom</option>
+          <option>Two Bedroom</option>
+          <option>Shared Bedsitter</option>
+          <option>Shared Single Room</option>
+        </select>
+      </div>
+      <div>
+        <label>Monthly Rent (KSh)</label>
+        <input id="editRent" type="number">
+      </div>
+      <div>
+        <label>Deposit Amount (KSh)</label>
+        <input id="editDeposit" type="number">
+      </div>
+      <div>
+        <label>Preferred Occupants</label>
+        <select id="editGender">
+          <option>Any Gender</option>
+          <option>Male Only</option>
+          <option>Female Only</option>
+          <option>Mixed</option>
+        </select>
+      </div>
+      <div>
+        <label>Availability Status</label>
+        <select id="editAvailability">
+          <option>Available</option>
+          <option>Occupied</option>
+        </select>
+      </div>
+      <div>
+        <label>Rooms Available</label>
+        <input id="editRoomsAvailable" type="number">
+      </div>
+      <div id="editMaxOccupantsWrap" style="display:none">
+        <label>Maximum Occupants</label>
+        <input id="editMaxOccupants" type="number" min="1">
+      </div>
+      <div id="editSharedRentWrap" style="display:none">
+        <label>Shared Rent Arrangement</label>
+        <select id="editSharedRentType">
+          <option value="">Select rent arrangement</option>
+          <option>Per head</option>
+          <option>Shared among occupants</option>
+        </select>
+      </div>
+      <div>
+        <label>Utilities Included</label>
+        <select id="editUtilities" onchange="toggleEditPartialUtilities()">
+          <option>Yes</option>
+          <option>No</option>
+          <option>Partially Included</option>
+        </select>
+      </div>
+      <div id="editIncludedUtilitiesWrap" style="display:none">
+        <label>Utilities Included In Rent</label>
+        <input id="editIncludedUtilities" placeholder="e.g. Water and electricity">
+      </div>
+      <div>
+        <label>Contact Number</label>
+        <input id="editPhone" placeholder="+254712345678">
+      </div>
+      <div>
+        <label>Property Location</label>
+        <input id="editLocation">
+      </div>
+    </div>
+
+    <label>Property Description</label>
+    <textarea id="editExtra"></textarea>
+
+    <label>Amenities</label>
+    <div class="amenityGrid" id="editAmenities"></div>
+
+    <label>Other Amenities</label>
+    <input id="editExtraAmenities" placeholder="e.g. CCTV, Laundry Area">
+
+    <label>Replace Property Photos</label>
+    <input id="editImages" type="file" multiple accept="image/*">
+    <small style="color:#64748b">Leave this empty to keep the current photos.</small>
+
+    <div class="formActions">
+      <button class="light" onclick="closeEditModal()">Cancel</button>
+      <button class="primary" id="submitEditBtn" onclick="submitEditForApproval()">Submit edit for approval</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -125,6 +406,32 @@ let approved = {};
 let rejected = {};
 let chats = {};
 let chatsOpen = false;
+let activeChatId = "";
+let activeEdit = null;
+let landlordNotificationsRef = null;
+const AMENITY_OPTIONS = ["WiFi","Water","Electricity","Furnished","Parking","Security","Balcony","Hot Shower"];
+
+function isSharedType(type){
+  return type === "Shared Bedsitter" || type === "Shared Single Room";
+}
+
+function toggleEditSharedFields(){
+  const show = isSharedType(document.getElementById("editType").value);
+  document.getElementById("editMaxOccupantsWrap").style.display = show ? "block" : "none";
+  document.getElementById("editSharedRentWrap").style.display = show ? "block" : "none";
+  if(!show){
+    document.getElementById("editMaxOccupants").value = "";
+    document.getElementById("editSharedRentType").value = "";
+  }
+}
+
+function toggleEditPartialUtilities(){
+  const show = document.getElementById("editUtilities").value === "Partially Included";
+  document.getElementById("editIncludedUtilitiesWrap").style.display = show ? "block" : "none";
+  if(!show){
+    document.getElementById("editIncludedUtilities").value = "";
+  }
+}
 
 auth.onAuthStateChanged(user=>{
   if(!user){
@@ -133,8 +440,18 @@ auth.onAuthStateChanged(user=>{
   }
   currentUser = user;
   document.getElementById("who").innerText = user.email;
+  document.getElementById("aboutEmail").innerText = user.email;
   startRealtime();
+  startNotifications();
 });
+
+function showTab(tab){
+  document.querySelectorAll(".tabPanel").forEach(panel=>panel.classList.remove("active"));
+  document.querySelectorAll(".bottomNav button").forEach(btn=>btn.classList.remove("active"));
+  document.getElementById(tab + "Panel").classList.add("active");
+  document.getElementById("nav" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
+  if(tab === "messages") renderChats();
+}
 
 function startRealtime(){
   db.ref("pendingProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
@@ -155,18 +472,24 @@ function startRealtime(){
   });
 }
 
+function startNotifications(){
+  if(landlordNotificationsRef) landlordNotificationsRef.off();
+  const notifyFrom = Date.now();
+  landlordNotificationsRef = db.ref("notifications/landlords/" + currentUser.uid).orderByChild("createdAt").startAt(notifyFrom);
+  landlordNotificationsRef.on("child_added", snap=>{
+    const note = snap.val() || {};
+    showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
+    db.ref("notifications/landlords/" + currentUser.uid + "/" + snap.key).update({read:true});
+  });
+}
+
 function render(){
   if(!currentUser) return;
   const rows = [
-    ...Object.entries(pending).map(([id,p])=>({id,...p, source:"pending", reviewStatus:"Pending"})),
+    ...Object.entries(pending).map(([id,p])=>({id,...p, source:"pending", reviewStatus:p.previousPropertyId ? "Pending edit approval" : "Pending approval"})),
     ...Object.entries(approved).map(([id,p])=>({id,...p, source:"approved", reviewStatus:p.listingState === "suspended" ? "Suspended" : "Approved"})),
     ...Object.entries(rejected).map(([id,p])=>({id,...p, source:"rejected", reviewStatus:"Rejected"}))
-  ].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-
-  document.getElementById("pendingCount").innerText = Object.keys(pending).length;
-  document.getElementById("approvedCount").innerText = Object.keys(approved).length;
-  document.getElementById("rejectedCount").innerText = Object.keys(rejected).length;
-  document.getElementById("totalCount").innerText = rows.length;
+  ].sort((a,b)=>(b.submittedForApprovalAt||b.updatedAt||b.createdAt||0)-(a.submittedForApprovalAt||a.updatedAt||a.createdAt||0));
 
   const list = document.getElementById("list");
   if(rows.length === 0){
@@ -182,26 +505,34 @@ function render(){
       p.reviewStatus === "Rejected" ? "rejected" :
       "pending";
     const availabilityToggle = p.status === "Available" ? "Occupied" : "Available";
+    const reviewNote = p.previousPropertyId && p.source === "pending"
+      ? "<div class='reason' style='background:#fef3c7;color:#78350f'><b>Edit status:</b> Waiting for admin approval. The current approved listing remains live until this edit is approved.</div>"
+      : "";
     return `
       <article class="card">
         ${img ? `<img src="${img}" alt="">` : ""}
         <div class="meta">
-          <strong>${p.type || "Property"}</strong><br>
+          <strong>${p.propertyName || p.houseName || p.type || "Property"}</strong><br>
+          ${p.type || ""}<br>
           ${p.location || ""}<br>
           KSh ${p.rent || ""}<br>
           ${p.phone || ""}<br>
           <b>Status:</b> ${p.status || p.availability || ""}<br>
           <span class="badge ${badgeClass}">${p.reviewStatus}</span>
+          ${reviewNote}
           ${p.rejectReason ? `<div class="reason"><b>Admin reason:</b> ${p.rejectReason}</div>` : ""}
           ${p.suspendReason ? `<div class="reason"><b>Suspension reason:</b> ${p.suspendReason}</div>` : ""}
           <div class="cardActions">
             ${p.source === "pending" ? `
-              <button class="light" onclick="editPending('${p.id}')">Edit</button>
+              <button class="light" onclick="openEditModal('pending','${p.id}')">Edit</button>
               <button class="danger" onclick="deletePending('${p.id}')">Delete</button>
             ` : ""}
             ${p.source === "approved" ? `
               <button class="successBtn" onclick="updateAvailability('${p.id}','${availabilityToggle}')">Mark ${availabilityToggle}</button>
-              <button class="warnBtn" onclick="sendApprovedEditForReview('${p.id}')">Request Edit Review</button>
+              <button class="warnBtn" onclick="openEditModal('approved','${p.id}')">Edit Property</button>
+            ` : ""}
+            ${p.source === "rejected" ? `
+              <button class="warnBtn" onclick="openEditModal('rejected','${p.id}')">Edit and Resubmit</button>
             ` : ""}
           </div>
         </div>
@@ -210,29 +541,184 @@ function render(){
   }).join("");
 }
 
-function editPending(id){
-  const p = pending[id];
+function getPropertyBySource(source, id){
+  if(source === "pending") return pending[id];
+  if(source === "approved") return approved[id];
+  if(source === "rejected") return rejected[id];
+  return null;
+}
+
+function splitAmenities(value){
+  return (value || "").split(",").map(item=>item.trim()).filter(Boolean);
+}
+
+function openEditModal(source, id){
+  const p = getPropertyBySource(source, id);
   if(!p) return;
 
-  const rent = prompt("Monthly rent", p.rent || "");
-  if(rent === null) return;
-  const deposit = prompt("Deposit amount", p.deposit || "");
-  if(deposit === null) return;
-  const phone = prompt("Contact number", p.phone || "");
-  if(phone === null) return;
-  const location = prompt("Location", p.location || "");
-  if(location === null) return;
-  const description = prompt("Description", p.extra || "");
-  if(description === null) return;
+  activeEdit = {source, id, property:p};
+  const selectedAmenities = splitAmenities(p.amenities);
+  const standardAmenities = selectedAmenities.filter(item=>AMENITY_OPTIONS.includes(item));
+  const otherAmenities = selectedAmenities.filter(item=>!AMENITY_OPTIONS.includes(item));
 
-  db.ref("pendingProperties/" + id).update({
-    rent: rent.trim(),
-    deposit: deposit.trim(),
-    phone: phone.trim(),
-    location: location.trim(),
-    extra: description.trim(),
-    updatedAt: Date.now()
+  document.getElementById("editTitle").innerText =
+    source === "approved" ? "Edit approved property" :
+    source === "rejected" ? "Edit rejected property" :
+    "Edit pending property";
+  document.getElementById("editPropertyName").value = p.propertyName || p.houseName || "";
+  document.getElementById("editType").value = p.type || "Bedsitter";
+  document.getElementById("editRent").value = p.rent || "";
+  document.getElementById("editDeposit").value = p.deposit || "";
+  document.getElementById("editGender").value = p.gender || "Any Gender";
+  document.getElementById("editAvailability").value = p.status || p.availability || "Available";
+  document.getElementById("editRoomsAvailable").value = p.roomsAvailable || "";
+  document.getElementById("editMaxOccupants").value = p.maxOccupants || "";
+  document.getElementById("editSharedRentType").value = p.sharedRentType || "";
+  toggleEditSharedFields();
+  document.getElementById("editUtilities").value = p.utilities || "Yes";
+  document.getElementById("editIncludedUtilities").value = p.includedUtilities || "";
+  toggleEditPartialUtilities();
+  document.getElementById("editPhone").value = p.phone || "";
+  document.getElementById("editLocation").value = p.location || "";
+  document.getElementById("editExtra").value = p.extra || "";
+  document.getElementById("editExtraAmenities").value = otherAmenities.join(", ");
+  document.getElementById("editImages").value = "";
+
+  document.getElementById("editAmenities").innerHTML = AMENITY_OPTIONS.map(item=>`
+    <label class="amenityChoice">
+      <input type="checkbox" class="editAmenity" value="${item}" ${standardAmenities.includes(item) ? "checked" : ""}>
+      ${item}
+    </label>
+  `).join("");
+
+  document.getElementById("submitEditBtn").innerText =
+    source === "pending" ? "Submit edit for approval" :
+    source === "rejected" ? "Submit edit for approval" :
+    "Submit edit for approval";
+  document.getElementById("editModal").style.display = "block";
+}
+
+function closeEditModal(){
+  document.getElementById("editModal").style.display = "none";
+  activeEdit = null;
+}
+
+function toBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
+}
+
+async function collectEditForm(){
+  const selected = [];
+  document.querySelectorAll(".editAmenity:checked").forEach(item=>selected.push(item.value));
+  const extraAmenities = document.getElementById("editExtraAmenities").value.trim();
+  const amenities = selected.concat(splitAmenities(extraAmenities)).join(", ");
+  const files = Array.from(document.getElementById("editImages").files || []);
+  const images = files.length
+    ? await Promise.all(files.map(file=>toBase64(file)))
+    : activeEdit.property.images || [];
+
+  return {
+    type: document.getElementById("editType").value,
+    propertyName: document.getElementById("editPropertyName").value.trim(),
+    houseName: document.getElementById("editPropertyName").value.trim(),
+    rent: document.getElementById("editRent").value.trim(),
+    deposit: document.getElementById("editDeposit").value.trim(),
+    gender: document.getElementById("editGender").value,
+    availability: document.getElementById("editAvailability").value,
+    status: document.getElementById("editAvailability").value,
+    roomsAvailable: document.getElementById("editRoomsAvailable").value.trim(),
+    maxOccupants: isSharedType(document.getElementById("editType").value) ? document.getElementById("editMaxOccupants").value.trim() : "",
+    sharedRentType: isSharedType(document.getElementById("editType").value) ? document.getElementById("editSharedRentType").value : "",
+    utilities: document.getElementById("editUtilities").value,
+    includedUtilities: document.getElementById("editUtilities").value === "Partially Included" ? document.getElementById("editIncludedUtilities").value.trim() : "",
+    phone: document.getElementById("editPhone").value.trim(),
+    location: document.getElementById("editLocation").value.trim(),
+    extra: document.getElementById("editExtra").value.trim(),
+    amenities,
+    images
+  };
+}
+
+async function submitEditForApproval(){
+  if(!activeEdit || !currentUser) return;
+
+  const btn = document.getElementById("submitEditBtn");
+  btn.disabled = true;
+  btn.innerText = "Submitting...";
+
+  try{
+    const edits = await collectEditForm();
+    if(!edits.propertyName || !edits.type || !edits.rent || !edits.phone || !edits.location){
+      showToast("Please fill house name, house type, rent, phone, and location before submitting.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    if(isSharedType(edits.type) && (!edits.maxOccupants || !edits.sharedRentType)){
+      showToast("Please enter maximum occupants and the shared rent arrangement.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    if(edits.utilities === "Partially Included" && !edits.includedUtilities){
+      showToast("Please name the utilities included in rent.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    const base = {
+      ...activeEdit.property,
+      ...edits,
+      approved: false,
+      reviewStatus: activeEdit.source === "approved" ? "pending_edit" : "pending",
+      landlordUid: currentUser.uid,
+      landlordEmail: currentUser.email,
+      createdAt: activeEdit.property.createdAt || Date.now(),
+      updatedAt: Date.now(),
+      submittedForApprovalAt: Date.now()
+    };
+
+    let submittedPropertyId = activeEdit.id;
+
+    if(activeEdit.source === "pending"){
+      await db.ref("pendingProperties/" + activeEdit.id).update(base);
+    }else if(activeEdit.source === "rejected"){
+      delete base.rejectReason;
+      delete base.rejectedAt;
+      await db.ref("pendingProperties/" + activeEdit.id).set(base);
+      await db.ref("rejectedProperties/" + activeEdit.id).remove();
+    }else{
+      base.previousPropertyId = activeEdit.id;
+      const ref = await db.ref("pendingProperties").push(base);
+      submittedPropertyId = ref.key;
+    }
+
+    await db.ref("notifications/admin").push({
+      type: activeEdit.source === "approved" ? "property_edit" : "property_resubmission",
+      propertyId: submittedPropertyId,
+      previousPropertyId: activeEdit.source === "approved" ? activeEdit.id : "",
+      title: "Property edit submitted",
+      body: (base.type || "Property") + " in " + (base.location || "") + " is waiting for approval.",
+      read: false,
+      createdAt: Date.now()
+    });
+
+    closeEditModal();
+    showToast("Edit submitted for admin approval. You can track it as pending, approved, or rejected here.", "success");
+  }catch(error){
+    showToast("Could not submit edit: " + error.message, "error");
+  }finally{
+    btn.disabled = false;
+    btn.innerText = "Submit edit for approval";
+  }
 }
 
 function deletePending(id){
@@ -248,45 +734,18 @@ function updateAvailability(id, status){
   });
 }
 
-function sendApprovedEditForReview(id){
-  const p = approved[id];
-  if(!p) return;
-
-  const rent = prompt("New monthly rent", p.rent || "");
-  if(rent === null) return;
-  const phone = prompt("New contact number", p.phone || "");
-  if(phone === null) return;
-  const description = prompt("Updated description", p.extra || "");
-  if(description === null) return;
-
-  const updated = {
-    ...p,
-    rent: rent.trim(),
-    phone: phone.trim(),
-    extra: description.trim(),
-    approved: false,
-    reviewStatus: "pending_edit",
-    previousPropertyId: id,
-    updatedAt: Date.now()
-  };
-
-  db.ref("pendingProperties").push(updated).then(ref=>{
-    db.ref("notifications/admin").push({
-      type: "property_edit",
-      propertyId: ref.key,
-      previousPropertyId: id,
-      title: "Approved property edited",
-      body: (p.type || "Property") + " in " + (p.location || "") + " needs edit approval.",
-      read: false,
-      createdAt: Date.now()
-    });
-    alert("Edit sent to admin for review. The current approved listing stays live until admin approves the update.");
-  });
+function showToast(message, type="success"){
+  const toast = document.getElementById("toast");
+  toast.className = "toast " + type + " show";
+  toast.innerText = message;
+  clearTimeout(window.dashboardToastTimer);
+  window.dashboardToastTimer = setTimeout(()=>{
+    toast.className = "toast";
+  },3200);
 }
 
 function toggleChats(){
-  chatsOpen = !chatsOpen;
-  document.getElementById("chatPanel").style.display = chatsOpen ? "block" : "none";
+  showTab("messages");
   renderChats();
 }
 
@@ -303,28 +762,70 @@ function renderChats(){
     return;
   }
 
-  chatList.innerHTML = rows.map(chat=>{
-    const messages = chat.messages || {};
-    const messageRows = Object.values(messages).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
-    return `
-      <article class="card chatThread">
-        <strong>${chat.propertyTitle || "Property chat"}</strong><br>
-        <span style="color:#64748b">${chat.propertyLocation || ""}</span>
-        <div class="messages">
-          ${messageRows.map(m=>`
-            <div class="message">
-              <b>${m.senderRole === "landlord" ? "You" : "Student"}</b>
+  if(!activeChatId || !rows.some(chat=>chat.id === activeChatId)){
+    activeChatId = rows[0].id;
+  }
+
+  const activeChat = rows.find(chat=>chat.id === activeChatId) || rows[0];
+  const activeMessages = Object.entries(activeChat.messages || {})
+    .map(([id,message])=>({id,...message}))
+    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+  const activeStudent = activeChat.userName || activeChat.userEmail || "Student";
+
+  chatList.innerHTML = `
+    <div class="chatShell">
+      <div class="chatThreads">
+        ${rows.map(chat=>{
+          const studentName = chat.userName || chat.userEmail || "Student";
+          const initial = studentName.trim().charAt(0).toUpperCase() || "S";
+          return `
+            <button class="chatThread ${chat.id === activeChatId ? "active" : ""}" onclick="selectChat('${chat.id}')">
+              <span class="chatAvatar">${initial}</span>
+              <span class="chatSummary">
+                <strong>${studentName}</strong>
+                <small>${chat.propertyTitle || "Property chat"} - ${chat.lastMessage || chat.propertyLocation || "Open conversation"}</small>
+              </span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+      <div class="chatWindow">
+        <div class="chatHeader">
+          <strong>${activeStudent}</strong>
+          <small>${activeChat.propertyTitle || "Property chat"}${activeChat.propertyLocation ? " - " + activeChat.propertyLocation : ""}</small>
+        </div>
+        <div class="messages" id="activeMessages">
+          ${activeMessages.length ? activeMessages.map(m=>`
+            <div class="message ${m.senderUid === currentUser.uid ? "mine" : ""}">
+              <b>${m.senderRole === "landlord" ? "You" : (m.senderName || activeStudent)}</b>
               ${m.text || ""}
+              ${m.editedAt ? "<small> Edited</small>" : ""}
+              ${m.senderUid === currentUser.uid ? `
+                <div class="messageTools">
+                  <button class="light" onclick="editReply('${activeChat.id}','${m.id}')">Edit</button>
+                  <button class="danger" onclick="deleteReply('${activeChat.id}','${m.id}')">Delete</button>
+                </div>
+              ` : ""}
             </div>
-          `).join("")}
+          `).join("") : "<div class='empty'>No messages in this chat yet.</div>"}
         </div>
         <div class="chatReply">
-          <input id="reply-${chat.id}" placeholder="Reply to student">
-          <button class="primary" onclick="sendReply('${chat.id}')">Send</button>
+          <input id="reply-${activeChat.id}" placeholder="Reply to ${activeStudent}">
+          <button class="primary" onclick="sendReply('${activeChat.id}')">Send</button>
         </div>
-      </article>
-    `;
-  }).join("");
+      </div>
+    </div>
+  `;
+
+  setTimeout(()=>{
+    const box = document.getElementById("activeMessages");
+    if(box) box.scrollTop = box.scrollHeight;
+  },0);
+}
+
+function selectChat(chatId){
+  activeChatId = chatId;
+  renderChats();
 }
 
 function sendReply(chatId){
@@ -336,6 +837,7 @@ function sendReply(chatId){
   db.ref("chats/" + chatId + "/messages").push({
     senderUid: currentUser.uid,
     senderRole: "landlord",
+    senderName: currentUser.email || "Landlord",
     text,
     createdAt: Date.now()
   });
@@ -349,12 +851,33 @@ function sendReply(chatId){
       chatId,
       propertyId: chat.propertyId || "",
       title: "New landlord reply",
-      body: text,
+      body: (currentUser.email || "Landlord") + ": " + text,
       read: false,
       createdAt: Date.now()
     });
   }
   input.value = "";
+}
+
+function editReply(chatId, messageId){
+  const current = chats[chatId]?.messages?.[messageId]?.text || "";
+  const text = prompt("Edit your message", current);
+  if(text === null) return;
+  const trimmed = text.trim();
+  if(!trimmed) return;
+  db.ref("chats/" + chatId + "/messages/" + messageId).update({
+    text: trimmed,
+    editedAt: Date.now()
+  });
+  db.ref("chats/" + chatId).update({
+    updatedAt: Date.now(),
+    lastMessage: trimmed
+  });
+}
+
+function deleteReply(chatId, messageId){
+  if(!confirm("Delete this message?")) return;
+  db.ref("chats/" + chatId + "/messages/" + messageId).remove();
 }
 
 function logout(){
