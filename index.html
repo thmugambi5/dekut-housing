@@ -273,6 +273,66 @@ font-size:18px;
 line-height:1;
 }
 
+.panelModal{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(15,23,42,.56);
+z-index:9998;
+padding:18px;
+overflow:auto;
+}
+
+.panelBox{
+background:white;
+max-width:720px;
+margin:40px auto 90px;
+border-radius:16px;
+padding:18px;
+box-shadow:0 22px 70px rgba(15,23,42,.28);
+}
+
+body.dark .panelBox{background:#1f2937;color:#f8fafc;}
+
+.panelHeader{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+margin-bottom:12px;
+}
+
+.panelHeader h2{margin:0;}
+
+.aboutActions{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+gap:10px;
+}
+
+.aboutActions a,.aboutActions button,.userChatItem{
+display:block;
+width:100%;
+border:0;
+border-radius:12px;
+padding:13px;
+text-align:left;
+background:#f1f5f9;
+color:#111827;
+text-decoration:none;
+font-weight:bold;
+cursor:pointer;
+}
+
+body.dark .aboutActions a,body.dark .aboutActions button,body.dark .userChatItem{background:#374151;color:#f8fafc;}
+
+.userChatItem small{
+display:block;
+font-weight:normal;
+color:#64748b;
+margin-top:4px;
+}
+
 .ratingModal{
 display:none;
 position:fixed;
@@ -618,11 +678,12 @@ overflow:auto;
 max-width:min(76%,520px);
 margin:8px 0;
 line-height:1.35;
-padding:8px 10px;
+padding:8px 34px 8px 10px;
 border-radius:8px;
 box-shadow:0 1px 2px rgba(15,23,42,0.14);
 clear:both;
 word-wrap:break-word;
+position:relative;
 }
 
 .message b{
@@ -643,6 +704,15 @@ background:#dcf8c6;
 float:right;
 border-top-right-radius:2px;
 }
+
+.msgMenu{position:absolute;right:5px;top:3px;}
+.msgMenu summary{list-style:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#667781;font-weight:bold;}
+.msgMenu summary::-webkit-details-marker{display:none;}
+.msgMenu[open] summary,.msgMenu summary:hover{background:rgba(0,0,0,.08);}
+.msgMenuList{position:absolute;right:0;top:26px;min-width:128px;background:white;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.22);padding:6px;z-index:20;}
+.msgMenuList button{display:block;width:100%;margin:0;padding:9px 10px;border:0;border-radius:8px;background:white;color:#111827;text-align:left;font-weight:bold;}
+.msgMenuList button:hover{background:#f1f5f9;}
+.msgMenuList button.dangerText{color:#dc2626;}
 
 .message.emptyChat{
 float:none;
@@ -779,11 +849,40 @@ height:200px;
 
 <nav class="bottomNav">
 <button onclick="browseProperties()"><span>Home</span>Home</button>
-<button onclick="showWishlist()"><span>Wish</span>Wishlist</button>
-<button onclick="openProfile()"><span>Profile</span>Profile</button>
+<button onclick="showUserMessages()"><span>Msg</span>Messages</button>
+<button onclick="openAboutPanel()"><span>About</span>About</button>
 </nav>
 
 <div id="toast" class="toast"></div>
+
+<div class="panelModal" id="userMessagesPanel">
+<div class="panelBox">
+<div class="panelHeader">
+<h2>Messages</h2>
+<button class="detailsbtn" onclick="closePanel('userMessagesPanel')">Close</button>
+</div>
+<div id="userChatList"></div>
+</div>
+</div>
+
+<div class="panelModal" id="aboutPanel">
+<div class="panelBox">
+<div class="panelHeader">
+<h2>About</h2>
+<button class="detailsbtn" onclick="closePanel('aboutPanel')">Close</button>
+</div>
+<div class="aboutActions">
+<button onclick="closePanel('aboutPanel'); openProfile()">Profile</button>
+<button onclick="closePanel('aboutPanel'); showWishlist()">Wishlist</button>
+<a href="user-login.html">User Login</a>
+<a href="landlord-signup.html">Landlord Signup</a>
+<button onclick="closePanel('aboutPanel'); openAllHousesMap()">Map View</button>
+<button onclick="toggleTheme(); closePanel('aboutPanel')">Dark / Light Mode</button>
+<button onclick="closePanel('aboutPanel'); contactUs()">Contact Us</button>
+<button onclick="logoutUser()">Logout</button>
+</div>
+</div>
+</div>
 
 <div class="modal" id="mapModal"></div>
 
@@ -867,8 +966,14 @@ document.getElementById("sideMenu").classList.remove("open");
 document.getElementById("menuOverlay").classList.remove("open");
 }
 
+function closePanel(id){
+document.getElementById(id).style.display = "none";
+}
+
 function browseProperties(){
 closeMenu();
+closePanel("aboutPanel");
+closePanel("userMessagesPanel");
 document.getElementById("searchBox").focus();
 document.getElementById("list").scrollIntoView({behavior:"smooth"});
 }
@@ -887,6 +992,27 @@ setTimeout(()=> window.location.href = "user-signup.html", 1200);
 return;
 }
 showToast("Profile: " + (currentUserProfile?.name || currentUser.email || "User"), "success");
+}
+
+function openAboutPanel(){
+closeMenu();
+document.getElementById("aboutPanel").style.display = "block";
+}
+
+function logoutUser(){
+closePanel("aboutPanel");
+if(!currentUser){
+showToast("You are not logged in yet.", "warning");
+return;
+}
+auth.signOut().then(()=> showToast("Logged out successfully.", "success"));
+}
+
+function showUserMessages(){
+closeMenu();
+if(!requireUser("messages")) return;
+renderUserChats();
+document.getElementById("userMessagesPanel").style.display = "block";
 }
 
 function contactUs(){
@@ -929,11 +1055,13 @@ let filteredArray = [];
 let currentUser = null;
 let currentUserProfile = null;
 let wishlist = {};
+let userChats = {};
 let ratings = {};
 let activeChat = null;
 let activeChatMessagesRef = null;
 let activeChatMessages = {};
 let userNotificationsRef = null;
+let userChatsRef = null;
 let activeRatingPropertyId = null;
 let selectedRating = 0;
 const DEKUT_LAT = -0.3977905;
@@ -972,6 +1100,12 @@ db.ref("wishlists/" + user.uid).on("value", snap=>{
 wishlist = snap.val() || {};
 applyFilters();
 });
+if(userChatsRef) userChatsRef.off();
+userChatsRef = db.ref("chats").orderByChild("userUid").equalTo(user.uid);
+userChatsRef.on("value", snap=>{
+userChats = snap.val() || {};
+renderUserChats();
+});
 if(userNotificationsRef) userNotificationsRef.off();
 const notifyFrom = Date.now();
 userNotificationsRef = db.ref("notifications/users/" + user.uid).orderByChild("createdAt").startAt(notifyFrom);
@@ -989,7 +1123,12 @@ if(userNotificationsRef){
 userNotificationsRef.off();
 userNotificationsRef = null;
 }
+if(userChatsRef){
+userChatsRef.off();
+userChatsRef = null;
+}
 wishlist = {};
+userChats = {};
 applyFilters();
 });
 
@@ -1184,6 +1323,51 @@ function getChatId(propertyId){
 return propertyId + "_" + currentUser.uid;
 }
 
+function renderUserChats(){
+const box = document.getElementById("userChatList");
+if(!box) return;
+const rows = Object.entries(userChats || {})
+.map(([id, chat])=>({id, ...chat}))
+.sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
+
+if(rows.length === 0){
+box.innerHTML = "<p style='color:#64748b'>No messages yet. Open a property and tap Chat to start.</p>";
+return;
+}
+
+box.innerHTML = rows.map(chat=>`
+<button class="userChatItem" onclick="openExistingChat('${chat.id}')">
+${chat.propertyTitle || "Property chat"}
+<small>${chat.propertyLocation || ""}</small>
+<small>${chat.lastMessage || "Open conversation"}</small>
+</button>
+`).join("");
+}
+
+function openExistingChat(chatId){
+if(!requireUser("messages")) return;
+const chat = userChats[chatId];
+if(!chat){
+showToast("This chat is no longer available.", "warning");
+return;
+}
+closePanel("userMessagesPanel");
+activeChat = {id: chatId, ...chat};
+document.getElementById("chatTitle").innerText =
+(activeChat.propertyTitle || "Property chat") + (activeChat.propertyLocation ? " - " + activeChat.propertyLocation : "");
+document.getElementById("chatModal").style.display = "block";
+
+if(activeChatMessagesRef){
+activeChatMessagesRef.off();
+}
+activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
+activeChatMessagesRef.on("value", snap=>{
+let messages = snap.val() || {};
+activeChatMessages = messages;
+renderChatMessages(messages);
+});
+}
+
 function openChat(encoded){
 if(!requireUser("chat")) return;
 
@@ -1249,10 +1433,13 @@ box.innerHTML = rows.map(m=>`
 ${m.text || ""}
 ${m.editedAt ? "<small>Edited</small>" : ""}
 ${m.senderUid === currentUser?.uid ? `
-<div style="margin-top:6px;">
-<button onclick="editChatMessage('${m.id}')" style="padding:4px 8px;font-size:12px;">Edit</button>
-<button onclick="deleteChatMessage('${m.id}')" style="padding:4px 8px;font-size:12px;background:#ef4444;color:white;">Delete</button>
+<details class="msgMenu">
+<summary>⋮</summary>
+<div class="msgMenuList">
+<button onclick="editChatMessage('${m.id}')">Edit</button>
+<button class="dangerText" onclick="deleteChatMessage('${m.id}')">Delete</button>
 </div>
+</details>
 ` : ""}
 </div>
 `).join("");
