@@ -245,21 +245,22 @@ left:0;
 right:0;
 bottom:0;
 height:66px;
-background:white;
+background:#075e54;
 display:grid;
 grid-template-columns:repeat(3,1fr);
 gap:4px;
 padding:8px;
-box-shadow:0 -10px 30px rgba(15,23,42,0.14);
+box-shadow:0 -4px 20px rgba(7,94,84,0.35);
+border-top:1px solid rgba(255,255,255,0.1);
 z-index:9000;
 }
 
 .bottomNav button{
 margin:0;
 padding:6px 4px;
-border-radius:8px;
-background:#f8fafc;
-color:#334155;
+border-radius:10px;
+background:transparent;
+color:#dcfce7;
 font-size:12px;
 display:flex;
 flex-direction:column;
@@ -267,6 +268,8 @@ align-items:center;
 justify-content:center;
 gap:2px;
 }
+
+.bottomNav button:hover{background:rgba(255,255,255,0.1);}
 
 .bottomNav span{
 font-size:18px;
@@ -310,6 +313,32 @@ grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
 gap:10px;
 }
 
+.aboutList{
+list-style:none;
+margin:0 14px 14px;
+padding:0;
+background:white;
+border-radius:12px;
+overflow:hidden;
+box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.aboutList li{border-bottom:1px solid #e2e8f0}
+.aboutList li:last-child{border-bottom:0}
+.aboutList a,.aboutList button{
+display:block;
+width:100%;
+padding:14px 16px;
+border:0;
+background:transparent;
+text-align:left;
+font-weight:bold;
+color:#111827;
+text-decoration:none;
+cursor:pointer;
+font-size:15px;
+}
+.aboutList a:hover,.aboutList button:hover{background:#f8fafc}
+
 .aboutActions a,.aboutActions button,.userChatItem{
 display:block;
 width:100%;
@@ -325,6 +354,10 @@ cursor:pointer;
 }
 
 body.dark .aboutActions a,body.dark .aboutActions button,body.dark .userChatItem{background:#374151;color:#f8fafc;}
+body.dark .aboutList{background:#1f2937}
+body.dark .aboutList li{border-bottom-color:#374151}
+body.dark .aboutList a,body.dark .aboutList button{color:#f8fafc}
+body.dark .aboutList a:hover,body.dark .aboutList button:hover{background:#374151}
 
 .userChatItem small{
 display:block;
@@ -755,10 +788,165 @@ place-items:center;
 
 #map{width:100%;height:100%;}
 
+.bottomNav button.active{background:#128c7e;color:white;font-weight:bold;}
+
+body.dark .bottomNav{background:#064e47;box-shadow:0 -4px 20px rgba(0,0,0,0.45);}
+body.dark .bottomNav button{color:#bbf7d0;}
+body.dark .bottomNav button.active{background:#0f766e;color:white;}
+
+.tabPanel{display:none;}
+.tabPanel.active{display:block;}
+
+.pageHeader{padding:14px 14px 0;}
+.pageHeader h2{margin:0 0 6px;font-size:22px;}
+
+.miniActions{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:10px 0;}
+.miniActions button{width:100%;margin:0;}
+
+.profileBox{
+  background:white;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+  max-width:520px;
+}
+.profileBox label{display:block;font-weight:bold;margin:12px 0 6px;}
+.profileBox input{
+  width:100%;
+  padding:12px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font:inherit;
+}
+.profileBox .readonly{background:#f8fafc;color:#64748b;}
+.profileActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+.profileActions button{margin:0;}
+
+.chatListPage,.chatConversationPage{
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.chatConversationPage{
+  min-height:calc(100vh - 150px);
+  background:#efeae2;
+  display:flex;
+  flex-direction:column;
+}
+.chatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid #e2e8f0;
+}
+.chatThreadMain{
+  flex:1;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  min-width:0;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  cursor:pointer;
+}
+.chatThreadMain:hover{background:#e7f7ee}
+.chatAvatar{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#16a34a;
+  color:white;
+  font-weight:bold;
+  flex-shrink:0;
+}
+.chatSummary{display:block;min-width:0;text-align:left}
+.chatSummary strong{display:block;color:#172033}
+.chatSummary small{display:block;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.threadMenu{position:relative;padding-right:8px;flex-shrink:0}
+.threadMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.threadMenu summary::-webkit-details-marker{display:none}
+.threadMenu[open] summary,.threadMenu summary:hover{background:rgba(0,0,0,.08)}
+.headerMenu{position:relative;margin-left:auto}
+.headerMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold;color:white}
+.headerMenu summary::-webkit-details-marker{display:none}
+.headerMenu[open] summary,.headerMenu summary:hover{background:rgba(255,255,255,.16)}
+.chatConvHeader{
+  background:#075e54;
+  color:white;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.chatConvHeader .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  width:auto;
+}
+.chatConvInfo{flex:1;min-width:0}
+.chatConvInfo h2{font-size:16px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatConvInfo small{display:block;color:#dcfce7;margin-top:2px}
+.chatConversationPage .messages{
+  flex:1;
+  padding:16px 12px;
+  overflow:auto;
+  background:#efeae2;
+  background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.28) 25%,transparent 25%);
+  background-size:32px 32px;
+}
+.chatConversationPage .message{
+  max-width:min(76%,520px);
+  margin:8px 0;
+  line-height:1.35;
+  padding:8px 34px 8px 10px;
+  border-radius:8px;
+  box-shadow:0 1px 2px rgba(15,23,42,0.14);
+  clear:both;
+  word-wrap:break-word;
+  position:relative;
+}
+.chatConversationPage .message b{display:block;font-size:12px;color:#667781;margin-bottom:3px}
+.chatConversationPage .message.received{background:white;float:left;border-top-left-radius:2px}
+.chatConversationPage .message.sent{background:#dcf8c6;float:right;border-top-right-radius:2px}
+.chatConversationPage .message.emptyChat{
+  float:none;max-width:100%;margin:20px auto;text-align:center;
+  background:rgba(255,255,255,.85);color:#667781;
+}
+.chatInput{
+  display:flex;gap:8px;padding:10px;background:#f0f2f5;align-items:center;flex-shrink:0;
+}
+.chatInput input{
+  flex:1;padding:12px;border:0;border-radius:999px;background:white;outline:none;font-size:15px;
+}
+.sendBtn{
+  width:44px;height:44px;border-radius:50%;background:#128c7e;color:white;margin:0;
+  font-size:18px;display:grid;place-items:center;border:0;cursor:pointer;font-weight:bold;
+}
+.chatListPage{min-height:calc(100vh - 150px);}
+
+body.dark .tabPanel .profileBox,
+body.dark .chatListPage,
+body.dark .chatConversationPage{background:#1f2937;color:#f8fafc;}
+body.dark .chatThreadMain:hover{background:#374151;}
+body.dark .chatSummary strong{color:#f8fafc}
+body.dark .profileBox input.readonly{background:#374151;color:#cbd5e1;}
+
 @media(max-width:640px){
 header{
 font-size:18px;
-padding:12px 8px 52px;
+padding:14px;
 }
 .filters{
 display:grid;
@@ -785,25 +973,10 @@ height:200px;
 <body>
 
 <header>
-<button class="menuBtn" onclick="toggleMenu()">☰</button>
 🏠 DeKUT Housing
 </header>
 
-<div id="menuOverlay" class="menuOverlay" onclick="closeMenu()"></div>
-<nav id="sideMenu" class="sideMenu">
-<h2>Menu</h2>
-<a href="index.html">Home</a>
-<a href="landlord-signup.html">Landlord Signup</a>
-<a href="user-login.html">User Login</a>
-<button onclick="openAllHousesMap()">Map View</button>
-<button onclick="toggleTheme()">Dark / Light Mode</button>
-<button onclick="contactUs()">Contact Us</button>
-<button onclick="closeMenu()">Close</button>
-</nav>
-
-<div style="text-align:center;padding:10px;">
-<button class="mapbtn" onclick="openAllHousesMap()">🗺 View All Houses on Map</button>
-</div>
+<section id="homePanel" class="tabPanel active">
 
 <div class="filters">
 
@@ -847,42 +1020,57 @@ height:200px;
 
 <div class="grid" id="list"></div>
 
+</section>
+
+<section id="messagesPanel" class="tabPanel">
+<div class="pageHeader"><h2>Messages</h2></div>
+<div id="userChatList" style="padding:14px;"></div>
+</section>
+
+<section id="aboutPanel" class="tabPanel">
+<div class="pageHeader"><h2>About</h2></div>
+<ul class="aboutList">
+<li><button type="button" onclick="openProfile()">Profile</button></li>
+<li><button type="button" onclick="showWishlist()">Wishlist</button></li>
+<li><a href="user-login.html">User Login</a></li>
+<li><a href="user-signup.html">Create Account</a></li>
+<li><a href="landlord-signup.html">Landlord Signup</a></li>
+<li><button type="button" onclick="openAllHousesMap()">Map View</button></li>
+<li><button type="button" onclick="toggleTheme()">Dark / Light Mode</button></li>
+<li><button type="button" onclick="contactUs()">Contact Us</button></li>
+<li><button type="button" onclick="logoutUser()">Logout</button></li>
+</ul>
+</section>
+
+<section id="profilePanel" class="tabPanel">
+<div class="pageHeader">
+<button class="backBtn" style="position:static;margin-bottom:10px;" onclick="backFromProfile()">Back</button>
+<h2>My Profile</h2>
+</div>
+<div style="padding:14px;">
+<div class="profileBox">
+<label>Full name</label>
+<input id="profileName" type="text">
+<label>Email</label>
+<input id="profileEmail" class="readonly" readonly>
+<label>Member since</label>
+<input id="profileSince" class="readonly" readonly>
+<div class="profileActions">
+<button class="detailsbtn" onclick="saveProfile()">Save changes</button>
+<button class="wishlist" onclick="showWishlist()">My wishlist</button>
+<button class="chatbtn" onclick="showTab('messages')">Messages</button>
+</div>
+</div>
+</div>
+</section>
+
 <nav class="bottomNav">
-<button onclick="browseProperties()"><span>Home</span>Home</button>
-<button onclick="showUserMessages()"><span>Msg</span>Messages</button>
-<button onclick="openAboutPanel()"><span>About</span>About</button>
+<button id="navHome" class="active" onclick="showTab('home')"><span>Home</span>Home</button>
+<button id="navMessages" onclick="showTab('messages')"><span>Msg</span>Messages</button>
+<button id="navAbout" onclick="showTab('about')"><span>About</span>About</button>
 </nav>
 
 <div id="toast" class="toast"></div>
-
-<div class="panelModal" id="userMessagesPanel">
-<div class="panelBox">
-<div class="panelHeader">
-<h2>Messages</h2>
-<button class="detailsbtn" onclick="closePanel('userMessagesPanel')">Close</button>
-</div>
-<div id="userChatList"></div>
-</div>
-</div>
-
-<div class="panelModal" id="aboutPanel">
-<div class="panelBox">
-<div class="panelHeader">
-<h2>About</h2>
-<button class="detailsbtn" onclick="closePanel('aboutPanel')">Close</button>
-</div>
-<div class="aboutActions">
-<button onclick="closePanel('aboutPanel'); openProfile()">Profile</button>
-<button onclick="closePanel('aboutPanel'); showWishlist()">Wishlist</button>
-<a href="user-login.html">User Login</a>
-<a href="landlord-signup.html">Landlord Signup</a>
-<button onclick="closePanel('aboutPanel'); openAllHousesMap()">Map View</button>
-<button onclick="toggleTheme(); closePanel('aboutPanel')">Dark / Light Mode</button>
-<button onclick="closePanel('aboutPanel'); contactUs()">Contact Us</button>
-<button onclick="logoutUser()">Logout</button>
-</div>
-</div>
-</div>
 
 <div class="modal" id="mapModal"></div>
 
@@ -913,24 +1101,6 @@ height:200px;
 </div>
 </div>
 
-<div class="chatModal" id="chatModal">
-<div class="chatBox">
-<div class="chatHeader">
-<button class="backBtn" onclick="closeChat()">Back</button>
-<div class="chatAvatar">L</div>
-<div class="chatHeading">
-<h2 id="chatTitle">Property Chat</h2>
-<small>Landlord chat</small>
-</div>
-</div>
-<div class="messages" id="chatMessages"></div>
-<div class="chatInput">
-<input id="chatInput" placeholder="Type your message">
-<button class="sendBtn" onclick="sendChatMessage()">➤</button>
-</div>
-</div>
-</div>
-
 <script>
 
 /* FIREBASE */
@@ -956,51 +1126,111 @@ function goUser(){
 window.location.href="user-login.html";
 }
 
-function toggleMenu(){
-document.getElementById("sideMenu").classList.add("open");
-document.getElementById("menuOverlay").classList.add("open");
+function pushNavState(state){
+if(navApplying) return;
+history.pushState(state, "", location.pathname + location.search);
 }
 
-function closeMenu(){
-document.getElementById("sideMenu").classList.remove("open");
-document.getElementById("menuOverlay").classList.remove("open");
+function showTab(tab, pushHistory=true){
+if(tab === "messages" && !requireUser("messages")) return;
+document.querySelectorAll(".tabPanel").forEach(p=>p.classList.remove("active"));
+document.querySelectorAll(".bottomNav button").forEach(b=>b.classList.remove("active"));
+const panel = document.getElementById(tab + "Panel");
+if(panel) panel.classList.add("active");
+const navBtn = document.getElementById("nav" + tab.charAt(0).toUpperCase() + tab.slice(1));
+if(navBtn) navBtn.classList.add("active");
+currentTab = tab;
+if(tab !== "messages"){
+messagesView = "list";
+activeUserChatId = "";
+}
+if(tab === "messages") renderUserChats();
+if(tab === "home"){
+window.scrollTo({top:0, behavior:"smooth"});
+}
+if(pushHistory) pushNavState({layer:"tab", tab});
 }
 
-function closePanel(id){
-document.getElementById(id).style.display = "none";
+function applyNavState(state){
+if(!state) state = {layer:"tab", tab:"home"};
+if(state.layer === "overlay"){
+if(state.name === "details") document.getElementById("detailsModal").style.display = "none";
+if(state.name === "photos") document.getElementById("photoModal").style.display = "none";
+if(state.name === "map") document.getElementById("mapModal").style.display = "none";
+if(state.name === "rating") closeRatingModal(true);
+return;
 }
+if(state.layer === "chat"){
+showTab("messages", false);
+messagesView = "conversation";
+activeUserChatId = state.chatId || "";
+const chat = userChats[activeUserChatId];
+if(chat) activeChat = {id: activeUserChatId, ...chat};
+renderUserChats();
+return;
+}
+if(state.layer === "profile"){
+showTab("about", false);
+document.querySelectorAll(".tabPanel").forEach(p=>p.classList.remove("active"));
+document.getElementById("profilePanel").classList.add("active");
+currentTab = "profile";
+return;
+}
+closeChat();
+messagesView = "list";
+activeUserChatId = "";
+if(state.layer === "tab") showTab(state.tab || "home", false);
+}
+
+window.addEventListener("popstate", (e)=>{
+navApplying = true;
+applyNavState(e.state || {layer:"tab", tab:"home"});
+navApplying = false;
+});
+
+history.replaceState({layer:"tab", tab:"home"}, "", location.pathname + location.search);
 
 function browseProperties(){
-closeMenu();
-closePanel("aboutPanel");
-closePanel("userMessagesPanel");
-document.getElementById("searchBox").focus();
-document.getElementById("list").scrollIntoView({behavior:"smooth"});
-}
-
-function focusSearch(){
-closeMenu();
-document.getElementById("searchBox").focus();
-document.querySelector(".filters").scrollIntoView({behavior:"smooth"});
+showTab("home");
 }
 
 function openProfile(){
-closeMenu();
-if(!currentUser){
-showToast("Please create an account or login first to view your profile.", "warning");
-setTimeout(()=> window.location.href = "user-signup.html", 1200);
-return;
+if(!requireUser("profile")) return;
+const nameEl = document.getElementById("profileName");
+const emailEl = document.getElementById("profileEmail");
+const sinceEl = document.getElementById("profileSince");
+if(nameEl) nameEl.value = currentUserProfile?.name || currentUser.displayName || "";
+if(emailEl) emailEl.value = currentUser.email || "";
+if(sinceEl){
+const created = currentUserProfile?.createdAt || currentUser.metadata?.creationTime;
+sinceEl.value = created ? new Date(created).toLocaleDateString() : "—";
 }
-showToast("Profile: " + (currentUserProfile?.name || currentUser.email || "User"), "success");
+document.querySelectorAll(".tabPanel").forEach(p=>p.classList.remove("active"));
+document.getElementById("profilePanel").classList.add("active");
+currentTab = "profile";
+pushNavState({layer:"profile"});
 }
 
-function openAboutPanel(){
-closeMenu();
-document.getElementById("aboutPanel").style.display = "block";
+function backFromProfile(){
+if(!navApplying) history.back();
+}
+
+function saveProfile(){
+if(!requireUser("profile")) return;
+const name = document.getElementById("profileName").value.trim();
+if(!name){
+showToast("Please enter your name.", "warning");
+return;
+}
+db.ref("users/" + currentUser.uid).update({name, updatedAt: Date.now()})
+.then(()=>{
+currentUserProfile = {...(currentUserProfile || {}), name};
+showToast("Profile updated successfully.", "success");
+})
+.catch(()=> showToast("Could not save profile.", "error"));
 }
 
 function logoutUser(){
-closePanel("aboutPanel");
 if(!currentUser){
 showToast("You are not logged in yet.", "warning");
 return;
@@ -1008,22 +1238,13 @@ return;
 auth.signOut().then(()=> showToast("Logged out successfully.", "success"));
 }
 
-function showUserMessages(){
-closeMenu();
-if(!requireUser("messages")) return;
-renderUserChats();
-document.getElementById("userMessagesPanel").style.display = "block";
-}
-
 function contactUs(){
-closeMenu();
 showToast("Contact DeKUT Housing support: support@dekuthousing.com", "success");
 }
 
 function toggleTheme(){
 document.body.classList.toggle("dark");
 localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
-closeMenu();
 }
 
 if(localStorage.getItem("theme") === "dark"){
@@ -1064,6 +1285,10 @@ let userNotificationsRef = null;
 let userChatsRef = null;
 let activeRatingPropertyId = null;
 let selectedRating = 0;
+let currentTab = "home";
+let messagesView = "list";
+let activeUserChatId = "";
+let navApplying = false;
 const DEKUT_LAT = -0.3977905;
 const DEKUT_LNG = 36.9608515;
 
@@ -1251,9 +1476,8 @@ showToast("Property added to wishlist successfully.", "success");
 }
 
 function showWishlist(){
-closeMenu();
 if(!requireUser("wishlist")) return;
-
+showTab("home", false);
 filteredArray = [];
 for(let id in data){
 let p = data[id];
@@ -1276,6 +1500,7 @@ selectedRating = 0;
 document.getElementById("ratingComment").value = "";
 updateStarPicker();
 document.getElementById("ratingModal").style.display = "block";
+pushNavState({layer:"overlay", name:"rating"});
 }
 
 function selectRating(value){
@@ -1291,10 +1516,11 @@ button.classList.toggle("selected", index < selectedRating);
 });
 }
 
-function closeRatingModal(){
+function closeRatingModal(fromHistory=false){
 document.getElementById("ratingModal").style.display = "none";
 activeRatingPropertyId = null;
 selectedRating = 0;
+if(!fromHistory && !navApplying) history.back();
 }
 
 function submitRating(){
@@ -1326,46 +1552,128 @@ return propertyId + "_" + currentUser.uid;
 function renderUserChats(){
 const box = document.getElementById("userChatList");
 if(!box) return;
+
+if(messagesView === "conversation" && activeUserChatId){
+if(!activeChat && userChats[activeUserChatId]) activeChat = {id: activeUserChatId, ...userChats[activeUserChatId]};
+if(activeChat){
+renderUserConversation(box);
+return;
+}
+}
+
+if(activeChatMessagesRef){
+activeChatMessagesRef.off();
+activeChatMessagesRef = null;
+}
+
 const rows = Object.entries(userChats || {})
 .map(([id, chat])=>({id, ...chat}))
 .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
 
 if(rows.length === 0){
-box.innerHTML = "<p style='color:#64748b'>No messages yet. Open a property and tap Chat to start.</p>";
+messagesView = "list";
+box.innerHTML = "<p style='color:#64748b;padding:14px'>No messages yet. Open a property and tap Chat to start.</p>";
 return;
 }
 
-box.innerHTML = rows.map(chat=>`
-<button class="userChatItem" onclick="openExistingChat('${chat.id}')">
-${chat.propertyTitle || "Property chat"}
-<small>${chat.propertyLocation || ""}</small>
+messagesView = "list";
+box.innerHTML = `
+<div class="chatListPage">
+${rows.map(chat=>{
+const title = chat.propertyTitle || "Property chat";
+return `
+<div class="chatThreadRow">
+<button class="chatThreadMain" onclick="openExistingChat('${chat.id}')">
+<span class="chatAvatar">L</span>
+<span class="chatSummary">
+<strong>${title}</strong>
+<small>${chat.propertyLocation || "DeKUT area"}</small>
 <small>${chat.lastMessage || "Open conversation"}</small>
+</span>
 </button>
-`).join("");
+<details class="threadMenu msgMenu" onclick="event.stopPropagation()">
+<summary>⋮</summary>
+<div class="msgMenuList">
+<button onclick="openExistingChat('${chat.id}')">Open chat</button>
+<button class="dangerText" onclick="deleteUserChat('${chat.id}')">Delete chat</button>
+</div>
+</details>
+</div>`;
+}).join("")}
+</div>`;
 }
 
-function openExistingChat(chatId){
+function renderUserConversation(box){
+if(activeChatMessagesRef){
+activeChatMessagesRef.off();
+}
+activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
+activeChatMessagesRef.on("value", snap=>{
+activeChatMessages = snap.val() || {};
+renderChatMessages(activeChatMessages);
+});
+
+const title = (activeChat.propertyTitle || "Property chat") + (activeChat.propertyLocation ? " - " + activeChat.propertyLocation : "");
+box.innerHTML = `
+<div class="chatConversationPage">
+<div class="chatConvHeader">
+<button class="backBtn" onclick="backToMessageList()">Back</button>
+<div class="chatConvInfo">
+<h2>${title}</h2>
+<small>Landlord chat</small>
+</div>
+<details class="headerMenu msgMenu">
+<summary>⋮</summary>
+<div class="msgMenuList">
+<button onclick="openExistingChat('${activeChat.id}', false)">Refresh</button>
+<button class="dangerText" onclick="deleteUserChat('${activeChat.id}')">Delete chat</button>
+</div>
+</details>
+</div>
+<div class="messages" id="chatMessages"></div>
+<div class="chatInput">
+<input id="chatInput" placeholder="Type your message">
+<button class="sendBtn" onclick="sendChatMessage()">➤</button>
+</div>
+</div>`;
+renderChatMessages(activeChatMessages || {});
+}
+
+function openExistingChat(chatId, pushHistory=true){
 if(!requireUser("messages")) return;
 const chat = userChats[chatId];
 if(!chat){
 showToast("This chat is no longer available.", "warning");
 return;
 }
-closePanel("userMessagesPanel");
 activeChat = {id: chatId, ...chat};
-document.getElementById("chatTitle").innerText =
-(activeChat.propertyTitle || "Property chat") + (activeChat.propertyLocation ? " - " + activeChat.propertyLocation : "");
-document.getElementById("chatModal").style.display = "block";
-
-if(activeChatMessagesRef){
-activeChatMessagesRef.off();
+activeUserChatId = chatId;
+messagesView = "conversation";
+showTab("messages", false);
+renderUserChats();
+if(pushHistory) pushNavState({layer:"chat", chatId});
 }
-activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
-activeChatMessagesRef.on("value", snap=>{
-let messages = snap.val() || {};
-activeChatMessages = messages;
-renderChatMessages(messages);
-});
+
+function backToMessageList(){
+if(!navApplying) history.back();
+}
+
+function deleteUserChat(chatId){
+if(!requireUser("messages")) return;
+const chat = userChats[chatId];
+if(!chat) return;
+const label = (chat.propertyTitle || "Property chat") + (chat.propertyLocation ? " - " + chat.propertyLocation : "");
+if(!confirm("Delete this whole chat permanently?\n\n" + label)) return;
+db.ref("chats/" + chatId).remove()
+.then(()=>{
+if(activeUserChatId === chatId || activeChat?.id === chatId){
+closeChat();
+if(!navApplying) history.back();
+}
+renderUserChats();
+showToast("Chat deleted.", "success");
+})
+.catch(()=> showToast("Could not delete chat.", "error"));
 }
 
 function openChat(encoded){
@@ -1375,6 +1683,13 @@ let p = JSON.parse(decodeURIComponent(encoded));
 if(!p.landlordUid){
 showToast("This listing does not have a landlord account attached yet.", "error");
 return;
+}
+
+if(document.getElementById("detailsModal").style.display === "block"){
+document.getElementById("detailsModal").style.display = "none";
+if(history.state?.layer === "overlay" && history.state?.name === "details"){
+history.replaceState({layer:"tab", tab: currentTab}, "", location.pathname + location.search);
+}
 }
 
 activeChat = {
@@ -1389,11 +1704,6 @@ userEmail: currentUser.email || "",
 userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "Student"
 };
 
-document.getElementById("chatTitle").innerText =
-activeChat.propertyTitle + " - " + activeChat.propertyLocation;
-
-document.getElementById("chatModal").style.display = "block";
-
 db.ref("chats/" + activeChat.id).update({
 propertyId: activeChat.propertyId,
 propertyTitle: activeChat.propertyTitle,
@@ -1406,21 +1716,13 @@ userName: activeChat.userName,
 updatedAt: Date.now()
 }).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
 
-if(activeChatMessagesRef){
-activeChatMessagesRef.off();
-}
-
-activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
-activeChatMessagesRef.on("value", snap=>{
-let messages = snap.val() || {};
-activeChatMessages = messages;
-renderChatMessages(messages);
-});
+openExistingChat(activeChat.id);
 }
 
 function renderChatMessages(messages){
 let rows = Object.entries(messages).map(([id,message])=>({id,...message})).sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
 let box = document.getElementById("chatMessages");
+if(!box) return;
 
 if(rows.length === 0){
 box.innerHTML = "<div class='message emptyChat'>No messages yet. Start the conversation.</div>";
@@ -1504,12 +1806,13 @@ input.value = "";
 }
 
 function closeChat(){
-document.getElementById("chatModal").style.display = "none";
 if(activeChatMessagesRef){
 activeChatMessagesRef.off();
 activeChatMessagesRef = null;
 }
 activeChat = null;
+activeUserChatId = "";
+messagesView = "list";
 }
 
 /* INFINITE SCROLL RENDER */
@@ -1526,6 +1829,8 @@ nextItems.forEach(p=>{
 
 let img = p.images?.[0] || "";
 let statusClass = (p.status||p.availability||"").toLowerCase()==="available" ? "available":"occupied";
+let ratingSummary = getRatingSummary(p.id);
+let saved = isWishlisted(p.id);
 
 list.innerHTML += `
 <div class="card">
@@ -1538,40 +1843,16 @@ ${img?`<img src="${img}" onclick='openDetails("${safe(p)}")'>`:``}
 <div class="cardPrice">KSh ${p.rent||""}</div>
 <div class="cardLocation">${p.location||""}</div>
 <div class="cardDetail">${p.distance ? p.distance + " KM from DeKUT" : ""}</div>
+<div class="ratingLine">Rating: ${ratingSummary}</div>
 <div class="cardMetaRow">
 <div class="badge ${statusClass}">${p.status||p.availability||""}</div>
 </div>
-<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>View Details</button>
-</div>
-</div>`;
-return;
-
-list.innerHTML += `
-<div class="card">
-
-${img?`<img src="${img}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
-
-<div class="cardContent">
-
-<b>🏠 ${p.type||""}</b><br>
-📍 ${p.location||""}<br>
-🧰 ${p.amenities||""}<br>
-📏 ${p.distance||""} KM<br>
-💰 KSh ${p.rent||""}<br>
-<div class="ratingLine">Rating: ${ratingSummary}</div>
-
-<div class="badge ${statusClass}">${p.status||""}</div>
-
 <div class="miniActions">
 <button class="wishlist" onclick="toggleWishlist('${p.id}', this)">${saved ? "Wishlisted" : "Add to wishlist"}</button>
 <button class="ratingbtn" onclick="rateProperty('${p.id}')">Rate</button>
 <button class="chatbtn" onclick='openChat("${safe(p)}")'>Chat</button>
 </div>
-
-<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>
-View Details
-</button>
-
+<button class="detailsbtn" onclick='openDetails("${safe(p)}")'>View Details</button>
 </div>
 </div>`;
 });
@@ -1640,7 +1921,7 @@ ${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}">`:``}
 <div class="detailsActions">
 <button class="wishlist" onclick="toggleWishlist('${p.id}', this)">${saved ? "Wishlisted" : "Add to wishlist"}</button>
 <button class="ratingbtn" onclick="rateProperty('${p.id}')">Rate</button>
-<button class="chatbtn" onclick='closeDetails(); openChat("${safe(p)}")'>Chat</button>
+<button class="chatbtn" onclick='openChat("${safe(p)}")'>Chat</button>
 </div>
 
 <div class="detailsGrid">
@@ -1683,47 +1964,14 @@ ${getRatingComments(p.id) || "No comments yet."}
 ${Array.isArray(p.images) && p.images.length ? `<button class="photosbtn" onclick='openPhotos("${safe(p.images||[])}")'>View Photos</button>` : ""}
 <button class="call" onclick="window.location.href='tel:${p.phone || ""}'">Call Landlord</button>
 <button class="whatsapp" onclick="window.open('https://wa.me/${String(p.phone || "").replace(/\D/g,"")}')">WhatsApp</button>
-<button class="mapbtn" onclick='closeDetails(); openMap("${safe(p)}")'>View Map</button>
+<button class="mapbtn" onclick='openMap("${safe(p)}")'>View Map</button>
 </div>
 
 </div>`;
 
 document.getElementById("detailsModal").style.display="block";
 document.getElementById("detailsContent").scrollTop = 0;
-return;
-
-document.getElementById("detailsContent").innerHTML=`
-<div class="backBtn" onclick="closeDetails()">⬅ Back</div>
-
-${p.images?.[0]?`<img class="detailsImage" src="${p.images[0]}" onclick='openPhotos("${safe(p.images||[])}")'>`:``}
-
-<div class="detailsBody">
-
-<h2>${p.type||""}</h2>
-
-<b>Rent:</b> ${p.rent}<br>
-<b>Deposit:</b> ${p.deposit || ""}<br>
-<b>Location:</b> ${p.location}<br>
-<b>Distance:</b> ${p.distance || ""} KM<br>
-<b>Amenities:</b> ${p.amenities || ""}<br>
-<b>Description:</b> ${p.extra || ""}<br>
-<b>Contact:</b> ${p.phone}<br>
-
-<button class="call" onclick="window.location.href='tel:${p.phone || ""}'">
-Call Landlord
-</button>
-
-<button class="whatsapp" onclick="window.open('https://wa.me/${String(p.phone || "").replace(/\D/g,"")}')">
-WhatsApp
-</button>
-
-<button class="mapbtn" onclick='closeDetails(); openMap("${safe(p)}")'>
-View Map
-</button>
-
-</div>`;
-
-document.getElementById("detailsModal").style.display="block";
+pushNavState({layer:"overlay", name:"details"});
 }
 
 /* PHOTO */
@@ -1747,6 +1995,7 @@ c.innerHTML += `
 
 document.getElementById("photoModal").style.display="block";
 c.scrollLeft = 0;
+pushNavState({layer:"overlay", name:"photos"});
 }
 
 /* MAP */
@@ -1771,6 +2020,13 @@ function openMap(encoded){
 let p = JSON.parse(decodeURIComponent(encoded));
 let lat = Number(p.lat);
 let lng = Number(p.lng);
+
+if(document.getElementById("detailsModal").style.display === "block"){
+document.getElementById("detailsModal").style.display = "none";
+if(history.state?.layer === "overlay" && history.state?.name === "details"){
+history.replaceState({layer:"tab", tab: currentTab}, "", location.pathname + location.search);
+}
+}
 
 document.getElementById("mapModal").style.display="block";
 
@@ -1801,10 +2057,10 @@ KSh ${p.rent || ""}<br>
 .openPopup();
 
 },100);
+pushNavState({layer:"overlay", name:"map"});
 }
 
 function openAllHousesMap(){
-closeMenu();
 document.getElementById("mapModal").style.display="block";
 document.getElementById("mapModal").innerHTML=`
 <div id="map"></div>
@@ -1840,12 +2096,22 @@ KSh ${p.rent || ""}<br>
 map.addLayer(markers);
 
 },100);
+pushNavState({layer:"overlay", name:"map"});
 }
 
 /* CLOSE */
-function closeDetails(){document.getElementById("detailsModal").style.display="none";}
-function closePhotos(){document.getElementById("photoModal").style.display="none";}
-function closeMap(){document.getElementById("mapModal").style.display="none";}
+function closeDetails(){
+if(!navApplying) history.back();
+else document.getElementById("detailsModal").style.display="none";
+}
+function closePhotos(){
+if(!navApplying) history.back();
+else document.getElementById("photoModal").style.display="none";
+}
+function closeMap(){
+if(!navApplying) history.back();
+else document.getElementById("mapModal").style.display="none";
+}
 
 </script>
 
