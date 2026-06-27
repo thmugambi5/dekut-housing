@@ -46,7 +46,8 @@ body{
   background:white;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
+  gap:12px;
   padding:12px 18px;
   box-shadow:0 2px 12px rgba(15,23,42,0.08);
 }
@@ -68,7 +69,7 @@ body{
 
 .sidebar{
   position:fixed;
-  right:18px;
+  left:18px;
   top:64px;
   width:240px;
   height:auto;
@@ -193,6 +194,55 @@ button{
 .message{margin:8px 0;line-height:1.4}
 .message b{display:block;font-size:12px;color:#64748b}
 .adminChatShell{
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+  box-shadow:0 12px 34px rgba(15,23,42,0.12);
+}
+.adminChatListOnly,.adminChatConversationPage{background:white;border-radius:16px;overflow:hidden;box-shadow:0 12px 34px rgba(15,23,42,0.12);margin-top:16px}
+.adminChatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid #e2e8f0;
+}
+.adminChatThreadMain{
+  flex:1;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+  cursor:pointer;
+}
+.adminChatThreadMain:hover{background:#e7f7ee}
+.adminChatConversationPage{display:flex;flex-direction:column;min-height:620px}
+.adminChatHeaderBar{
+  background:#075e54;
+  color:white;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.adminChatHeaderBar .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  margin:0;
+}
+.adminHeaderMenu summary{color:white}
+.adminHeaderMenu[open] summary,.adminHeaderMenu summary:hover{background:rgba(255,255,255,.16)}
+.threadMenu{position:relative;flex-shrink:0;padding-right:8px}
+.threadMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.threadMenu summary::-webkit-details-marker{display:none}
+.threadMenu[open] summary,.threadMenu summary:hover{background:rgba(0,0,0,.08)}
+.adminChatShell{
   display:grid;
   grid-template-columns:minmax(270px,360px) 1fr;
   min-height:620px;
@@ -300,11 +350,10 @@ button{
 
 /* MOBILE */
 @media(max-width:768px){
-  .sidebar{ right:10px; left:10px; top:62px; width:auto; }
+  .sidebar{ left:10px; right:10px; top:62px; width:auto; }
   .main{ padding:14px; }
-  .adminChatShell{grid-template-columns:1fr;min-height:calc(100vh - 160px)}
-  .adminChatThreads{max-height:260px;border-right:0;border-bottom:1px solid #dbe5df}
-  .adminChatHeader{display:block}
+  .adminChatConversationPage{min-height:calc(100vh - 160px)}
+  .adminChatHeaderBar{display:flex}
 }
 
 </style>
@@ -322,8 +371,8 @@ button{
 <div id="app">
 
 <div class="adminTopbar">
-  <h1>Dashboard</h1>
   <button class="hamburger" onclick="toggleAdminMenu()" aria-label="Open admin menu">☰</button>
+  <h1>Dashboard</h1>
 </div>
 
 <div class="sidebar" id="adminMenu">
@@ -400,6 +449,8 @@ let chats = {};
 let ratings = {};
 let mode = "pending";
 let activeAdminChatId = "";
+let adminChatView = "list";
+let navApplying = false;
 
 /* 🔐 HARD SECURITY GATE */
 auth.onAuthStateChanged(async user => {
@@ -466,12 +517,57 @@ function logout(){
 }
 
 function toggleAdminMenu(){
-  document.getElementById("adminMenu").classList.toggle("open");
+  const menu = document.getElementById("adminMenu");
+  const opening = !menu.classList.contains("open");
+  menu.classList.toggle("open");
+  if(opening) pushNavState({layer:"menu"});
 }
 
-function closeAdminMenu(){
+function closeAdminMenu(fromHistory=false){
   document.getElementById("adminMenu").classList.remove("open");
+  if(!fromHistory && !navApplying && history.state?.layer === "menu") history.back();
 }
+
+function pushNavState(state){
+  if(navApplying) return;
+  history.pushState(state, "", location.pathname + location.search);
+}
+
+window.addEventListener("popstate", (e)=>{
+  navApplying = true;
+  applyNavState(e.state || {layer:"listings", mode:"pending"});
+  navApplying = false;
+});
+
+function applyNavState(state){
+  if(!state) state = {layer:"listings", mode:"pending"};
+  if(state.layer === "menu"){
+    document.getElementById("adminMenu").classList.remove("open");
+    return;
+  }
+  if(state.layer === "details"){
+    document.getElementById("detailsModal").style.display = "none";
+    return;
+  }
+  if(state.layer === "chat"){
+    mode = "chats";
+    adminChatView = "conversation";
+    activeAdminChatId = state.chatId || "";
+    closeAdminMenu(true);
+    render();
+    return;
+  }
+  if(state.layer === "listings" || state.layer === "tab"){
+    adminChatView = "list";
+    activeAdminChatId = "";
+    closeAdminMenu(true);
+    document.getElementById("detailsModal").style.display = "none";
+    mode = state.mode || "pending";
+    render();
+  }
+}
+
+history.replaceState({layer:"listings", mode:"pending"}, "", location.pathname + location.search);
 
 function updateStats(){
   document.getElementById("totalPending").innerText =
@@ -484,14 +580,33 @@ function updateStats(){
     Object.keys(rejected).length;
 }
 
-function showPending(){ mode="pending"; closeAdminMenu(); render(); }
-function showApproved(){ mode="approved"; closeAdminMenu(); render(); }
-function showRejected(){ mode="rejected"; closeAdminMenu(); render(); }
-function showChats(){ mode="chats"; closeAdminMenu(); render(); }
-function loadAll(){ mode="all"; closeAdminMenu(); render(); }
+function showPending(){ mode="pending"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showApproved(){ mode="approved"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showRejected(){ mode="rejected"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showChats(){ mode="chats"; adminChatView="list"; activeAdminChatId=""; closeAdminMenu(true); pushNavState({layer:"listings", mode:"chats"}); render(); }
+function loadAll(){ mode="all"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode:"all"}); render(); }
 
 function safe(obj){
   return encodeURIComponent(JSON.stringify(obj));
+}
+
+function getListingById(id){
+  if(pending[id]) return pending[id];
+  if(approved[id]) return approved[id];
+  if(rejected[id]) return rejected[id];
+  return null;
+}
+
+function listingLabel(item){
+  if(!item) return "this property";
+  return item.propertyName || item.houseName || item.type || "this property";
+}
+
+function listingConfirmMessage(action, item){
+  const name = listingLabel(item);
+  const location = item?.location ? "\nLocation: " + item.location : "";
+  const landlord = item?.landlordEmail ? "\nLandlord: " + item.landlordEmail : "";
+  return "Are you sure you want to " + action + " \"" + name + "\"?" + location + landlord;
 }
 
 function getRatingSummary(propertyId){
@@ -656,6 +771,7 @@ function openDetails(encoded){
   `;
 
   document.getElementById("detailsModal").style.display="block";
+  pushNavState({layer:"details"});
 }
 
 function editRating(propertyId, uid){
@@ -687,14 +803,15 @@ function deleteRating(propertyId, uid){
 }
 
 function closeDetails(){
-  document.getElementById("detailsModal").style.display="none";
+  if(!navApplying) history.back();
+  else document.getElementById("detailsModal").style.display="none";
 }
 
 function approve(id){
 
   let item = pending[id];
   if(!item) return;
-  if(!confirm("Approve only after verifying photos, GPS location, phone number, and landlord identity.")) return;
+  if(!confirm(listingConfirmMessage("approve", item) + "\n\nOnly approve after verifying photos, GPS location, phone number, and landlord identity.")) return;
 
   item.approved = true;
   item.reviewStatus = "approved";
@@ -730,15 +847,43 @@ function renderChats(q, list){
   });
 
   if(filtered.length === 0){
+    adminChatView = "list";
     list.innerHTML = "<div class='card'><div class='cardContent'>No chats found.</div></div>";
     return;
   }
 
-  if(!activeAdminChatId || !filtered.some(chat=>chat.id === activeAdminChatId)){
-    activeAdminChatId = filtered[0].id;
+  if(adminChatView === "conversation" && activeAdminChatId){
+    const activeChat = filtered.find(chat=>chat.id === activeAdminChatId) || chats[activeAdminChatId];
+    if(activeChat){
+      renderAdminChatConversation(list, activeChat);
+      return;
+    }
   }
 
-  const activeChat = filtered.find(chat=>chat.id === activeAdminChatId) || filtered[0];
+  adminChatView = "list";
+  list.innerHTML = `
+    <div class="adminChatListOnly">
+      ${filtered.map(chat=>`
+        <div class="adminChatThreadRow">
+          <button class="adminChatThreadMain" onclick="openAdminChat('${chat.id}')">
+            <span class="threadTitle">${chat.propertyTitle || "Property chat"}</span>
+            <span class="threadMeta">${chat.propertyLocation || "Location not recorded"}</span>
+            <span class="threadMeta">${chat.userName || chat.userEmail || "Student"} ↔ ${chat.landlordEmail || "Landlord"}</span>
+            <span class="threadMeta">${chat.lastMessage || "Open conversation"}</span>
+          </button>
+          <details class="threadMenu msgMenu" onclick="event.stopPropagation()">
+            <summary>⋮</summary>
+            <div class="msgMenuList">
+              <button onclick="openAdminChat('${chat.id}')">Open chat</button>
+            </div>
+          </details>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderAdminChatConversation(list, activeChat){
   const messages = Object.entries(activeChat.messages || {})
     .map(([id, message])=>({id, ...message}))
     .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
@@ -746,39 +891,35 @@ function renderChats(q, list){
   const landlordName = activeChat.landlordEmail || activeChat.landlordUid || "Landlord";
 
   list.innerHTML = `
-    <div class="adminChatShell">
-      <div class="adminChatThreads">
-        ${filtered.map(chat=>`
-          <button class="adminChatThread ${chat.id === activeAdminChatId ? "active" : ""}" onclick="selectAdminChat('${chat.id}')">
-            <span class="threadTitle">${chat.propertyTitle || "Property chat"}</span>
-            <span class="threadMeta">${chat.propertyLocation || "Location not recorded"}</span>
-            <span class="threadMeta">${chat.userName || chat.userEmail || "Student"} ↔ ${chat.landlordEmail || "Landlord"}</span>
-            <span class="threadMeta">${chat.lastMessage || "Open conversation"}</span>
-          </button>
-        `).join("")}
-      </div>
-      <div class="adminChatWindow">
-        <div class="adminChatHeader">
-          <div>
-            <strong>${activeChat.propertyTitle || "Property chat"}</strong>
-            <small>${activeChat.propertyLocation || ""}</small>
-            <small>User: ${studentName}</small>
-            <small>Landlord: ${landlordName}</small>
+    <div class="adminChatConversationPage">
+      <div class="adminChatHeaderBar">
+        <button class="backBtn" onclick="backToAdminChatList()">Back</button>
+        <div class="adminChatHeaderInfo" style="flex:1;min-width:0">
+          <strong>${activeChat.propertyTitle || "Property chat"}</strong>
+          <small>${activeChat.propertyLocation || ""}</small>
+          <small>User: ${studentName} · Landlord: ${landlordName}</small>
+        </div>
+        <details class="adminHeaderMenu msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button class="dangerText" onclick="deleteAdminChat('${activeChat.id}')">Delete chat</button>
           </div>
-          <button class="delete" onclick="deleteAdminChat('${activeChat.id}')">Delete Whole Chat</button>
-        </div>
-        <div class="adminChatMessages" id="adminChatMessages">
-          ${messages.length ? messages.map(m=>`
-            <div class="adminBubble ${m.senderRole === "landlord" ? "landlord" : ""}">
-              <b>${m.senderRole === "landlord" ? "Landlord" : "User"}: ${m.senderName || ""}</b>
-              ${m.text || ""}
-              ${m.editedAt ? "<small>Edited</small>" : ""}
-              <div class="adminChatTools">
-                <button class="delete" onclick="deleteAdminMessage('${activeChat.id}','${m.id}')">Delete Message</button>
+        </details>
+      </div>
+      <div class="adminChatMessages" id="adminChatMessages">
+        ${messages.length ? messages.map(m=>`
+          <div class="adminBubble ${m.senderRole === "landlord" ? "landlord" : ""}">
+            <b>${m.senderRole === "landlord" ? "Landlord" : "User"}: ${m.senderName || ""}</b>
+            ${m.text || ""}
+            ${m.editedAt ? "<small>Edited</small>" : ""}
+            <details class="msgMenu">
+              <summary>⋮</summary>
+              <div class="msgMenuList">
+                <button class="dangerText" onclick="deleteAdminMessage('${activeChat.id}','${m.id}')">Delete message</button>
               </div>
-            </div>
-          `).join("") : "<div class='cardContent'>No messages in this chat.</div>"}
-        </div>
+            </details>
+          </div>
+        `).join("") : "<div class='cardContent'>No messages in this chat.</div>"}
       </div>
     </div>
   `;
@@ -789,9 +930,20 @@ function renderChats(q, list){
   },0);
 }
 
-function selectAdminChat(chatId){
+function openAdminChat(chatId, pushHistory=true){
+  if(!chats[chatId]) return;
   activeAdminChatId = chatId;
+  adminChatView = "conversation";
   render();
+  if(pushHistory) pushNavState({layer:"chat", chatId});
+}
+
+function backToAdminChatList(){
+  if(!navApplying) history.back();
+}
+
+function selectAdminChat(chatId){
+  openAdminChat(chatId);
 }
 
 function notifyChatUser(chat, title, body){
@@ -822,11 +974,15 @@ async function deleteAdminChat(chatId){
   await notifyChatUser({id:chatId, ...chat}, "Chat removed by admin", "Your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
   await db.ref("chats/" + chatId).remove();
   activeAdminChatId = "";
+  adminChatView = "list";
+  if(!navApplying) history.back();
 }
 
 function rejectItem(id){
   const item = pending[id];
   if(!item) return;
+
+  if(!confirm(listingConfirmMessage("reject", item) + "\n\nYou will be asked for a reason to show the landlord.")) return;
 
   const reason = prompt("Why is this property rejected? This will be shown to the landlord.");
   if(reason === null) return;
@@ -841,12 +997,20 @@ function rejectItem(id){
 }
 
 function deleteItem(id){
-  if(!confirm("Delete this listing permanently?")) return;
+  const item = getListingById(id);
+  if(!item) return;
+  if(!confirm(listingConfirmMessage("permanently delete", item) + "\n\nThis action cannot be undone.")) return;
   db.ref("pendingProperties/" + id).remove();
   db.ref("properties/" + id).remove();
+  db.ref("rejectedProperties/" + id).remove();
 }
 
 function suspendItem(id){
+  const item = approved[id];
+  if(!item) return;
+
+  if(!confirm(listingConfirmMessage("suspend", item) + "\n\nYou will be asked for a suspension reason.")) return;
+
   const reason = prompt("Why are you suspending this listing?");
   if(reason === null) return;
 
