@@ -69,16 +69,191 @@ button,a.button{
   justify-content:space-between;
   margin-bottom:14px;
 }
-.statusHint{
-  color:#64748b;
-  background:#e0f2fe;
-  border:1px solid #bae6fd;
-  border-radius:10px;
-  padding:10px 12px;
-}
 .aboutGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.chatListOnly,.chatConversationOnly{background:white;border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(15,23,42,0.12)}
+.chatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+}
+.chatThreadRow .chatThread{flex:1;border:0;border-bottom:0}
+.chatThreadMenuWrap{position:relative;padding-right:8px}
+.chatThreadMenuWrap .msgMenu{position:static}
+.chatHeader{display:flex;align-items:center;gap:10px}
+.chatHeader .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.chatHeaderInfo{flex:1;min-width:0}
+.chatHeaderActions{position:relative}
+.chatHeaderActions .msgMenu summary{color:white}
+.chatHeaderActions .msgMenu[open] summary,.chatHeaderActions .msgMenu summary:hover{background:rgba(255,255,255,.18)}
 .aboutItem{background:white;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(15,23,42,0.08)}
 .aboutItem strong{display:block;margin-bottom:6px}
+.chatListOnly{
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 14px 40px rgba(15,23,42,0.12);
+}
+.chatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+}
+.chatThreadRow:hover{background:#e7f7ee}
+.chatThreadMain{
+  flex:1;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  min-width:0;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:0;
+  cursor:pointer;
+}
+.chatConversationPage{
+  min-height:calc(100vh - 150px);
+  background:#efeae2;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+  display:flex;
+  flex-direction:column;
+}
+.chatConvHeader{
+  background:#075e54;
+  color:white;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.chatConvHeader .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  width:auto;
+}
+.chatConvInfo{flex:1;min-width:0}
+.chatConvInfo h2{
+  font-size:16px;
+  margin:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.chatConvInfo small{display:block;color:#dcfce7;margin-top:2px}
+.headerMenu{position:relative;margin-left:auto}
+.headerMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold}
+.headerMenu summary::-webkit-details-marker{display:none}
+.headerMenu[open] summary,.headerMenu summary:hover{background:rgba(255,255,255,.16)}
+.headerMenu summary{color:white}
+.chatConversationPage .messages{
+  flex:1;
+  padding:16px 12px;
+  overflow:auto;
+  background:#efeae2;
+  background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.28) 25%,transparent 25%);
+  background-size:32px 32px;
+}
+.chatConversationPage .message{
+  max-width:min(76%,520px);
+  margin:8px 0;
+  line-height:1.35;
+  padding:8px 34px 8px 10px;
+  border-radius:8px;
+  box-shadow:0 1px 2px rgba(15,23,42,0.14);
+  clear:both;
+  word-wrap:break-word;
+  position:relative;
+}
+.chatConversationPage .message b{
+  display:block;
+  font-size:12px;
+  color:#667781;
+  margin-bottom:3px;
+}
+.chatConversationPage .message.received{
+  background:white;
+  float:left;
+  border-top-left-radius:2px;
+}
+.chatConversationPage .message.sent{
+  background:#dcf8c6;
+  float:right;
+  border-top-right-radius:2px;
+}
+.chatConversationPage .message.emptyChat{
+  float:none;
+  max-width:100%;
+  margin:20px auto;
+  text-align:center;
+  background:rgba(255,255,255,.85);
+  color:#667781;
+}
+.chatInput{
+  display:flex;
+  gap:8px;
+  padding:10px;
+  background:#f0f2f5;
+  align-items:center;
+  flex-shrink:0;
+}
+.chatInput input{
+  flex:1;
+  padding:12px;
+  border:0;
+  border-radius:999px;
+  background:white;
+  outline:none;
+  font-size:15px;
+}
+.sendBtn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:#128c7e;
+  color:white;
+  margin:0;
+  font-size:18px;
+  display:grid;
+  place-items:center;
+  border:0;
+  cursor:pointer;
+  font-weight:bold;
+}
+.chatListPage{
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.threadMenu{position:relative;flex-shrink:0}
+.threadMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.threadMenu summary::-webkit-details-marker{display:none}
+.threadMenu[open] summary,.threadMenu summary:hover{background:rgba(0,0,0,.08)}
 .chatShell{
   display:grid;
   grid-template-columns:minmax(260px,330px) 1fr;
@@ -217,7 +392,7 @@ button,a.button{
   header{display:block}
   .actions{margin-top:12px}
   button,a.button{width:100%;text-align:center}
-  .bottomNav button,.msgMenuList button,.chatReply button{width:auto}
+  .bottomNav button,.msgMenuList button,.chatReply button,.sendBtn{width:auto}
   .chatShell{grid-template-columns:1fr;min-height:calc(100vh - 190px)}
   .chatThreads{max-height:250px;border-right:0;border-bottom:1px solid #dbe5df}
 }
@@ -237,7 +412,6 @@ button,a.button{
     <div class="propertyTools">
       <div>
         <h2 style="margin:0 0 6px">Property</h2>
-        <div class="statusHint">Current properties and edit requests appear here. Approved properties stay live while edited versions wait for admin approval.</div>
       </div>
       <a class="button primary" href="landlord.html">Add New Property</a>
     </div>
@@ -405,9 +579,12 @@ let pending = {};
 let approved = {};
 let rejected = {};
 let chats = {};
-let chatsOpen = false;
+let chatView = "list";
 let activeChatId = "";
 let activeEdit = null;
+let navApplying = false;
+let activeChatMessagesRef = null;
+let activeChatMessages = {};
 let landlordNotificationsRef = null;
 const AMENITY_OPTIONS = ["WiFi","Water","Electricity","Furnished","Parking","Security","Balcony","Hot Shower"];
 
@@ -445,13 +622,55 @@ auth.onAuthStateChanged(user=>{
   startNotifications();
 });
 
-function showTab(tab){
+function pushNavState(state){
+  if(navApplying) return;
+  history.pushState(state, "", location.pathname + location.search);
+}
+
+function showTab(tab, pushHistory=true){
   document.querySelectorAll(".tabPanel").forEach(panel=>panel.classList.remove("active"));
   document.querySelectorAll(".bottomNav button").forEach(btn=>btn.classList.remove("active"));
   document.getElementById(tab + "Panel").classList.add("active");
   document.getElementById("nav" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
+  if(tab !== "messages") chatView = "list";
   if(tab === "messages") renderChats();
+  if(pushHistory) pushNavState({layer:"tab", tab});
 }
+
+window.addEventListener("popstate", (e)=>{
+  navApplying = true;
+  applyNavState(e.state || {layer:"tab", tab:"property"});
+  navApplying = false;
+});
+
+function applyNavState(state){
+  if(!state) state = {layer:"tab", tab:"property"};
+  if(state.layer === "edit"){
+    document.getElementById("editModal").style.display = "none";
+    activeEdit = null;
+    return;
+  }
+  if(state.layer === "chat"){
+    showTab("messages", false);
+    activeChatId = state.chatId || "";
+    chatView = "conversation";
+    renderChats();
+    return;
+  }
+  if(state.layer === "tab"){
+    document.getElementById("editModal").style.display = "none";
+    activeEdit = null;
+    if(activeChatMessagesRef){
+      activeChatMessagesRef.off();
+      activeChatMessagesRef = null;
+    }
+    chatView = "list";
+    activeChatId = "";
+    showTab(state.tab || "property", false);
+  }
+}
+
+history.replaceState({layer:"tab", tab:"property"}, "", location.pathname + location.search);
 
 function startRealtime(){
   db.ref("pendingProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
@@ -596,11 +815,16 @@ function openEditModal(source, id){
     source === "rejected" ? "Submit edit for approval" :
     "Submit edit for approval";
   document.getElementById("editModal").style.display = "block";
+  pushNavState({layer:"edit", source, id});
 }
 
 function closeEditModal(){
   document.getElementById("editModal").style.display = "none";
   activeEdit = null;
+  if(!navApplying){
+    if(history.state?.layer === "edit") history.back();
+    else showTab("property", false);
+  }
 }
 
 function toBase64(file){
@@ -758,74 +982,134 @@ function renderChats(){
     .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
 
   if(rows.length === 0){
+    chatView = "list";
     chatList.innerHTML = "<div class='card empty'>No student messages yet.</div>";
     return;
   }
 
-  if(!activeChatId || !rows.some(chat=>chat.id === activeChatId)){
-    activeChatId = rows[0].id;
+  if(chatView === "conversation" && activeChatId && chats[activeChatId]){
+    renderChatConversation(chatList, chats[activeChatId]);
+    return;
   }
 
-  const activeChat = rows.find(chat=>chat.id === activeChatId) || rows[0];
-  const activeMessages = Object.entries(activeChat.messages || {})
-    .map(([id,message])=>({id,...message}))
-    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
-  const activeStudent = activeChat.userName || activeChat.userEmail || "Student";
+  if(activeChatMessagesRef){
+    activeChatMessagesRef.off();
+    activeChatMessagesRef = null;
+  }
 
+  chatView = "list";
   chatList.innerHTML = `
-    <div class="chatShell">
-      <div class="chatThreads">
-        ${rows.map(chat=>{
-          const studentName = chat.userName || chat.userEmail || "Student";
-          const initial = studentName.trim().charAt(0).toUpperCase() || "S";
-          return `
-            <button class="chatThread ${chat.id === activeChatId ? "active" : ""}" onclick="selectChat('${chat.id}')">
+    <div class="chatListPage">
+      ${rows.map(chat=>{
+        const studentName = chat.userName || chat.userEmail || "Student";
+        const initial = studentName.trim().charAt(0).toUpperCase() || "S";
+        return `
+          <div class="chatThreadRow">
+            <button class="chatThreadMain" onclick="openChatConversation('${chat.id}')">
               <span class="chatAvatar">${initial}</span>
               <span class="chatSummary">
                 <strong>${studentName}</strong>
-                <small>${chat.propertyTitle || "Property chat"} - ${chat.lastMessage || chat.propertyLocation || "Open conversation"}</small>
+                <small>${chat.propertyTitle || "Property chat"}</small>
+                <small>${chat.lastMessage || chat.propertyLocation || "Open conversation"}</small>
               </span>
             </button>
-          `;
-        }).join("")}
+            <details class="threadMenu msgMenu" onclick="event.stopPropagation()">
+              <summary>⋮</summary>
+              <div class="msgMenuList">
+                <button onclick="openChatConversation('${chat.id}')">Open chat</button>
+              </div>
+            </details>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderChatConversation(chatList, chat){
+  const activeStudent = chat.userName || chat.userEmail || "Student";
+  const title = (chat.propertyTitle || "Property chat") + (chat.propertyLocation ? " - " + chat.propertyLocation : "");
+
+  if(activeChatMessagesRef) activeChatMessagesRef.off();
+  activeChatMessagesRef = db.ref("chats/" + chat.id + "/messages");
+  activeChatMessagesRef.on("value", snap=>{
+    activeChatMessages = snap.val() || {};
+    renderLandlordChatMessages(chat, activeStudent);
+  });
+
+  chatList.innerHTML = `
+    <div class="chatConversationPage">
+      <div class="chatConvHeader">
+        <button class="backBtn" onclick="backToChatList()">Back</button>
+        <div class="chatConvInfo">
+          <h2>${title}</h2>
+          <small>${activeStudent}</small>
+        </div>
+        <details class="headerMenu msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button onclick="openChatConversation('${chat.id}', false)">Refresh</button>
+          </div>
+        </details>
       </div>
-      <div class="chatWindow">
-        <div class="chatHeader">
-          <strong>${activeStudent}</strong>
-          <small>${activeChat.propertyTitle || "Property chat"}${activeChat.propertyLocation ? " - " + activeChat.propertyLocation : ""}</small>
-        </div>
-        <div class="messages" id="activeMessages">
-          ${activeMessages.length ? activeMessages.map(m=>`
-            <div class="message ${m.senderUid === currentUser.uid ? "mine" : ""}">
-              <b>${m.senderRole === "landlord" ? "You" : (m.senderName || activeStudent)}</b>
-              ${m.text || ""}
-              ${m.editedAt ? "<small> Edited</small>" : ""}
-              ${m.senderUid === currentUser.uid ? `
-                <div class="messageTools">
-                  <button class="light" onclick="editReply('${activeChat.id}','${m.id}')">Edit</button>
-                  <button class="danger" onclick="deleteReply('${activeChat.id}','${m.id}')">Delete</button>
-                </div>
-              ` : ""}
-            </div>
-          `).join("") : "<div class='empty'>No messages in this chat yet.</div>"}
-        </div>
-        <div class="chatReply">
-          <input id="reply-${activeChat.id}" placeholder="Reply to ${activeStudent}">
-          <button class="primary" onclick="sendReply('${activeChat.id}')">Send</button>
-        </div>
+      <div class="messages" id="activeMessages"></div>
+      <div class="chatInput">
+        <input id="reply-${chat.id}" placeholder="Reply to ${activeStudent}">
+        <button class="sendBtn" onclick="sendReply('${chat.id}')">➤</button>
       </div>
     </div>
   `;
 
-  setTimeout(()=>{
-    const box = document.getElementById("activeMessages");
-    if(box) box.scrollTop = box.scrollHeight;
-  },0);
+  renderLandlordChatMessages(chat, activeStudent);
+}
+
+function renderLandlordChatMessages(chat, activeStudent){
+  const box = document.getElementById("activeMessages");
+  if(!box) return;
+
+  const rows = Object.entries(activeChatMessages || {})
+    .map(([id, message])=>({id, ...message}))
+    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+
+  if(rows.length === 0){
+    box.innerHTML = "<div class='message emptyChat'>No messages in this chat yet.</div>";
+    return;
+  }
+
+  box.innerHTML = rows.map(m=>`
+    <div class="message ${m.senderRole === "landlord" ? "sent" : "received"}">
+      <b>${m.senderRole === "landlord" ? "You" : (m.senderName || activeStudent)}</b>
+      ${m.text || ""}
+      ${m.editedAt ? "<small>Edited</small>" : ""}
+      ${m.senderUid === currentUser.uid ? `
+        <details class="msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button onclick="editReply('${chat.id}','${m.id}')">Edit</button>
+            <button class="dangerText" onclick="deleteReply('${chat.id}','${m.id}')">Delete</button>
+          </div>
+        </details>
+      ` : ""}
+    </div>
+  `).join("");
+
+  box.scrollTop = box.scrollHeight;
+}
+
+function openChatConversation(chatId, pushHistory=true){
+  if(!chats[chatId]) return;
+  activeChatId = chatId;
+  chatView = "conversation";
+  renderChats();
+  if(pushHistory) pushNavState({layer:"chat", chatId});
+}
+
+function backToChatList(){
+  if(!navApplying) history.back();
 }
 
 function selectChat(chatId){
-  activeChatId = chatId;
-  renderChats();
+  openChatConversation(chatId);
 }
 
 function sendReply(chatId){
