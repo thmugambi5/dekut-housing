@@ -744,7 +744,7 @@ function render(){
           <div class="cardActions">
             ${p.source === "pending" ? `
               <button class="light" onclick="openEditModal('pending','${p.id}')">Edit</button>
-              <button class="danger" onclick="deletePending('${p.id}')">Delete</button>
+              <button class="danger" onclick="deletePending('${p.id}')">Delete property</button>
             ` : ""}
             ${p.source === "approved" ? `
               <button class="successBtn" onclick="updateAvailability('${p.id}','${availabilityToggle}')">Mark ${availabilityToggle}</button>
@@ -946,7 +946,11 @@ async function submitEditForApproval(){
 }
 
 function deletePending(id){
-  if(!confirm("Delete this pending upload?")) return;
+  const p = pending[id];
+  if(!p) return;
+  const name = p.propertyName || p.houseName || p.type || "this property";
+  const location = p.location ? "\nLocation: " + p.location : "";
+  if(!confirm("Are you sure you want to delete \"" + name + "\"?" + location + "\n\nThis action cannot be undone.")) return;
   db.ref("pendingProperties/" + id).remove();
 }
 
