@@ -10,15 +10,37 @@
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px;font-family:Arial,sans-serif;background:#eef2f6}
-.box{width:100%;max-width:360px;background:white;padding:22px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,0.12)}
-h1{font-size:24px;margin:0 0 6px;text-align:center}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  font-family:Arial,sans-serif;
+  background:
+    linear-gradient(135deg,rgba(15,23,42,.84),rgba(13,148,136,.72)),
+    url("https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=80") center/cover;
+}
+.box{
+  width:100%;
+  max-width:410px;
+  background:white;
+  padding:28px;
+  border-radius:18px;
+  box-shadow:0 24px 70px rgba(15,23,42,0.34);
+  position:relative;
+  overflow:hidden;
+}
+.box:before{content:"";position:absolute;inset:0 0 auto;height:7px;background:linear-gradient(90deg,#14b8a6,#22c55e,#f59e0b)}
+h1{font-size:28px;margin:6px 0 6px;text-align:center;color:#0f172a}
 p{color:#5b6472;text-align:center;line-height:1.5}
 label{display:block;margin-top:14px;font-weight:bold}
-input{width:100%;padding:12px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px}
-button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:8px;background:#0f172a;color:white;font-weight:bold;cursor:pointer}
+input{width:100%;padding:12px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#f8fafc}
+input:focus{outline:2px solid #5eead4;border-color:#0d9488;background:white}
+button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:999px;background:linear-gradient(135deg,#0f172a,#0d9488);color:white;font-weight:bold;cursor:pointer;box-shadow:0 12px 26px rgba(13,148,136,.28)}
 button:disabled{background:#94a3b8;cursor:not-allowed}
-.link{display:block;margin-top:14px;text-align:center;color:#0f5fd7;text-decoration:none}
+.link{display:block;margin-top:16px;text-align:center;color:#0d9488;text-decoration:none;font-weight:bold}
 .msg{margin-top:12px;text-align:center;font-size:14px;color:#b91c1c}
 </style>
 </head>
