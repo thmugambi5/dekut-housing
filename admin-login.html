@@ -7,7 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 
@@ -132,7 +132,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-const db = firebase.database();
+const db = firebase.firestore();
 
 /* LOGIN */
 async function login(){
@@ -170,16 +170,15 @@ async function login(){
         console.log("USER UID:", user.uid);
 
         /* CHECK ADMINS NODE. If empty, the first successful login becomes admin. */
-        const adminRef = db.ref("admins");
+        const adminSnap = await db.collection("admins").get();
 
-        const snap =
-          await adminRef.once("value");
+        const admins = {};
+        adminSnap.forEach(doc=>{
+          admins[doc.id] = doc.data();
+        });
 
-        const admins =
-          snap.val() || {};
-
-        if(Object.keys(admins).length === 0){
-            await adminRef.child(user.uid).set({
+        if(adminSnap.empty){
+            await db.collection("admins").doc(user.uid).set({
                 email:user.email,
                 role:"superadmin",
                 createdAt:Date.now()
