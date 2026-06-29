@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
@@ -439,7 +439,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-const db = firebase.database();
+const db = firebase.firestore();
 const auth = firebase.auth();
 
 let pending = {};
@@ -460,7 +460,7 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
-  const adminSnap = await db.ref("admins/" + user.uid).once("value");
+  const adminSnap = await db.collection("admins").doc(user.uid).get();
 
   if(!adminSnap.exists()){
     auth.signOut();
@@ -480,31 +480,50 @@ auth.onAuthStateChanged(async user => {
 /* REALTIME DATA ONLY AFTER AUTH */
 function startRealtime(){
 
-  db.ref("pendingProperties").on("value", snap=>{
-    pending = snap.val() || {};
+  db.collection("pendingProperties").onSnapshot(snapshot=>{
+    pending = {};
+    snapshot.forEach(doc=>{
+      pending[doc.id] = {id: doc.id, ...doc.data()};
+    });
     updateStats();
     render();
   });
 
-  db.ref("properties").on("value", snap=>{
-    approved = snap.val() || {};
+  db.collection("properties").onSnapshot(snapshot=>{
+    approved = {};
+    snapshot.forEach(doc=>{
+      approved[doc.id] = {id: doc.id, ...doc.data()};
+    });
     updateStats();
     render();
   });
 
-  db.ref("rejectedProperties").on("value", snap=>{
-    rejected = snap.val() || {};
+  db.collection("rejectedProperties").onSnapshot(snapshot=>{
+    rejected = {};
+    snapshot.forEach(doc=>{
+      rejected[doc.id] = {id: doc.id, ...doc.data()};
+    });
     updateStats();
     render();
   });
 
-  db.ref("chats").on("value", snap=>{
-    chats = snap.val() || {};
+  db.collection("chats").onSnapshot(snapshot=>{
+    chats = {};
+    snapshot.forEach(doc=>{
+      chats[doc.id] = {id: doc.id, ...doc.data()};
+    });
     if(mode === "chats") render();
   });
 
-  db.ref("ratings").on("value", snap=>{
-    ratings = snap.val() || {};
+  db.collection("ratings").onSnapshot(snapshot=>{
+    ratings = {};
+    snapshot.forEach(doc=>{
+      ratings[doc.id] = {};
+      const subData = doc.data();
+      for(let uid in subData){
+        ratings[doc.id][uid] = subData[uid];
+      }
+    });
     render();
   });
 
@@ -790,16 +809,20 @@ function editRating(propertyId, uid){
   const comment = prompt("Edit comment", item.comment || "");
   if(comment === null) return;
 
-  db.ref("ratings/" + propertyId + "/" + uid).update({
-    rating,
-    comment: comment.trim(),
-    moderatedAt: Date.now()
-  });
+  db.collection("ratings").doc(propertyId).set({
+    [uid]: {
+      rating,
+      comment: comment.trim(),
+      moderatedAt: Date.now()
+    }
+  }, {merge: true});
 }
 
 function deleteRating(propertyId, uid){
   if(!confirm("Delete this rating/comment?")) return;
-  db.ref("ratings/" + propertyId + "/" + uid).remove();
+  db.collection("ratings").doc(propertyId).update({
+    [uid]: firebase.firestore.FieldValue.delete()
+  });
 }
 
 function closeDetails(){
@@ -822,8 +845,8 @@ function approve(id){
 
   const targetId = item.previousPropertyId || id;
 
-  db.ref("properties/" + targetId).set(item);
-  db.ref("pendingProperties/" + id).remove();
+  db.collection("properties").doc(targetId).set(item);
+  db.collection("pendingProperties").doc(id).delete();
 
 }
 
@@ -948,7 +971,7 @@ function selectAdminChat(chatId){
 
 function notifyChatUser(chat, title, body){
   if(!chat || !chat.userUid) return Promise.resolve();
-  return db.ref("notifications/users/" + chat.userUid).push({
+  return db.collection("notifications").doc("users").collection(chat.userUid).add({
     type: "admin_chat_moderation",
     chatId: chat.id || "",
     propertyId: chat.propertyId || "",
@@ -963,7 +986,7 @@ async function deleteAdminMessage(chatId, messageId){
   const chat = chats[chatId];
   if(!chat) return;
   if(!confirm("Delete this single message from the chat?")) return;
-  await db.ref("chats/" + chatId + "/messages/" + messageId).remove();
+  await db.collection("chats").doc(chatId).collection("messages").doc(messageId).delete();
   await notifyChatUser({id:chatId, ...chat}, "Message removed by admin", "A message in your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
 }
 
@@ -972,7 +995,7 @@ async function deleteAdminChat(chatId){
   if(!chat) return;
   if(!confirm("Delete this whole chat permanently?")) return;
   await notifyChatUser({id:chatId, ...chat}, "Chat removed by admin", "Your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
-  await db.ref("chats/" + chatId).remove();
+  await db.collection("chats").doc(chatId).delete();
   activeAdminChatId = "";
   adminChatView = "list";
   if(!navApplying) history.back();
@@ -992,17 +1015,17 @@ function rejectItem(id){
   item.rejectReason = reason.trim() || "Admin rejected this property.";
   item.rejectedAt = Date.now();
 
-  db.ref("rejectedProperties/" + id).set(item);
-  db.ref("pendingProperties/" + id).remove();
+  db.collection("rejectedProperties").doc(id).set(item);
+  db.collection("pendingProperties").doc(id).delete();
 }
 
 function deleteItem(id){
   const item = getListingById(id);
   if(!item) return;
   if(!confirm(listingConfirmMessage("permanently delete", item) + "\n\nThis action cannot be undone.")) return;
-  db.ref("pendingProperties/" + id).remove();
-  db.ref("properties/" + id).remove();
-  db.ref("rejectedProperties/" + id).remove();
+  db.collection("pendingProperties").doc(id).delete();
+  db.collection("properties").doc(id).delete();
+  db.collection("rejectedProperties").doc(id).delete();
 }
 
 function suspendItem(id){
@@ -1014,7 +1037,7 @@ function suspendItem(id){
   const reason = prompt("Why are you suspending this listing?");
   if(reason === null) return;
 
-  db.ref("properties/" + id).update({
+  db.collection("properties").doc(id).update({
     listingState: "suspended",
     suspendReason: reason.trim() || "Suspended by admin.",
     suspendedAt: Date.now()
@@ -1022,7 +1045,7 @@ function suspendItem(id){
 }
 
 function restoreItem(id){
-  db.ref("properties/" + id).update({
+  db.collection("properties").doc(id).update({
     listingState: "active",
     suspendReason: null,
     restoredAt: Date.now()
