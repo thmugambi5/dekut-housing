@@ -7,7 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 *{box-sizing:border-box}
@@ -58,6 +58,24 @@ button,a.button{
 .empty{text-align:center;color:#64748b;padding:24px}
 .cardActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .reason{background:#fee2e2;color:#7f1d1d;border-radius:8px;padding:8px;margin-top:10px}
+.ratingLine{color:#92400e;font-weight:bold;margin-top:10px}
+.stars{color:#f59e0b;letter-spacing:1px}
+.ratingsBlock{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid #e2e8f0;
+}
+.ratingsBlock > strong{display:block;margin-bottom:8px;color:#172033}
+.ratingComment{
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  padding:10px;
+  margin-bottom:8px;
+}
+.ratingComment strong{display:block;margin-bottom:4px}
+.ratingComment p{margin:6px 0 0;color:#334155;line-height:1.5}
+.ratingComment small{color:#64748b}
 .sectionTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .tabPanel{display:none}
 .tabPanel.active{display:block}
@@ -129,14 +147,30 @@ button,a.button{
   cursor:pointer;
 }
 .chatConversationPage{
-  min-height:calc(100vh - 150px);
   background:#efeae2;
-  border-radius:12px;
   overflow:hidden;
-  box-shadow:0 2px 10px rgba(15,23,42,0.08);
   display:flex;
   flex-direction:column;
 }
+#messagesPanel.chatOpen{
+  position:fixed;
+  inset:0;
+  z-index:8500;
+  overflow:hidden;
+  background:#efeae2;
+}
+#messagesPanel.chatOpen #chatList{height:100%}
+#messagesPanel.chatOpen .sectionTitle{display:none}
+#messagesPanel.chatOpen .chatConversationPage{
+  min-height:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+}
+body.chatOpen header,
+body.chatOpen .bottomNav{display:none}
+body.chatOpen{margin-bottom:0}
+body.chatOpen main.wrap{padding:0;max-width:none}
 .chatConvHeader{
   background:#075e54;
   color:white;
@@ -572,13 +606,14 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.database();
+const db = firebase.firestore();
 
 let currentUser = null;
 let pending = {};
 let approved = {};
 let rejected = {};
 let chats = {};
+let ratings = {};
 let chatView = "list";
 let activeChatId = "";
 let activeEdit = null;
@@ -627,12 +662,21 @@ function pushNavState(state){
   history.pushState(state, "", location.pathname + location.search);
 }
 
+function setChatOpen(open){
+  document.body.classList.toggle("chatOpen", open);
+  const panel = document.getElementById("messagesPanel");
+  if(panel) panel.classList.toggle("chatOpen", open);
+}
+
 function showTab(tab, pushHistory=true){
   document.querySelectorAll(".tabPanel").forEach(panel=>panel.classList.remove("active"));
   document.querySelectorAll(".bottomNav button").forEach(btn=>btn.classList.remove("active"));
   document.getElementById(tab + "Panel").classList.add("active");
   document.getElementById("nav" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
-  if(tab !== "messages") chatView = "list";
+  if(tab !== "messages"){
+    chatView = "list";
+    setChatOpen(false);
+  }
   if(tab === "messages") renderChats();
   if(pushHistory) pushNavState({layer:"tab", tab});
 }
@@ -661,11 +705,12 @@ function applyNavState(state){
     document.getElementById("editModal").style.display = "none";
     activeEdit = null;
     if(activeChatMessagesRef){
-      activeChatMessagesRef.off();
+      activeChatMessagesRef();
       activeChatMessagesRef = null;
     }
     chatView = "list";
     activeChatId = "";
+    setChatOpen(false);
     showTab(state.tab || "property", false);
   }
 }
@@ -673,33 +718,95 @@ function applyNavState(state){
 history.replaceState({layer:"tab", tab:"property"}, "", location.pathname + location.search);
 
 function startRealtime(){
-  db.ref("pendingProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
-    pending = snap.val() || {};
+  db.collection("pendingProperties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    pending = {};
+    snapshot.forEach(doc=>{
+      pending[doc.id] = {id: doc.id, ...doc.data()};
+    });
     render();
   });
-  db.ref("properties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
-    approved = snap.val() || {};
+  db.collection("properties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    approved = {};
+    snapshot.forEach(doc=>{
+      approved[doc.id] = {id: doc.id, ...doc.data()};
+    });
     render();
   });
-  db.ref("rejectedProperties").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
-    rejected = snap.val() || {};
+  db.collection("rejectedProperties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    rejected = {};
+    snapshot.forEach(doc=>{
+      rejected[doc.id] = {id: doc.id, ...doc.data()};
+    });
     render();
   });
-  db.ref("chats").orderByChild("landlordUid").equalTo(currentUser.uid).on("value", snap=>{
-    chats = snap.val() || {};
+  db.collection("chats").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    chats = {};
+    snapshot.forEach(doc=>{
+      chats[doc.id] = {id: doc.id, ...doc.data()};
+    });
     renderChats();
+  });
+  db.collection("ratings").onSnapshot(snapshot=>{
+    ratings = {};
+    snapshot.forEach(doc=>{
+      ratings[doc.id] = {};
+      const subData = doc.data();
+      for(let uid in subData){
+        ratings[doc.id][uid] = subData[uid];
+      }
+    });
+    render();
   });
 }
 
 function startNotifications(){
-  if(landlordNotificationsRef) landlordNotificationsRef.off();
+  if(landlordNotificationsRef) landlordNotificationsRef();
   const notifyFrom = Date.now();
-  landlordNotificationsRef = db.ref("notifications/landlords/" + currentUser.uid).orderByChild("createdAt").startAt(notifyFrom);
-  landlordNotificationsRef.on("child_added", snap=>{
-    const note = snap.val() || {};
-    showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
-    db.ref("notifications/landlords/" + currentUser.uid + "/" + snap.key).update({read:true});
+  landlordNotificationsRef = db.collection("notifications").doc("landlords").collection(currentUser.uid).where("createdAt", ">=", notifyFrom).onSnapshot(snapshot=>{
+    snapshot.forEach(doc=>{
+      const note = doc.data() || {};
+      showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
+      doc.ref.update({read:true});
+    });
   });
+}
+
+function getRatingPropertyId(p){
+  if(p.source === "approved") return p.id;
+  if(p.previousPropertyId) return p.previousPropertyId;
+  return p.id;
+}
+
+function getRatingSummary(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const values = Object.values(propertyRatings).map(item=>Number(item.rating || 0)).filter(Boolean);
+  if(values.length === 0) return "No ratings yet";
+  const total = values.reduce((sum, rating)=>sum + rating, 0);
+  const avg = total / values.length;
+  return "<span class='stars'>" + renderStars(avg) + "</span> " + avg.toFixed(1) + " (" + values.length + ")";
+}
+
+function renderStars(value){
+  const rounded = Math.round(Number(value || 0));
+  let stars = "";
+  for(let i = 1; i <= 5; i++){
+    stars += i <= rounded ? "★" : "☆";
+  }
+  return stars;
+}
+
+function getLandlordRatingComments(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const rows = Object.values(propertyRatings).sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0));
+  if(rows.length === 0) return "";
+  return rows.map(item=>`
+    <div class="ratingComment">
+      <strong>${item.userName || item.userEmail || "Student"}</strong>
+      <span class="stars">${renderStars(item.rating)}</span>
+      <p>${item.comment || "No written comment."}</p>
+      ${item.createdAt ? `<small>${new Date(item.createdAt).toLocaleDateString()}</small>` : ""}
+    </div>
+  `).join("");
 }
 
 function render(){
@@ -727,6 +834,9 @@ function render(){
     const reviewNote = p.previousPropertyId && p.source === "pending"
       ? "<div class='reason' style='background:#fef3c7;color:#78350f'><b>Edit status:</b> Waiting for admin approval. The current approved listing remains live until this edit is approved.</div>"
       : "";
+    const ratingId = getRatingPropertyId(p);
+    const ratingSummary = getRatingSummary(ratingId);
+    const ratingCommentsHtml = getLandlordRatingComments(ratingId);
     return `
       <article class="card">
         ${img ? `<img src="${img}" alt="">` : ""}
@@ -737,10 +847,12 @@ function render(){
           KSh ${p.rent || ""}<br>
           ${p.phone || ""}<br>
           <b>Status:</b> ${p.status || p.availability || ""}<br>
+          <div class="ratingLine"><b>Ratings:</b> ${ratingSummary}</div>
           <span class="badge ${badgeClass}">${p.reviewStatus}</span>
           ${reviewNote}
           ${p.rejectReason ? `<div class="reason"><b>Admin reason:</b> ${p.rejectReason}</div>` : ""}
           ${p.suspendReason ? `<div class="reason"><b>Suspension reason:</b> ${p.suspendReason}</div>` : ""}
+          ${ratingCommentsHtml ? `<div class="ratingsBlock"><strong>Student ratings & comments</strong>${ratingCommentsHtml}</div>` : ""}
           <div class="cardActions">
             ${p.source === "pending" ? `
               <button class="light" onclick="openEditModal('pending','${p.id}')">Edit</button>
@@ -913,19 +1025,19 @@ async function submitEditForApproval(){
     let submittedPropertyId = activeEdit.id;
 
     if(activeEdit.source === "pending"){
-      await db.ref("pendingProperties/" + activeEdit.id).update(base);
+      await db.collection("pendingProperties").doc(activeEdit.id).update(base);
     }else if(activeEdit.source === "rejected"){
       delete base.rejectReason;
       delete base.rejectedAt;
-      await db.ref("pendingProperties/" + activeEdit.id).set(base);
-      await db.ref("rejectedProperties/" + activeEdit.id).remove();
+      await db.collection("pendingProperties").doc(activeEdit.id).set(base);
+      await db.collection("rejectedProperties").doc(activeEdit.id).delete();
     }else{
       base.previousPropertyId = activeEdit.id;
-      const ref = await db.ref("pendingProperties").push(base);
-      submittedPropertyId = ref.key;
+      const ref = await db.collection("pendingProperties").add(base);
+      submittedPropertyId = ref.id;
     }
 
-    await db.ref("notifications/admin").push({
+    await db.collection("notifications").doc("admin").collection("notifications").add({
       type: activeEdit.source === "approved" ? "property_edit" : "property_resubmission",
       propertyId: submittedPropertyId,
       previousPropertyId: activeEdit.source === "approved" ? activeEdit.id : "",
@@ -951,11 +1063,11 @@ function deletePending(id){
   const name = p.propertyName || p.houseName || p.type || "this property";
   const location = p.location ? "\nLocation: " + p.location : "";
   if(!confirm("Are you sure you want to delete \"" + name + "\"?" + location + "\n\nThis action cannot be undone.")) return;
-  db.ref("pendingProperties/" + id).remove();
+  db.collection("pendingProperties").doc(id).delete();
 }
 
 function updateAvailability(id, status){
-  db.ref("properties/" + id).update({
+  db.collection("properties").doc(id).update({
     status,
     availability: status,
     updatedAt: Date.now()
@@ -987,17 +1099,21 @@ function renderChats(){
 
   if(rows.length === 0){
     chatView = "list";
+    setChatOpen(false);
     chatList.innerHTML = "<div class='card empty'>No student messages yet.</div>";
     return;
   }
 
   if(chatView === "conversation" && activeChatId && chats[activeChatId]){
+    setChatOpen(true);
     renderChatConversation(chatList, chats[activeChatId]);
     return;
   }
 
+  setChatOpen(false);
+
   if(activeChatMessagesRef){
-    activeChatMessagesRef.off();
+    activeChatMessagesRef();
     activeChatMessagesRef = null;
   }
 
@@ -1034,17 +1150,19 @@ function renderChatConversation(chatList, chat){
   const activeStudent = chat.userName || chat.userEmail || "Student";
   const title = (chat.propertyTitle || "Property chat") + (chat.propertyLocation ? " - " + chat.propertyLocation : "");
 
-  if(activeChatMessagesRef) activeChatMessagesRef.off();
-  activeChatMessagesRef = db.ref("chats/" + chat.id + "/messages");
-  activeChatMessagesRef.on("value", snap=>{
-    activeChatMessages = snap.val() || {};
+  if(activeChatMessagesRef) activeChatMessagesRef();
+  activeChatMessagesRef = db.collection("chats").doc(chat.id).collection("messages").orderBy("createdAt").onSnapshot(snapshot=>{
+    activeChatMessages = {};
+    snapshot.forEach(doc=>{
+      activeChatMessages[doc.id] = {id: doc.id, ...doc.data()};
+    });
     renderLandlordChatMessages(chat, activeStudent);
   });
 
   chatList.innerHTML = `
     <div class="chatConversationPage">
       <div class="chatConvHeader">
-        <button class="backBtn" onclick="backToChatList()">Back</button>
+        <button class="backBtn" onclick="backToChatList()" aria-label="Back">←</button>
         <div class="chatConvInfo">
           <h2>${title}</h2>
           <small>${activeStudent}</small>
@@ -1122,19 +1240,19 @@ function sendReply(chatId){
   if(!text) return;
   const chat = chats[chatId] || {};
 
-  db.ref("chats/" + chatId + "/messages").push({
+  db.collection("chats").doc(chatId).collection("messages").add({
     senderUid: currentUser.uid,
     senderRole: "landlord",
     senderName: currentUser.email || "Landlord",
     text,
     createdAt: Date.now()
   });
-  db.ref("chats/" + chatId).update({
+  db.collection("chats").doc(chatId).update({
     updatedAt: Date.now(),
     lastMessage: text
   });
   if(chat.userUid){
-    db.ref("notifications/users/" + chat.userUid).push({
+    db.collection("notifications").doc("users").collection(chat.userUid).add({
       type: "message",
       chatId,
       propertyId: chat.propertyId || "",
@@ -1148,16 +1266,16 @@ function sendReply(chatId){
 }
 
 function editReply(chatId, messageId){
-  const current = chats[chatId]?.messages?.[messageId]?.text || "";
+  const current = activeChatMessages[messageId]?.text || "";
   const text = prompt("Edit your message", current);
   if(text === null) return;
   const trimmed = text.trim();
   if(!trimmed) return;
-  db.ref("chats/" + chatId + "/messages/" + messageId).update({
+  db.collection("chats").doc(chatId).collection("messages").doc(messageId).update({
     text: trimmed,
     editedAt: Date.now()
   });
-  db.ref("chats/" + chatId).update({
+  db.collection("chats").doc(chatId).update({
     updatedAt: Date.now(),
     lastMessage: trimmed
   });
@@ -1165,7 +1283,7 @@ function editReply(chatId, messageId){
 
 function deleteReply(chatId, messageId){
   if(!confirm("Delete this message?")) return;
-  db.ref("chats/" + chatId + "/messages/" + messageId).remove();
+  db.collection("chats").doc(chatId).collection("messages").doc(messageId).delete();
 }
 
 function logout(){
