@@ -7,7 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 
@@ -524,7 +524,7 @@ appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-const db = firebase.database();
+const db = firebase.firestore();
 
 let currentLandlord = null;
 
@@ -877,7 +877,7 @@ DEKUT_LNG
 updateProgress(85,"Saving property to database...");
 
 /* SAVE */
-const newPropertyRef = await db.ref("pendingProperties").push({
+const newPropertyRef = await db.collection("pendingProperties").add({
 
 type: typeVal,
 propertyName: propertyNameVal,
@@ -915,9 +915,9 @@ createdAt: Date.now()
 
 });
 
-await db.ref("notifications/admin").push({
+await db.collection("notifications").doc("admin").collection("notifications").add({
 type: "property_upload",
-propertyId: newPropertyRef.key,
+propertyId: newPropertyRef.id,
 title: "New property uploaded",
 body: propertyNameVal + " (" + typeVal + ") in " + locationVal + " is waiting for approval.",
 read: false,
