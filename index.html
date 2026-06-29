@@ -14,7 +14,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 
@@ -824,16 +824,37 @@ body.dark .bottomNav button.active{background:#0f766e;color:white;}
 
 .chatListPage,.chatConversationPage{
   background:white;
-  border-radius:12px;
   overflow:hidden;
+}
+.chatListPage{
+  border-radius:12px;
   box-shadow:0 2px 10px rgba(15,23,42,0.08);
 }
 .chatConversationPage{
-  min-height:calc(100vh - 150px);
   background:#efeae2;
   display:flex;
   flex-direction:column;
 }
+#messagesPanel{padding:0}
+#messagesPanel #userChatList{padding:14px}
+#messagesPanel.chatOpen{
+  position:fixed;
+  inset:0;
+  z-index:8500;
+  overflow:hidden;
+  background:#efeae2;
+}
+#messagesPanel.chatOpen #userChatList{padding:0;height:100%}
+#messagesPanel.chatOpen .pageHeader{display:none}
+#messagesPanel.chatOpen .chatConversationPage{
+  min-height:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+}
+body.chatOpen header,
+body.chatOpen .bottomNav{display:none}
+body.chatOpen{padding-bottom:0}
 .chatThreadRow{
   display:flex;
   align-items:center;
@@ -1024,7 +1045,7 @@ height:200px;
 
 <section id="messagesPanel" class="tabPanel">
 <div class="pageHeader"><h2>Messages</h2></div>
-<div id="userChatList" style="padding:14px;"></div>
+<div id="userChatList"></div>
 </section>
 
 <section id="aboutPanel" class="tabPanel">
@@ -1116,7 +1137,7 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.database();
+const db = firebase.firestore();
 
 function goLandlord(){
 window.location.href="landlord-login.html";
@@ -1131,6 +1152,12 @@ if(navApplying) return;
 history.pushState(state, "", location.pathname + location.search);
 }
 
+function setChatOpen(open){
+document.body.classList.toggle("chatOpen", open);
+const panel = document.getElementById("messagesPanel");
+if(panel) panel.classList.toggle("chatOpen", open);
+}
+
 function showTab(tab, pushHistory=true){
 if(tab === "messages" && !requireUser("messages")) return;
 document.querySelectorAll(".tabPanel").forEach(p=>p.classList.remove("active"));
@@ -1143,6 +1170,7 @@ currentTab = tab;
 if(tab !== "messages"){
 messagesView = "list";
 activeUserChatId = "";
+setChatOpen(false);
 }
 if(tab === "messages") renderUserChats();
 if(tab === "home"){
@@ -1222,7 +1250,7 @@ if(!name){
 showToast("Please enter your name.", "warning");
 return;
 }
-db.ref("users/" + currentUser.uid).update({name, updatedAt: Date.now()})
+db.collection("users").doc(currentUser.uid).update({name, updatedAt: Date.now()})
 .then(()=>{
 currentUserProfile = {...(currentUserProfile || {}), name};
 showToast("Profile updated successfully.", "success");
@@ -1305,39 +1333,52 @@ const PAGE_SIZE = 6;
 let isLoading = false;
 
 /* REAL-TIME FIREBASE (NO LAG + AUTO UPDATE) */
-db.ref("properties").on("value", snap=>{
-data = snap.val() || {};
-applyFilters();   // re-filter instantly on update
+db.collection("properties").onSnapshot(snapshot=>{
+  data = {};
+  snapshot.forEach(doc=>{
+    data[doc.id] = {id: doc.id, ...doc.data()};
+  });
+  applyFilters();   // re-filter instantly on update
 });
 
-db.ref("ratings").on("value", snap=>{
-ratings = snap.val() || {};
-applyFilters();
+db.collection("ratings").onSnapshot(snapshot=>{
+  ratings = {};
+  snapshot.forEach(doc=>{
+    ratings[doc.id] = {};
+    const subData = doc.data();
+    for(let uid in subData){
+      ratings[doc.id][uid] = subData[uid];
+    }
+  });
+  applyFilters();
 });
 
 auth.onAuthStateChanged(user=>{
 if(user){
 currentUser = user;
-db.ref("users/" + user.uid).once("value").then(snap=>{
-currentUserProfile = snap.val() || {};
+db.collection("users").doc(user.uid).get().then(snap=>{
+currentUserProfile = snap.exists() ? snap.data() : {};
 });
-db.ref("wishlists/" + user.uid).on("value", snap=>{
-wishlist = snap.val() || {};
-applyFilters();
+db.collection("wishlists").doc(user.uid).onSnapshot(snap=>{
+  wishlist = snap.exists() ? snap.data() : {};
+  applyFilters();
 });
-if(userChatsRef) userChatsRef.off();
-userChatsRef = db.ref("chats").orderByChild("userUid").equalTo(user.uid);
-userChatsRef.on("value", snap=>{
-userChats = snap.val() || {};
-renderUserChats();
+if(userChatsRef) userChatsRef();
+userChatsRef = db.collection("chats").where("userUid", "==", user.uid).onSnapshot(snapshot=>{
+  userChats = {};
+  snapshot.forEach(doc=>{
+    userChats[doc.id] = {id: doc.id, ...doc.data()};
+  });
+  renderUserChats();
 });
-if(userNotificationsRef) userNotificationsRef.off();
+if(userNotificationsRef) userNotificationsRef();
 const notifyFrom = Date.now();
-userNotificationsRef = db.ref("notifications/users/" + user.uid).orderByChild("createdAt").startAt(notifyFrom);
-userNotificationsRef.on("child_added", snap=>{
-let note = snap.val() || {};
-showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
-db.ref("notifications/users/" + user.uid + "/" + snap.key).update({read:true});
+userNotificationsRef = db.collection("notifications").doc("users").collection(user.uid).where("createdAt", ">=", notifyFrom).onSnapshot(snapshot=>{
+  snapshot.forEach(doc=>{
+    let note = doc.data() || {};
+    showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
+    doc.ref.update({read:true});
+  });
 });
 return;
 }
@@ -1345,11 +1386,11 @@ return;
 currentUser = null;
 currentUserProfile = null;
 if(userNotificationsRef){
-userNotificationsRef.off();
+userNotificationsRef();
 userNotificationsRef = null;
 }
 if(userChatsRef){
-userChatsRef.off();
+userChatsRef();
 userChatsRef = null;
 }
 wishlist = {};
@@ -1455,21 +1496,21 @@ return wishlist[propertyId] === true;
 function toggleWishlist(propertyId, button){
 if(!requireUser("wishlist")) return;
 
-let ref = db.ref("wishlists/" + currentUser.uid + "/" + propertyId);
+let ref = db.collection("wishlists").doc(currentUser.uid);
 if(isWishlisted(propertyId)){
-ref.remove()
+ref.update({[propertyId]: firebase.firestore.FieldValue.delete()})
 .then(()=>{
-wishlist[propertyId] = false;
-if(button) button.innerText = "Add to wishlist";
-showToast("Removed from wishlist.", "success");
+  wishlist[propertyId] = false;
+  if(button) button.innerText = "Add to wishlist";
+  showToast("Removed from wishlist.", "success");
 })
 .catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
 }else{
-ref.set(true)
+ref.set({[propertyId]: true}, {merge: true})
 .then(()=>{
-wishlist[propertyId] = true;
-if(button) button.innerText = "Wishlisted";
-showToast("Property added to wishlist successfully.", "success");
+  wishlist[propertyId] = true;
+  if(button) button.innerText = "Wishlisted";
+  showToast("Property added to wishlist successfully.", "success");
 })
 .catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
 }
@@ -1531,13 +1572,15 @@ return;
 }
 
 let comment = document.getElementById("ratingComment").value.trim();
-db.ref("ratings/" + activeRatingPropertyId + "/" + currentUser.uid).set({
-rating: selectedRating,
-comment,
-userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "User",
-userEmail: currentUser.email || "",
-createdAt: Date.now()
-})
+db.collection("ratings").doc(activeRatingPropertyId).set({
+  [currentUser.uid]: {
+    rating: selectedRating,
+    comment,
+    userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "User",
+    userEmail: currentUser.email || "",
+    createdAt: Date.now()
+  }
+}, {merge: true})
 .then(()=>{
 closeRatingModal();
 showToast("Rating submitted successfully.", "success");
@@ -1556,13 +1599,16 @@ if(!box) return;
 if(messagesView === "conversation" && activeUserChatId){
 if(!activeChat && userChats[activeUserChatId]) activeChat = {id: activeUserChatId, ...userChats[activeUserChatId]};
 if(activeChat){
+setChatOpen(true);
 renderUserConversation(box);
 return;
 }
 }
 
+setChatOpen(false);
+
 if(activeChatMessagesRef){
-activeChatMessagesRef.off();
+activeChatMessagesRef();
 activeChatMessagesRef = null;
 }
 
@@ -1605,19 +1651,21 @@ return `
 
 function renderUserConversation(box){
 if(activeChatMessagesRef){
-activeChatMessagesRef.off();
+activeChatMessagesRef();
 }
-activeChatMessagesRef = db.ref("chats/" + activeChat.id + "/messages");
-activeChatMessagesRef.on("value", snap=>{
-activeChatMessages = snap.val() || {};
-renderChatMessages(activeChatMessages);
+activeChatMessagesRef = db.collection("chats").doc(activeChat.id).collection("messages").orderBy("createdAt").onSnapshot(snapshot=>{
+  activeChatMessages = {};
+  snapshot.forEach(doc=>{
+    activeChatMessages[doc.id] = {id: doc.id, ...doc.data()};
+  });
+  renderChatMessages(activeChatMessages);
 });
 
 const title = (activeChat.propertyTitle || "Property chat") + (activeChat.propertyLocation ? " - " + activeChat.propertyLocation : "");
 box.innerHTML = `
 <div class="chatConversationPage">
 <div class="chatConvHeader">
-<button class="backBtn" onclick="backToMessageList()">Back</button>
+<button class="backBtn" onclick="backToMessageList()" aria-label="Back">←</button>
 <div class="chatConvInfo">
 <h2>${title}</h2>
 <small>Landlord chat</small>
@@ -1664,7 +1712,7 @@ const chat = userChats[chatId];
 if(!chat) return;
 const label = (chat.propertyTitle || "Property chat") + (chat.propertyLocation ? " - " + chat.propertyLocation : "");
 if(!confirm("Delete this whole chat permanently?\n\n" + label)) return;
-db.ref("chats/" + chatId).remove()
+db.collection("chats").doc(chatId).delete()
 .then(()=>{
 if(activeUserChatId === chatId || activeChat?.id === chatId){
 closeChat();
@@ -1704,7 +1752,7 @@ userEmail: currentUser.email || "",
 userName: currentUserProfile?.name || currentUser.displayName || currentUser.email || "Student"
 };
 
-db.ref("chats/" + activeChat.id).update({
+db.collection("chats").doc(activeChat.id).set({
 propertyId: activeChat.propertyId,
 propertyTitle: activeChat.propertyTitle,
 propertyLocation: activeChat.propertyLocation,
@@ -1714,6 +1762,7 @@ userUid: activeChat.userUid,
 userEmail: activeChat.userEmail,
 userName: activeChat.userName,
 updatedAt: Date.now()
+}, {merge: true})
 }).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
 
 openExistingChat(activeChat.id);
@@ -1756,20 +1805,20 @@ const text = prompt("Edit your message", current);
 if(text === null) return;
 const trimmed = text.trim();
 if(!trimmed) return;
-db.ref("chats/" + activeChat.id + "/messages/" + messageId).update({
-text: trimmed,
-editedAt: Date.now()
+db.collection("chats").doc(activeChat.id).collection("messages").doc(messageId).update({
+  text: trimmed,
+  editedAt: Date.now()
 });
-db.ref("chats/" + activeChat.id).update({
-lastMessage: trimmed,
-updatedAt: Date.now()
+db.collection("chats").doc(activeChat.id).update({
+  lastMessage: trimmed,
+  updatedAt: Date.now()
 });
 }
 
 function deleteChatMessage(messageId){
 if(!activeChat) return;
 if(!confirm("Delete this message?")) return;
-db.ref("chats/" + activeChat.id + "/messages/" + messageId).remove();
+db.collection("chats").doc(activeChat.id).collection("messages").doc(messageId).delete();
 }
 
 function sendChatMessage(){
@@ -1779,27 +1828,27 @@ let input = document.getElementById("chatInput");
 let text = input.value.trim();
 if(!text) return;
 
-db.ref("chats/" + activeChat.id + "/messages").push({
-senderUid: currentUser.uid,
-senderRole: "user",
-senderName: activeChat.userName,
-text,
-createdAt: Date.now()
+db.collection("chats").doc(activeChat.id).collection("messages").add({
+  senderUid: currentUser.uid,
+  senderRole: "user",
+  senderName: activeChat.userName,
+  text,
+  createdAt: Date.now()
 }).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
 
-db.ref("chats/" + activeChat.id).update({
-lastMessage: text,
-updatedAt: Date.now()
+db.collection("chats").doc(activeChat.id).update({
+  lastMessage: text,
+  updatedAt: Date.now()
 });
 
-db.ref("notifications/landlords/" + activeChat.landlordUid).push({
-type: "message",
-chatId: activeChat.id,
-propertyId: activeChat.propertyId,
-title: "New message from " + activeChat.userName,
-body: activeChat.userName + ": " + text,
-read: false,
-createdAt: Date.now()
+db.collection("notifications").doc("landlords").collection(activeChat.landlordUid).add({
+  type: "message",
+  chatId: activeChat.id,
+  propertyId: activeChat.propertyId,
+  title: "New message from " + activeChat.userName,
+  body: activeChat.userName + ": " + text,
+  read: false,
+  createdAt: Date.now()
 });
 
 input.value = "";
@@ -1807,12 +1856,13 @@ input.value = "";
 
 function closeChat(){
 if(activeChatMessagesRef){
-activeChatMessagesRef.off();
+activeChatMessagesRef();
 activeChatMessagesRef = null;
 }
 activeChat = null;
 activeUserChatId = "";
 messagesView = "list";
+setChatOpen(false);
 }
 
 /* INFINITE SCROLL RENDER */
