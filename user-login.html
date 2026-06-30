@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Login - DeKUT Housing</title>
+<title>User Login - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -17,10 +17,10 @@ body{
   align-items:center;
   justify-content:center;
   padding:18px;
-  font-family:Arial, sans-serif;
+  font-family:Arial,sans-serif;
   background:
-    linear-gradient(135deg,rgba(15,23,42,.88),rgba(14,116,144,.72)),
-    url("https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=80") center/cover;
+    linear-gradient(135deg,rgba(15,23,42,.84),rgba(13,148,136,.72)),
+    url("https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=80") center/cover;
 }
 .box{
   width:100%;
@@ -32,48 +32,23 @@ body{
   position:relative;
   overflow:hidden;
 }
-.box:before{
-  content:"";
-  position:absolute;
-  inset:0 0 auto;
-  height:7px;
-  background:linear-gradient(90deg,#22c55e,#06b6d4,#f97316);
-}
+.box:before{content:"";position:absolute;inset:0 0 auto;height:7px;background:linear-gradient(90deg,#14b8a6,#22c55e,#f59e0b)}
 h1{font-size:28px;margin:6px 0 6px;text-align:center;color:#0f172a}
 p{color:#5b6472;text-align:center;line-height:1.5}
 label{display:block;margin-top:14px;font-weight:bold}
-input{
-  width:100%;
-  padding:12px;
-  margin-top:6px;
-  border:1px solid #cbd5e1;
-  border-radius:8px;
-  font-size:15px;
-  background:#f8fafc;
-}
-input:focus{outline:2px solid #67e8f9;border-color:#0891b2;background:white}
-button{
-  width:100%;
-  margin-top:18px;
-  padding:12px;
-  border:0;
-  border-radius:999px;
-  background:linear-gradient(135deg,#0f172a,#0e7490);
-  color:white;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:0 12px 26px rgba(14,116,144,.28);
-}
+input{width:100%;padding:12px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#f8fafc}
+input:focus{outline:2px solid #5eead4;border-color:#0d9488;background:white}
+button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:999px;background:linear-gradient(135deg,#0f172a,#0d9488);color:white;font-weight:bold;cursor:pointer;box-shadow:0 12px 26px rgba(13,148,136,.28)}
 button:disabled{background:#94a3b8;cursor:not-allowed}
-.link{display:block;margin-top:16px;text-align:center;color:#0e7490;text-decoration:none;font-weight:bold}
+.link{display:block;margin-top:16px;text-align:center;color:#0d9488;text-decoration:none;font-weight:bold}
 .msg{margin-top:12px;text-align:center;font-size:14px;color:#b91c1c}
 </style>
 </head>
 <body>
 
 <div class="box">
-  <h1>Landlord Login</h1>
-  <p>Upload and track your rental houses.</p>
+  <h1>User Login</h1>
+  <p>Login to wishlist, rate houses, and chat with landlords.</p>
 
   <label>Email</label>
   <input id="email" type="email" placeholder="you@example.com">
@@ -82,7 +57,8 @@ button:disabled{background:#94a3b8;cursor:not-allowed}
   <input id="password" type="password" placeholder="Password">
 
   <button id="loginBtn" onclick="login()">Login</button>
-  <a class="link" href="landlord-signup.html">Create landlord account</a>
+  <a class="link" href="user-signup.html">Create user account</a>
+  <a class="link" href="index.html">Back to houses</a>
   <div id="msg" class="msg"></div>
 </div>
 
@@ -116,7 +92,7 @@ async function login(){
 
   try{
     await auth.signInWithEmailAndPassword(email,password);
-    window.location.href="landlord-dashboard.html";
+    window.location.href = "index.html";
   }
   catch(error){
     msg.innerText = error.message;

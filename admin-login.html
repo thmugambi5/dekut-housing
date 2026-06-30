@@ -4,10 +4,12 @@
 <meta charset="UTF-8">
 <title>Admin Login - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 
@@ -84,11 +86,6 @@ button:disabled{
     margin-top:10px;
 }
 
-.testBtn{
-    background:#111;
-    margin-top:5px;
-}
-
 </style>
 </head>
 
@@ -117,14 +114,6 @@ onclick="login()"
 Login
 </button>
 
-<!-- TEST BUTTON -->
-<button
-class="testBtn"
-onclick="testWrite()"
->
-TEST DATABASE WRITE
-</button>
-
 <div id="msg"></div>
 
 </div>
@@ -145,7 +134,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-const db = firebase.database();
+const db = firebase.firestore();
 
 /* LOGIN */
 async function login(){
@@ -182,32 +171,24 @@ async function login(){
         console.log("LOGIN SUCCESS:", user.email);
         console.log("USER UID:", user.uid);
 
-        /* CHECK ADMINS NODE */
-        const adminRef = db.ref("admins");
+        /* CHECK ADMINS NODE. If empty, the first successful login becomes admin. */
+        const adminSnap = await db.collection("admins").get();
 
-        const snap =
-          await adminRef.once("value");
+        const admins = {};
+        adminSnap.forEach(doc=>{
+          admins[doc.id] = doc.data();
+        });
 
-        const admins =
-          snap.val() || {};
-
-        console.log("ADMINS:", admins);
-
-        /* CREATE FIRST ADMIN */
-        if(Object.keys(admins).length === 0){
-
-            console.log("CREATING FIRST ADMIN");
-
-            await adminRef.child(user.uid).set({
-
+        if(adminSnap.empty){
+            await db.collection("admins").doc(user.uid).set({
                 email:user.email,
                 role:"superadmin",
                 createdAt:Date.now()
-
             });
-
-            console.log("FIRST ADMIN CREATED");
-
+        }
+        else if(!admins[user.uid]){
+            await auth.signOut();
+            throw new Error("This account is not registered as an admin.");
         }
 
         msg.innerHTML =
@@ -237,36 +218,6 @@ async function login(){
 
 }
 
-/* TEST DATABASE WRITE */
-async function testWrite(){
-
-    try{
-
-        await db.ref("testAdmin").set({
-
-            hello:"admin works",
-            time:Date.now()
-
-        });
-
-        alert("WRITE SUCCESS");
-
-        console.log("DATABASE WRITE SUCCESS");
-
-    }
-    catch(error){
-
-        console.error("WRITE FAILED:", error);
-
-        alert("WRITE FAILED");
-
-    }
-
-}
-
-/* IMPORTANT:
-   NO AUTO REDIRECT HERE
-*/
 auth.onAuthStateChanged(user=>{
 
     console.log(

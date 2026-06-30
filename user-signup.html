@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Signup - DeKUT Housing</title>
+<title>User Signup - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f172a">
@@ -20,41 +20,30 @@ body{
   align-items:center;
   justify-content:center;
   padding:18px;
-  font-family:Arial, sans-serif;
-  background:#eef2f6;
+  font-family:Arial,sans-serif;
+  background:
+    linear-gradient(135deg,rgba(15,23,42,.84),rgba(22,163,74,.70)),
+    url("https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1400&q=80") center/cover;
 }
 .box{
   width:100%;
-  max-width:380px;
+  max-width:430px;
   background:white;
-  padding:22px;
-  border-radius:12px;
-  box-shadow:0 8px 24px rgba(15,23,42,0.12);
+  padding:28px;
+  border-radius:18px;
+  box-shadow:0 24px 70px rgba(15,23,42,0.34);
+  position:relative;
+  overflow:hidden;
 }
-h1{font-size:24px;margin:0 0 6px;text-align:center}
+.box:before{content:"";position:absolute;inset:0 0 auto;height:7px;background:linear-gradient(90deg,#22c55e,#06b6d4,#f59e0b)}
+h1{font-size:28px;margin:6px 0 6px;text-align:center;color:#0f172a}
 p{color:#5b6472;text-align:center;line-height:1.5}
 label{display:block;margin-top:14px;font-weight:bold}
-input{
-  width:100%;
-  padding:12px;
-  margin-top:6px;
-  border:1px solid #cbd5e1;
-  border-radius:8px;
-  font-size:15px;
-}
-button{
-  width:100%;
-  margin-top:18px;
-  padding:12px;
-  border:0;
-  border-radius:8px;
-  background:#0f172a;
-  color:white;
-  font-weight:bold;
-  cursor:pointer;
-}
+input{width:100%;padding:12px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#f8fafc}
+input:focus{outline:2px solid #86efac;border-color:#16a34a;background:white}
+button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:999px;background:linear-gradient(135deg,#0f172a,#16a34a);color:white;font-weight:bold;cursor:pointer;box-shadow:0 12px 26px rgba(22,163,74,.28)}
 button:disabled{background:#94a3b8;cursor:not-allowed}
-.link{display:block;margin-top:14px;text-align:center;color:#0f5fd7;text-decoration:none}
+.link{display:block;margin-top:16px;text-align:center;color:#15803d;text-decoration:none;font-weight:bold}
 .msg{margin-top:12px;text-align:center;font-size:14px}
 .error{color:#b91c1c}
 .success{color:#166534}
@@ -63,8 +52,8 @@ button:disabled{background:#94a3b8;cursor:not-allowed}
 <body>
 
 <div class="box">
-  <h1>Landlord Signup</h1>
-  <p>Create an account before uploading houses for admin approval.</p>
+  <h1>User Signup</h1>
+  <p>Create an account to save houses, rate properties, and chat with landlords.</p>
 
   <label>Name</label>
   <input id="name" placeholder="Your full name">
@@ -72,14 +61,12 @@ button:disabled{background:#94a3b8;cursor:not-allowed}
   <label>Email</label>
   <input id="email" type="email" placeholder="you@example.com">
 
-  <label>National ID Number</label>
-  <input id="nationalId" inputmode="numeric" placeholder="Kenyan national ID">
-
   <label>Password</label>
   <input id="password" type="password" placeholder="At least 6 characters">
 
   <button id="signupBtn" onclick="signup()">Create Account</button>
-  <a class="link" href="landlord-login.html">Already have an account? Login</a>
+  <a class="link" href="user-login.html">Already have an account? Login</a>
+  <a class="link" href="index.html">Back to houses</a>
   <div id="msg" class="msg"></div>
 </div>
 
@@ -101,18 +88,12 @@ const db = firebase.firestore();
 async function signup(){
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
-  const nationalId = document.getElementById("nationalId").value.trim();
   const password = document.getElementById("password").value;
   const msg = document.getElementById("msg");
   const btn = document.getElementById("signupBtn");
 
-  if(!name || !email || !nationalId || !password){
+  if(!name || !email || !password){
     msg.innerHTML = "<span class='error'>Please fill in all fields.</span>";
-    return;
-  }
-
-  if(!/^\d{6,10}$/.test(nationalId)){
-    msg.innerHTML = "<span class='error'>Please enter a valid national ID number.</span>";
     return;
   }
 
@@ -121,15 +102,14 @@ async function signup(){
 
   try{
     const credential = await auth.createUserWithEmailAndPassword(email, password);
-    await db.collection("landlords").doc(credential.user.uid).set({
+    await db.collection("users").doc(credential.user.uid).set({
       name,
       email,
-      nationalId,
-      idVerified: false,
+      role: "user",
       createdAt: Date.now()
     });
-    msg.innerHTML = "<span class='success'>Account created. Opening dashboard...</span>";
-    setTimeout(()=> window.location.href = "landlord-dashboard.html", 700);
+    msg.innerHTML = "<span class='success'>Account created. Opening houses...</span>";
+    setTimeout(()=> window.location.href = "index.html", 700);
   }
   catch(error){
     msg.innerHTML = "<span class='error'>" + error.message + "</span>";

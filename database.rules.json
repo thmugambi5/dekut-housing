@@ -1,0 +1,95 @@
+{
+  "rules": {
+    "admins": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$uid": {
+        ".write": "auth != null && ((!root.child('admins').exists() && auth.uid === $uid) || root.child('admins').child(auth.uid).exists())",
+        ".validate": "newData.hasChildren(['email','role','createdAt'])"
+      }
+    },
+    "landlords": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "pendingProperties": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (query.orderByChild == 'landlordUid' && query.equalTo == auth.uid))",
+      ".indexOn": ["landlordUid", "createdAt"],
+      "$propertyId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (!data.exists() && newData.child('landlordUid').val() === auth.uid && newData.child('approved').val() === false) || (data.exists() && data.child('landlordUid').val() === auth.uid && data.child('approved').val() !== true && newData.child('landlordUid').val() === auth.uid && newData.child('approved').val() === false))"
+      }
+    },
+    "properties": {
+      ".read": true,
+      ".indexOn": ["landlordUid", "approved", "listingState", "type", "location"],
+      "$propertyId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (data.exists() && data.child('landlordUid').val() === auth.uid && newData.child('landlordUid').val() === auth.uid && newData.child('approved').val() === true))"
+      }
+    },
+    "rejectedProperties": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (query.orderByChild == 'landlordUid' && query.equalTo == auth.uid))",
+      ".indexOn": ["landlordUid", "rejectedAt"],
+      "$propertyId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (data.exists() && data.child('landlordUid').val() === auth.uid && !newData.exists()))"
+      }
+    },
+    "wishlists": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$propertyId": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "ratings": {
+      "$propertyId": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+          ".validate": "!newData.exists() || (newData.hasChildren(['rating']) && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5)"
+        }
+      }
+    },
+    "chats": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (query.orderByChild == 'landlordUid' && query.equalTo == auth.uid) || (query.orderByChild == 'userUid' && query.equalTo == auth.uid))",
+      ".indexOn": ["landlordUid", "userUid", "propertyId", "updatedAt"],
+      "$chatId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || data.child('landlordUid').val() === auth.uid || data.child('userUid').val() === auth.uid)",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || newData.child('landlordUid').val() === auth.uid || newData.child('userUid').val() === auth.uid || data.child('landlordUid').val() === auth.uid || data.child('userUid').val() === auth.uid)",
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (!data.exists() && newData.child('senderUid').val() === auth.uid) || (data.exists() && data.child('senderUid').val() === auth.uid))"
+          }
+        }
+      }
+    },
+    "notifications": {
+      "admin": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".indexOn": ["createdAt"],
+        ".write": "auth != null"
+      },
+      "landlords": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".indexOn": ["createdAt"],
+          ".write": "auth != null"
+        }
+      },
+      "users": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".indexOn": ["createdAt"],
+          ".write": "auth != null"
+        }
+      }
+    }
+  }
+}

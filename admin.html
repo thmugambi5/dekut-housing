@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <title>Admin Dashboard - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <style>
@@ -38,20 +40,54 @@ body{
   display:none;
 }
 
-/* SIDEBAR */
-.sidebar{
-  position:fixed;
-  left:0;
+/* TOP MENU */
+.adminTopbar{
+  position:sticky;
   top:0;
-  width:220px;
-  height:100%;
-  background:#111;
-  color:white;
-  padding:20px;
-  overflow:auto;
+  z-index:5000;
+  background:white;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  padding:12px 18px;
+  box-shadow:0 2px 12px rgba(15,23,42,0.08);
 }
 
-.sidebar h2{ margin-top:0; }
+.adminTopbar h1{
+  margin:0;
+  font-size:22px;
+}
+
+.hamburger{
+  background:#111827;
+  color:white;
+  border-radius:10px;
+  width:46px;
+  height:42px;
+  font-size:22px;
+  line-height:1;
+}
+
+.sidebar{
+  position:fixed;
+  left:18px;
+  top:64px;
+  width:240px;
+  height:auto;
+  background:#111;
+  color:white;
+  padding:12px;
+  overflow:auto;
+  border-radius:14px;
+  box-shadow:0 18px 48px rgba(15,23,42,0.28);
+  z-index:6000;
+  display:none;
+}
+
+.sidebar.open{ display:block; }
+
+.sidebar h2{ margin:6px 8px 10px; font-size:17px; }
 
 .sidebar button{
   width:100%;
@@ -69,7 +105,6 @@ body{
 
 /* MAIN */
 .main{
-  margin-left:240px;
   padding:20px;
 }
 
@@ -129,7 +164,10 @@ body{
 }
 
 .pending{ background:orange; }
+.pendingEdit{ background:#7c3aed; }
 .approved{ background:green; }
+.rejected{ background:#b91c1c; }
+.suspended{ background:#6b7280; }
 .available{ background:#28a745; }
 .occupied{ background:#d32f2f; }
 
@@ -148,6 +186,140 @@ button{
 .delete{ background:#e74c3c; color:white; }
 .view{ background:#111; color:white; }
 .mapbtn{ background:#007bff; color:white; }
+.suspend{ background:#6b7280; color:white; }
+.restore{ background:#0f766e; color:white; }
+.trustGrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0; }
+.trustItem{ background:#f1f5f9; border-radius:8px; padding:10px; }
+.trustPass{ color:#166534; font-weight:bold; }
+.trustFail{ color:#b91c1c; font-weight:bold; }
+.messages{background:#f8fafc;border-radius:8px;padding:10px;max-height:260px;overflow:auto;margin-top:10px}
+.message{margin:8px 0;line-height:1.4}
+.message b{display:block;font-size:12px;color:#64748b}
+.adminChatShell{
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+  box-shadow:0 12px 34px rgba(15,23,42,0.12);
+}
+.adminChatListOnly,.adminChatConversationPage{background:white;border-radius:16px;overflow:hidden;box-shadow:0 12px 34px rgba(15,23,42,0.12);margin-top:16px}
+.adminChatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid #e2e8f0;
+}
+.adminChatThreadMain{
+  flex:1;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+  cursor:pointer;
+}
+.adminChatThreadMain:hover{background:#e7f7ee}
+.adminChatConversationPage{display:flex;flex-direction:column;min-height:620px}
+.adminChatHeaderBar{
+  background:#075e54;
+  color:white;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.adminChatHeaderBar .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  margin:0;
+}
+.adminHeaderMenu summary{color:white}
+.adminHeaderMenu[open] summary,.adminHeaderMenu summary:hover{background:rgba(255,255,255,.16)}
+.threadMenu{position:relative;flex-shrink:0;padding-right:8px}
+.threadMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.threadMenu summary::-webkit-details-marker{display:none}
+.threadMenu[open] summary,.threadMenu summary:hover{background:rgba(0,0,0,.08)}
+.adminChatShell{
+  display:grid;
+  grid-template-columns:minmax(270px,360px) 1fr;
+  min-height:620px;
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+  box-shadow:0 12px 34px rgba(15,23,42,0.12);
+}
+.adminChatThreads{
+  background:#f8fafc;
+  border-right:1px solid #dbe5df;
+  overflow:auto;
+}
+.adminChatThread{
+  display:block;
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  border-radius:0;
+  padding:14px;
+  margin:0;
+}
+.adminChatThread.active,.adminChatThread:hover{background:#e7f7ee}
+.threadTitle{display:block;font-weight:bold;color:#172033}
+.threadMeta{display:block;color:#64748b;font-size:13px;margin-top:3px}
+.adminChatWindow{background:#efeae2;display:flex;flex-direction:column;min-width:0}
+.adminChatHeader{
+  background:#075e54;
+  color:white;
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.adminChatHeader strong{display:block}
+.adminChatHeader small{display:block;color:#dcfce7;margin-top:2px}
+.adminChatMessages{padding:16px;overflow:auto;flex:1}
+.adminBubble{
+  max-width:78%;
+  background:white;
+  border-radius:10px;
+  padding:9px 34px 9px 11px;
+  margin:8px 0;
+  line-height:1.45;
+  box-shadow:0 1px 2px rgba(15,23,42,0.1);
+  position:relative;
+}
+.adminBubble.landlord{margin-left:auto;background:#dcf8c6}
+.adminBubble b{display:block;color:#475569;font-size:12px;margin-bottom:3px}
+.adminBubble small{display:block;color:#64748b;margin-top:4px}
+.msgMenu{position:absolute;right:5px;top:3px}
+.msgMenu summary{list-style:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.msgMenu summary::-webkit-details-marker{display:none}
+.msgMenu[open] summary,.msgMenu summary:hover{background:rgba(0,0,0,.08)}
+.msgMenuList{position:absolute;right:0;top:26px;min-width:138px;background:white;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.22);padding:6px;z-index:20}
+.msgMenuList button{display:block;width:100%;margin:0;padding:9px 10px;border:0;border-radius:8px;background:white;color:#111827;text-align:left;font-weight:bold}
+.msgMenuList button:hover{background:#f1f5f9}
+.msgMenuList button.dangerText{color:#dc2626}
+.photoGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  margin:12px 0 18px;
+}
+.photoGrid img{
+  width:100%;
+  height:190px;
+  object-fit:cover;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(15,23,42,0.12);
+}
 
 /* DETAILS MODAL */
 .modal{
@@ -180,8 +352,10 @@ button{
 
 /* MOBILE */
 @media(max-width:768px){
-  .sidebar{ position:relative; width:100%; height:auto; }
-  .main{ margin-left:0; }
+  .sidebar{ left:10px; right:10px; top:62px; width:auto; }
+  .main{ padding:14px; }
+  .adminChatConversationPage{min-height:calc(100vh - 160px)}
+  .adminChatHeaderBar{display:flex}
 }
 
 </style>
@@ -198,12 +372,19 @@ button{
 <!-- MAIN APP -->
 <div id="app">
 
-<div class="sidebar">
+<div class="adminTopbar">
+  <button class="hamburger" onclick="toggleAdminMenu()" aria-label="Open admin menu">☰</button>
+  <h1>Dashboard</h1>
+</div>
+
+<div class="sidebar" id="adminMenu">
 
   <h2>🏠 Admin Panel</h2>
 
   <button onclick="showPending()">🟡 Pending</button>
   <button onclick="showApproved()">🟢 Approved</button>
+  <button onclick="showRejected()">Rejected</button>
+  <button onclick="showChats()">Chats</button>
   <button onclick="loadAll()">📦 All Listings</button>
 
   <button onclick="logout()" style="background:#c62828;">
@@ -213,8 +394,6 @@ button{
 </div>
 
 <div class="main">
-
-  <h1>Dashboard</h1>
 
   <div class="stats">
 
@@ -226,6 +405,11 @@ button{
     <div class="statBox">
       <h2 id="totalApproved">0</h2>
       <p>Approved</p>
+    </div>
+
+    <div class="statBox">
+      <h2 id="totalRejected">0</h2>
+      <p>Rejected</p>
     </div>
 
   </div>
@@ -257,24 +441,30 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-const db = firebase.database();
+const db = firebase.firestore();
 const auth = firebase.auth();
-
-const ADMIN_EMAIL = "admin@dekut.com";
 
 let pending = {};
 let approved = {};
+let rejected = {};
+let chats = {};
+let ratings = {};
 let mode = "pending";
+let activeAdminChatId = "";
+let adminChatView = "list";
+let navApplying = false;
 
 /* 🔐 HARD SECURITY GATE */
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     window.location.href = "admin-login.html";
     return;
   }
 
-  if(user.email !== ADMIN_EMAIL){
+  const adminSnap = await db.collection("admins").doc(user.uid).get();
+
+  if(!adminSnap.exists()){
     auth.signOut();
     window.location.href = "admin-login.html";
     return;
@@ -292,15 +482,50 @@ auth.onAuthStateChanged(user => {
 /* REALTIME DATA ONLY AFTER AUTH */
 function startRealtime(){
 
-  db.ref("pendingProperties").on("value", snap=>{
-    pending = snap.val() || {};
+  db.collection("pendingProperties").onSnapshot(snapshot=>{
+    pending = {};
+    snapshot.forEach(doc=>{
+      pending[doc.id] = {id: doc.id, ...doc.data()};
+    });
     updateStats();
     render();
   });
 
-  db.ref("properties").on("value", snap=>{
-    approved = snap.val() || {};
+  db.collection("properties").onSnapshot(snapshot=>{
+    approved = {};
+    snapshot.forEach(doc=>{
+      approved[doc.id] = {id: doc.id, ...doc.data()};
+    });
     updateStats();
+    render();
+  });
+
+  db.collection("rejectedProperties").onSnapshot(snapshot=>{
+    rejected = {};
+    snapshot.forEach(doc=>{
+      rejected[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    updateStats();
+    render();
+  });
+
+  db.collection("chats").onSnapshot(snapshot=>{
+    chats = {};
+    snapshot.forEach(doc=>{
+      chats[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    if(mode === "chats") render();
+  });
+
+  db.collection("ratings").onSnapshot(snapshot=>{
+    ratings = {};
+    snapshot.forEach(doc=>{
+      ratings[doc.id] = {};
+      const subData = doc.data();
+      for(let uid in subData){
+        ratings[doc.id][uid] = subData[uid];
+      }
+    });
     render();
   });
 
@@ -312,20 +537,130 @@ function logout(){
   });
 }
 
+function toggleAdminMenu(){
+  const menu = document.getElementById("adminMenu");
+  const opening = !menu.classList.contains("open");
+  menu.classList.toggle("open");
+  if(opening) pushNavState({layer:"menu"});
+}
+
+function closeAdminMenu(fromHistory=false){
+  document.getElementById("adminMenu").classList.remove("open");
+  if(!fromHistory && !navApplying && history.state?.layer === "menu") history.back();
+}
+
+function pushNavState(state){
+  if(navApplying) return;
+  history.pushState(state, "", location.pathname + location.search);
+}
+
+window.addEventListener("popstate", (e)=>{
+  navApplying = true;
+  applyNavState(e.state || {layer:"listings", mode:"pending"});
+  navApplying = false;
+});
+
+function applyNavState(state){
+  if(!state) state = {layer:"listings", mode:"pending"};
+  if(state.layer === "menu"){
+    document.getElementById("adminMenu").classList.remove("open");
+    return;
+  }
+  if(state.layer === "details"){
+    document.getElementById("detailsModal").style.display = "none";
+    return;
+  }
+  if(state.layer === "chat"){
+    mode = "chats";
+    adminChatView = "conversation";
+    activeAdminChatId = state.chatId || "";
+    closeAdminMenu(true);
+    render();
+    return;
+  }
+  if(state.layer === "listings" || state.layer === "tab"){
+    adminChatView = "list";
+    activeAdminChatId = "";
+    closeAdminMenu(true);
+    document.getElementById("detailsModal").style.display = "none";
+    mode = state.mode || "pending";
+    render();
+  }
+}
+
+history.replaceState({layer:"listings", mode:"pending"}, "", location.pathname + location.search);
+
 function updateStats(){
   document.getElementById("totalPending").innerText =
     Object.keys(pending).length;
 
   document.getElementById("totalApproved").innerText =
     Object.keys(approved).length;
+
+  document.getElementById("totalRejected").innerText =
+    Object.keys(rejected).length;
 }
 
-function showPending(){ mode="pending"; render(); }
-function showApproved(){ mode="approved"; render(); }
-function loadAll(){ mode="all"; render(); }
+function showPending(){ mode="pending"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showApproved(){ mode="approved"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showRejected(){ mode="rejected"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode}); render(); }
+function showChats(){ mode="chats"; adminChatView="list"; activeAdminChatId=""; closeAdminMenu(true); pushNavState({layer:"listings", mode:"chats"}); render(); }
+function loadAll(){ mode="all"; adminChatView="list"; closeAdminMenu(true); pushNavState({layer:"listings", mode:"all"}); render(); }
 
 function safe(obj){
   return encodeURIComponent(JSON.stringify(obj));
+}
+
+function getListingById(id){
+  if(pending[id]) return pending[id];
+  if(approved[id]) return approved[id];
+  if(rejected[id]) return rejected[id];
+  return null;
+}
+
+function listingLabel(item){
+  if(!item) return "this property";
+  return item.propertyName || item.houseName || item.type || "this property";
+}
+
+function listingConfirmMessage(action, item){
+  const name = listingLabel(item);
+  const location = item?.location ? "\nLocation: " + item.location : "";
+  const landlord = item?.landlordEmail ? "\nLandlord: " + item.landlordEmail : "";
+  return "Are you sure you want to " + action + " \"" + name + "\"?" + location + landlord;
+}
+
+function getRatingSummary(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const values = Object.values(propertyRatings).map(item=>Number(item.rating || 0)).filter(Boolean);
+  if(values.length === 0) return "No ratings yet";
+  const total = values.reduce((sum, rating)=>sum + rating, 0);
+  const avg = total / values.length;
+  return renderStars(avg) + " " + avg.toFixed(1) + " (" + values.length + ")";
+}
+
+function renderStars(value){
+  const rounded = Math.round(Number(value || 0));
+  let stars = "";
+  for(let i = 1; i <= 5; i++){
+    stars += i <= rounded ? "★" : "☆";
+  }
+  return stars;
+}
+
+function getRatingComments(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  return Object.entries(propertyRatings)
+    .map(([uid,item])=>({uid,...item}))
+    .sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0))
+    .map(item=>`
+      <div style="border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0;">
+        <p><b>${item.userName || item.userEmail || "User"}:</b> ${renderStars(item.rating)} ${item.comment || "No comment"}</p>
+        <button class="view" onclick="editRating('${propertyId}','${item.uid}')">Edit</button>
+        <button class="delete" onclick="deleteRating('${propertyId}','${item.uid}')">Delete</button>
+      </div>
+    `)
+    .join("");
 }
 
 function render(){
@@ -334,22 +669,31 @@ function render(){
   let list = document.getElementById("list");
   list.innerHTML = "";
 
+  if(mode === "chats"){
+    renderChats(q, list);
+    return;
+  }
+
   let source =
     mode==="pending" ? pending :
     mode==="approved" ? approved :
-    {...pending, ...approved};
+    mode==="rejected" ? rejected :
+    {...pending, ...approved, ...rejected};
 
   for(let id in source){
 
     let p = source[id];
 
     let text =
-      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")).toLowerCase();
+      ((p.location||"")+" "+(p.type||"")+" "+(p.phone||"")+" "+(p.landlordEmail||"")).toLowerCase();
 
     if(q && !text.includes(q)) continue;
 
     let img = p.images?.[0] || "";
     let isPending = pending[id] ? true : false;
+    let isRejected = rejected[id] ? true : false;
+    let isSuspended = p.listingState === "suspended";
+    let ratingSummary = getRatingSummary(id);
 
     list.innerHTML += `
       <div class="card">
@@ -363,20 +707,30 @@ function render(){
           💰 KSh ${p.rent || ""}<br>
           📞 ${p.phone || ""}<br>
 
-          <span class="badge ${isPending ? "pending" : "approved"}">
-            ${isPending ? "Pending" : "Approved"}
+          <span class="badge ${isRejected ? "rejected" : isPending ? "pending" : isSuspended ? "suspended" : "approved"}">
+            ${isRejected ? "Rejected" : isPending ? "Pending" : isSuspended ? "Suspended" : "Approved"}
           </span>
 
           <br><br>
 
-          <button class="view" onclick='openDetails("${safe(p)}")'>View</button>
+          <div><b>Rating:</b> ${ratingSummary}</div>
+
+          <button class="view" onclick='openDetails("${safe({id,...p})}")'>View</button>
 
           ${isPending ? `
             <button class="approve" onclick="approve('${id}')">✔ Approve</button>
             <button class="reject" onclick="rejectItem('${id}')">❌ Reject</button>
           ` : ""}
 
-          <button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>
+          ${!isPending && !isRejected ? `
+            ${isSuspended ? `
+              <button class="restore" onclick="restoreItem('${id}')">Restore</button>
+            ` : `
+              <button class="suspend" onclick="suspendItem('${id}')">Suspend</button>
+            `}
+          ` : ""}
+
+          ${!isRejected ? `<button class="delete" onclick="deleteItem('${id}')">🗑 Delete</button>` : ""}
 
         </div>
 
@@ -388,12 +742,48 @@ function render(){
 /* DETAILS */
 function openDetails(encoded){
   let p = JSON.parse(decodeURIComponent(encoded));
+  const ratingSummary = getRatingSummary(p.id);
+  const hasGps = !!(p.lat && p.lng);
+  const hasPhotos = Array.isArray(p.images) && p.images.length > 0;
+  const hasKenyanPhone = /^\+254\d{9}$/.test(p.phone || "");
+  const hasLandlord = !!p.landlordUid;
+  const photoGrid = hasPhotos
+    ? `<h3>Uploaded Property Photos (${p.images.length})</h3>
+       <div class="photoGrid">
+         ${p.images.map((img, index)=>`<img src="${img}" alt="Property photo ${index + 1}">`).join("")}
+       </div>`
+    : "<p><b>Uploaded Property Photos:</b> No photos uploaded.</p>";
 
   document.getElementById("detailsContent").innerHTML = `
     <div class="modalContent">
-      <h2>${p.type}</h2>
-      <p>${p.location}</p>
-      <p>${p.rent}</p>
+      <h2>${p.type || "Property"}</h2>
+      ${photoGrid}
+      <p><b>Location:</b> ${p.location || ""}</p>
+      <p><b>Rent:</b> KSh ${p.rent || ""}</p>
+      <p><b>Deposit:</b> KSh ${p.deposit || ""}</p>
+      <p><b>Availability:</b> ${p.status || p.availability || ""}</p>
+      <p><b>Rooms:</b> ${p.roomsAvailable || ""}</p>
+      <p><b>Occupants:</b> ${p.gender || ""}</p>
+      <p><b>Utilities:</b> ${p.utilities || ""}</p>
+      ${p.includedUtilities ? `<p><b>Utilities Included In Rent:</b> ${p.includedUtilities}</p>` : ""}
+      <p><b>Amenities:</b> ${p.amenities || ""}</p>
+      <p><b>Rating:</b> ${ratingSummary}</p>
+      <h3>Ratings & Comments</h3>
+      ${getRatingComments(p.id) || "<p>No ratings yet.</p>"}
+      <p><b>Description:</b> ${p.extra || ""}</p>
+      <p><b>Landlord:</b> ${p.landlordEmail || "Not recorded"}</p>
+      <p><b>Phone:</b> ${p.phone || ""}</p>
+      <p><b>Review Status:</b> ${p.reviewStatus || ""}</p>
+      ${p.rejectReason ? `<p><b>Reject Reason:</b> ${p.rejectReason}</p>` : ""}
+      ${p.suspendReason ? `<p><b>Suspension Reason:</b> ${p.suspendReason}</p>` : ""}
+
+      <h3>Trust Checks</h3>
+      <div class="trustGrid">
+        <div class="trustItem"><span class="${hasGps ? "trustPass" : "trustFail"}">${hasGps ? "OK" : "Missing"}</span><br>GPS location</div>
+        <div class="trustItem"><span class="${hasPhotos ? "trustPass" : "trustFail"}">${hasPhotos ? "OK" : "Missing"}</span><br>Property photos</div>
+        <div class="trustItem"><span class="${hasKenyanPhone ? "trustPass" : "trustFail"}">${hasKenyanPhone ? "OK" : "Check"}</span><br>Kenyan phone format</div>
+        <div class="trustItem"><span class="${hasLandlord ? "trustPass" : "trustFail"}">${hasLandlord ? "OK" : "Missing"}</span><br>Landlord account</div>
+      </div>
 
       <button class="mapbtn" onclick="openMap(${p.lat},${p.lng})">
         View Map
@@ -402,31 +792,266 @@ function openDetails(encoded){
   `;
 
   document.getElementById("detailsModal").style.display="block";
+  pushNavState({layer:"details"});
+}
+
+function editRating(propertyId, uid){
+  const item = ratings[propertyId]?.[uid];
+  if(!item) return;
+
+  const ratingValue = prompt("Edit rating from 1 to 5", item.rating || "");
+  if(ratingValue === null) return;
+
+  const rating = Number(ratingValue);
+  if(!Number.isInteger(rating) || rating < 1 || rating > 5){
+    alert("Please enter a whole number from 1 to 5.");
+    return;
+  }
+
+  const comment = prompt("Edit comment", item.comment || "");
+  if(comment === null) return;
+
+  db.collection("ratings").doc(propertyId).set({
+    [uid]: {
+      rating,
+      comment: comment.trim(),
+      moderatedAt: Date.now()
+    }
+  }, {merge: true});
+}
+
+function deleteRating(propertyId, uid){
+  if(!confirm("Delete this rating/comment?")) return;
+  db.collection("ratings").doc(propertyId).update({
+    [uid]: firebase.firestore.FieldValue.delete()
+  });
 }
 
 function closeDetails(){
-  document.getElementById("detailsModal").style.display="none";
+  if(!navApplying) history.back();
+  else document.getElementById("detailsModal").style.display="none";
 }
 
 function approve(id){
 
   let item = pending[id];
   if(!item) return;
+  if(!confirm(listingConfirmMessage("approve", item) + "\n\nOnly approve after verifying photos, GPS location, phone number, and landlord identity.")) return;
 
   item.approved = true;
+  item.reviewStatus = "approved";
+  item.approvedAt = Date.now();
+  item.verifiedAt = Date.now();
+  item.adminVerified = true;
+  item.listingState = "active";
 
-  db.ref("properties/" + id).set(item);
-  db.ref("pendingProperties/" + id).remove();
+  const targetId = item.previousPropertyId || id;
 
+  db.collection("properties").doc(targetId).set(item);
+  db.collection("pendingProperties").doc(id).delete();
+
+}
+
+function renderChats(q, list){
+  const rows = Object.entries(chats)
+    .map(([id, chat])=>({id, ...chat}))
+    .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
+
+  const filtered = rows.filter(chat=>{
+    const text = [
+      chat.propertyTitle || "",
+      chat.propertyLocation || "",
+      chat.landlordEmail || "",
+      chat.landlordUid || "",
+      chat.userName || "",
+      chat.userEmail || "",
+      chat.userUid || "",
+      chat.lastMessage || ""
+    ].join(" ").toLowerCase();
+    return !q || text.includes(q);
+  });
+
+  if(filtered.length === 0){
+    adminChatView = "list";
+    list.innerHTML = "<div class='card'><div class='cardContent'>No chats found.</div></div>";
+    return;
+  }
+
+  if(adminChatView === "conversation" && activeAdminChatId){
+    const activeChat = filtered.find(chat=>chat.id === activeAdminChatId) || chats[activeAdminChatId];
+    if(activeChat){
+      renderAdminChatConversation(list, activeChat);
+      return;
+    }
+  }
+
+  adminChatView = "list";
+  list.innerHTML = `
+    <div class="adminChatListOnly">
+      ${filtered.map(chat=>`
+        <div class="adminChatThreadRow">
+          <button class="adminChatThreadMain" onclick="openAdminChat('${chat.id}')">
+            <span class="threadTitle">${chat.propertyTitle || "Property chat"}</span>
+            <span class="threadMeta">${chat.propertyLocation || "Location not recorded"}</span>
+            <span class="threadMeta">${chat.userName || chat.userEmail || "Student"} ↔ ${chat.landlordEmail || "Landlord"}</span>
+            <span class="threadMeta">${chat.lastMessage || "Open conversation"}</span>
+          </button>
+          <details class="threadMenu msgMenu" onclick="event.stopPropagation()">
+            <summary>⋮</summary>
+            <div class="msgMenuList">
+              <button onclick="openAdminChat('${chat.id}')">Open chat</button>
+            </div>
+          </details>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderAdminChatConversation(list, activeChat){
+  const messages = Object.entries(activeChat.messages || {})
+    .map(([id, message])=>({id, ...message}))
+    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+  const studentName = activeChat.userName || activeChat.userEmail || activeChat.userUid || "Student";
+  const landlordName = activeChat.landlordEmail || activeChat.landlordUid || "Landlord";
+
+  list.innerHTML = `
+    <div class="adminChatConversationPage">
+      <div class="adminChatHeaderBar">
+        <button class="backBtn" onclick="backToAdminChatList()">Back</button>
+        <div class="adminChatHeaderInfo" style="flex:1;min-width:0">
+          <strong>${activeChat.propertyTitle || "Property chat"}</strong>
+          <small>${activeChat.propertyLocation || ""}</small>
+          <small>User: ${studentName} · Landlord: ${landlordName}</small>
+        </div>
+        <details class="adminHeaderMenu msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button class="dangerText" onclick="deleteAdminChat('${activeChat.id}')">Delete chat</button>
+          </div>
+        </details>
+      </div>
+      <div class="adminChatMessages" id="adminChatMessages">
+        ${messages.length ? messages.map(m=>`
+          <div class="adminBubble ${m.senderRole === "landlord" ? "landlord" : ""}">
+            <b>${m.senderRole === "landlord" ? "Landlord" : "User"}: ${m.senderName || ""}</b>
+            ${m.text || ""}
+            ${m.editedAt ? "<small>Edited</small>" : ""}
+            <details class="msgMenu">
+              <summary>⋮</summary>
+              <div class="msgMenuList">
+                <button class="dangerText" onclick="deleteAdminMessage('${activeChat.id}','${m.id}')">Delete message</button>
+              </div>
+            </details>
+          </div>
+        `).join("") : "<div class='cardContent'>No messages in this chat.</div>"}
+      </div>
+    </div>
+  `;
+
+  setTimeout(()=>{
+    const box = document.getElementById("adminChatMessages");
+    if(box) box.scrollTop = box.scrollHeight;
+  },0);
+}
+
+function openAdminChat(chatId, pushHistory=true){
+  if(!chats[chatId]) return;
+  activeAdminChatId = chatId;
+  adminChatView = "conversation";
+  render();
+  if(pushHistory) pushNavState({layer:"chat", chatId});
+}
+
+function backToAdminChatList(){
+  if(!navApplying) history.back();
+}
+
+function selectAdminChat(chatId){
+  openAdminChat(chatId);
+}
+
+function notifyChatUser(chat, title, body){
+  if(!chat || !chat.userUid) return Promise.resolve();
+  return db.collection("notifications").doc("users").collection(chat.userUid).add({
+    type: "admin_chat_moderation",
+    chatId: chat.id || "",
+    propertyId: chat.propertyId || "",
+    title,
+    body,
+    read: false,
+    createdAt: Date.now()
+  });
+}
+
+async function deleteAdminMessage(chatId, messageId){
+  const chat = chats[chatId];
+  if(!chat) return;
+  if(!confirm("Delete this single message from the chat?")) return;
+  await db.collection("chats").doc(chatId).collection("messages").doc(messageId).delete();
+  await notifyChatUser({id:chatId, ...chat}, "Message removed by admin", "A message in your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
+}
+
+async function deleteAdminChat(chatId){
+  const chat = chats[chatId];
+  if(!chat) return;
+  if(!confirm("Delete this whole chat permanently?")) return;
+  await notifyChatUser({id:chatId, ...chat}, "Chat removed by admin", "Your chat about " + (chat.propertyTitle || "this property") + " was removed by admin.");
+  await db.collection("chats").doc(chatId).delete();
+  activeAdminChatId = "";
+  adminChatView = "list";
+  if(!navApplying) history.back();
 }
 
 function rejectItem(id){
-  db.ref("pendingProperties/" + id).remove();
+  const item = pending[id];
+  if(!item) return;
+
+  if(!confirm(listingConfirmMessage("reject", item) + "\n\nYou will be asked for a reason to show the landlord.")) return;
+
+  const reason = prompt("Why is this property rejected? This will be shown to the landlord.");
+  if(reason === null) return;
+
+  item.approved = false;
+  item.reviewStatus = "rejected";
+  item.rejectReason = reason.trim() || "Admin rejected this property.";
+  item.rejectedAt = Date.now();
+
+  db.collection("rejectedProperties").doc(id).set(item);
+  db.collection("pendingProperties").doc(id).delete();
 }
 
 function deleteItem(id){
-  db.ref("pendingProperties/" + id).remove();
-  db.ref("properties/" + id).remove();
+  const item = getListingById(id);
+  if(!item) return;
+  if(!confirm(listingConfirmMessage("permanently delete", item) + "\n\nThis action cannot be undone.")) return;
+  db.collection("pendingProperties").doc(id).delete();
+  db.collection("properties").doc(id).delete();
+  db.collection("rejectedProperties").doc(id).delete();
+}
+
+function suspendItem(id){
+  const item = approved[id];
+  if(!item) return;
+
+  if(!confirm(listingConfirmMessage("suspend", item) + "\n\nYou will be asked for a suspension reason.")) return;
+
+  const reason = prompt("Why are you suspending this listing?");
+  if(reason === null) return;
+
+  db.collection("properties").doc(id).update({
+    listingState: "suspended",
+    suspendReason: reason.trim() || "Suspended by admin.",
+    suspendedAt: Date.now()
+  });
+}
+
+function restoreItem(id){
+  db.collection("properties").doc(id).update({
+    listingState: "active",
+    suspendReason: null,
+    restoredAt: Date.now()
+  });
 }
 
 function openMap(lat,lng){

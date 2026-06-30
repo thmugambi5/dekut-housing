@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <title>Landlord Form - DeKUT Housing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 
@@ -21,6 +24,48 @@ margin:0;
 padding:15px;
 }
 
+.topbar{
+max-width:700px;
+margin:0 auto 12px;
+background:white;
+padding:12px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+}
+
+.topbar a,
+.topbar button{
+width:auto;
+margin:0;
+padding:9px 11px;
+border-radius:8px;
+text-decoration:none;
+font-size:14px;
+}
+
+.topbar a{
+background:#111;
+color:white;
+}
+
+.topbar button{
+background:#c62828;
+}
+
+#authGate{
+max-width:700px;
+margin:auto;
+background:white;
+padding:18px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.08);
+text-align:center;
+}
+
 .card{
 max-width:700px;
 margin:auto;
@@ -28,6 +73,10 @@ background:white;
 padding:18px;
 border-radius:14px;
 box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card > label:first-of-type{
+display:none;
 }
 
 h2{
@@ -74,6 +123,24 @@ opacity:0.95;
 button:disabled{
 opacity:0.6;
 cursor:not-allowed;
+}
+
+.sharedDetails{
+display:none;
+background:#f8fafc;
+border:1px solid #e2e8f0;
+border-radius:12px;
+padding:12px;
+margin-top:12px;
+}
+
+.partialUtilitiesBox{
+display:none;
+background:#f8fafc;
+border:1px solid #e2e8f0;
+border-radius:12px;
+padding:12px;
+margin-top:12px;
 }
 
 .locationBtn{
@@ -183,6 +250,21 @@ transition:width 0.3s ease;
 
 <body>
 
+<div id="authGate">Checking landlord account...</div>
+
+<div id="uploadApp" style="display:none;">
+
+<div class="topbar">
+<div>
+<b>Landlord Upload</b><br>
+<small id="landlordEmail"></small>
+</div>
+<div>
+<a href="landlord-dashboard.html">Dashboard</a>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
+
 <div class="card">
 
 <h2>🏠 Landlord Property Upload</h2>
@@ -194,7 +276,16 @@ Your property will first be reviewed by admin before appearing to students.
 <!-- HOUSE TYPE -->
 <label>🏠 House Type</label>
 
-<select id="type">
+<label>Apartment / House Name</label>
+
+<input
+id="propertyName"
+placeholder="e.g. Green View Apartments"
+>
+
+<label>House Type</label>
+
+<select id="type" onchange="toggleSharedFields()">
 <option>Bedsitter</option>
 <option>Single Room</option>
 <option>One Bedroom</option>
@@ -202,6 +293,23 @@ Your property will first be reviewed by admin before appearing to students.
 <option>Shared Bedsitter</option>
 <option>Shared Single Room</option>
 </select>
+
+<div id="sharedDetails" class="sharedDetails">
+<label>Maximum Number of Occupants</label>
+<input
+id="maxOccupants"
+type="number"
+min="1"
+placeholder="e.g. 2"
+>
+
+<label>For Shared Rooms, Rent Is</label>
+<select id="sharedRentType">
+<option value="">Select rent arrangement</option>
+<option>Per head</option>
+<option>Shared among occupants</option>
+</select>
+</div>
 
 <!-- RENT -->
 <label>💰 Monthly Rent (KSh)</label>
@@ -332,6 +440,16 @@ id="extraAmenities"
 placeholder="e.g. CCTV, Laundry Area"
 >
 
+<div id="utilitiesPlacement"></div>
+
+<div id="partialUtilitiesBox" class="partialUtilitiesBox">
+<label>Utilities Included In Rent</label>
+<input
+id="includedUtilities"
+placeholder="e.g. Water and electricity"
+>
+</div>
+
 <!-- IMAGES -->
 <label>📸 Property Photos</label>
 
@@ -390,6 +508,8 @@ Preparing upload...
 
 </div>
 
+</div>
+
 <script>
 
 /* FIREBASE */
@@ -405,7 +525,68 @@ appId: "1:784034754945:web:198f5e3cf47777ab97f880"
 
 firebase.initializeApp(firebaseConfig);
 
-const db = firebase.database();
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentLandlord = null;
+
+auth.onAuthStateChanged(user => {
+
+if(!user){
+window.location.href = "landlord-login.html";
+return;
+}
+
+currentLandlord = user;
+document.getElementById("authGate").style.display = "none";
+document.getElementById("uploadApp").style.display = "block";
+document.getElementById("landlordEmail").innerText = user.email;
+
+});
+
+function logout(){
+auth.signOut().then(() => {
+window.location.href = "landlord-login.html";
+});
+}
+
+function isSharedType(type){
+return type === "Shared Bedsitter" || type === "Shared Single Room";
+}
+
+function toggleSharedFields(){
+const typeVal = document.getElementById("type").value;
+const show = isSharedType(typeVal);
+document.getElementById("sharedDetails").style.display = show ? "block" : "none";
+if(!show){
+document.getElementById("maxOccupants").value = "";
+document.getElementById("sharedRentType").value = "";
+}
+}
+
+function moveUtilitiesQuestion(){
+const utilities = document.getElementById("utilities");
+const target = document.getElementById("utilitiesPlacement");
+if(!utilities || !target) return;
+const label = utilities.previousElementSibling;
+if(label) target.appendChild(label);
+target.appendChild(utilities);
+utilities.setAttribute("onchange", "togglePartialUtilities()");
+togglePartialUtilities();
+}
+
+function togglePartialUtilities(){
+const utilities = document.getElementById("utilities");
+const box = document.getElementById("partialUtilitiesBox");
+if(!utilities || !box) return;
+const show = utilities.value === "Partially Included";
+box.style.display = show ? "block" : "none";
+if(!show){
+document.getElementById("includedUtilities").value = "";
+}
+}
+
+moveUtilitiesQuestion();
 
 /* GPS */
 let lat = "";
@@ -529,6 +710,12 @@ preview.appendChild(img);
 /* UPLOAD */
 async function upload(){
 
+if(!currentLandlord){
+alert("Please login as a landlord before uploading.");
+window.location.href = "landlord-login.html";
+return;
+}
+
 const uploadBtn =
 document.getElementById("uploadBtn");
 
@@ -536,6 +723,9 @@ uploadBtn.disabled = true;
 
 const typeVal =
 document.getElementById("type").value.trim();
+
+const propertyNameVal =
+document.getElementById("propertyName").value.trim();
 
 const rentVal =
 document.getElementById("rent").value.trim();
@@ -552,8 +742,17 @@ document.getElementById("availability").value;
 const roomsVal =
 document.getElementById("roomsAvailable").value.trim();
 
+const maxOccupantsVal =
+document.getElementById("maxOccupants").value.trim();
+
+const sharedRentTypeVal =
+document.getElementById("sharedRentType").value;
+
 const utilitiesVal =
 document.getElementById("utilities").value;
+
+const includedUtilitiesVal =
+document.getElementById("includedUtilities").value.trim();
 
 const phoneVal =
 document.getElementById("phone").value.trim();
@@ -570,12 +769,33 @@ document.getElementById("msg");
 /* VALIDATION */
 if(
 !typeVal ||
+!propertyNameVal ||
 !rentVal ||
 !phoneVal ||
 !locationVal
 ){
 
 alert("Please fill all required fields");
+
+uploadBtn.disabled = false;
+
+return;
+
+}
+
+if(utilitiesVal === "Partially Included" && !includedUtilitiesVal){
+
+alert("Please name the utilities included in rent.");
+
+uploadBtn.disabled = false;
+
+return;
+
+}
+
+if(isSharedType(typeVal) && (!maxOccupantsVal || !sharedRentTypeVal)){
+
+alert("Please enter maximum occupants and choose whether shared rent is per head or shared among occupants.");
 
 uploadBtn.disabled = false;
 
@@ -659,15 +879,20 @@ DEKUT_LNG
 updateProgress(85,"Saving property to database...");
 
 /* SAVE */
-await db.ref("pendingProperties").push({
+const newPropertyRef = await db.collection("pendingProperties").add({
 
 type: typeVal,
+propertyName: propertyNameVal,
+houseName: propertyNameVal,
 rent: rentVal,
 deposit: depositVal,
 gender: genderVal,
 availability: availabilityVal,
 roomsAvailable: roomsVal,
+maxOccupants: isSharedType(typeVal) ? maxOccupantsVal : "",
+sharedRentType: isSharedType(typeVal) ? sharedRentTypeVal : "",
 utilities: utilitiesVal,
+includedUtilities: utilitiesVal === "Partially Included" ? includedUtilitiesVal : "",
 phone: phoneVal,
 extra: extraVal,
 location: locationVal,
@@ -681,11 +906,24 @@ distance: distance,
 images: images,
 
 approved: false,
+reviewStatus: "pending",
 
 status: availabilityVal,
 
+landlordUid: currentLandlord.uid,
+landlordEmail: currentLandlord.email,
+
 createdAt: Date.now()
 
+});
+
+await db.collection("notifications").doc("admin").collection("notifications").add({
+type: "property_upload",
+propertyId: newPropertyRef.id,
+title: "New property uploaded",
+body: propertyNameVal + " (" + typeVal + ") in " + locationVal + " is waiting for approval.",
+read: false,
+createdAt: Date.now()
 });
 
 updateProgress(100,"Upload completed successfully");
@@ -700,9 +938,16 @@ Waiting for admin approval.
 
 /* RESET FORM */
 document.getElementById("type").selectedIndex = 0;
+document.getElementById("propertyName").value = "";
 document.getElementById("rent").value = "";
 document.getElementById("deposit").value = "";
 document.getElementById("roomsAvailable").value = "";
+document.getElementById("maxOccupants").value = "";
+document.getElementById("sharedRentType").value = "";
+toggleSharedFields();
+document.getElementById("utilities").selectedIndex = 0;
+document.getElementById("includedUtilities").value = "";
+togglePartialUtilities();
 document.getElementById("phone").value = "";
 document.getElementById("extra").value = "";
 document.getElementById("location").value = "";

@@ -2,50 +2,1295 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Landlord Dashboard</title>
+<title>Landlord Dashboard - DeKUT Housing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-</head>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+<style>
+*{box-sizing:border-box}
+body{margin:0 0 78px;font-family:Arial,sans-serif;background:#f4f6f9;color:#172033}
+header{
+  background:linear-gradient(135deg,#0f172a,#075985);
+  color:white;
+  padding:14px 18px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 8px rgba(15,23,42,0.08);
+}
+h1{font-size:22px;margin:0}
+.wrap{max-width:1050px;margin:0 auto;padding:18px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,a.button{
+  border:0;
+  border-radius:8px;
+  padding:10px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-block;
+}
+.primary{background:#0f172a;color:white}
+.danger{background:#b91c1c;color:white}
+.light{background:#e2e8f0;color:#172033}
+.successBtn{background:#15803d;color:white}
+.warnBtn{background:#d97706;color:white}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.stat,.card{
+  background:white;
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.stat strong{font-size:28px;display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card img{width:100%;height:170px;object-fit:cover;border-radius:8px;margin-bottom:10px}
+.meta{line-height:1.7;color:#334155}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;color:white;font-size:12px;margin-top:8px}
+.pending{background:#d97706}
+.approved{background:#15803d}
+.rejected{background:#b91c1c}
+.suspended{background:#6b7280}
+.empty{text-align:center;color:#64748b;padding:24px}
+.cardActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.reason{background:#fee2e2;color:#7f1d1d;border-radius:8px;padding:8px;margin-top:10px}
+.ratingLine{color:#92400e;font-weight:bold;margin-top:10px}
+.stars{color:#f59e0b;letter-spacing:1px}
+.ratingsBlock{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid #e2e8f0;
+}
+.ratingsBlock > strong{display:block;margin-bottom:8px;color:#172033}
+.ratingComment{
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  padding:10px;
+  margin-bottom:8px;
+}
+.ratingComment strong{display:block;margin-bottom:4px}
+.ratingComment p{margin:6px 0 0;color:#334155;line-height:1.5}
+.ratingComment small{color:#64748b}
+.sectionTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tabPanel{display:none}
+.tabPanel.active{display:block}
+.propertyTools{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.aboutGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.chatListOnly,.chatConversationOnly{background:white;border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(15,23,42,0.12)}
+.chatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+}
+.chatThreadRow .chatThread{flex:1;border:0;border-bottom:0}
+.chatThreadMenuWrap{position:relative;padding-right:8px}
+.chatThreadMenuWrap .msgMenu{position:static}
+.chatHeader{display:flex;align-items:center;gap:10px}
+.chatHeader .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.chatHeaderInfo{flex:1;min-width:0}
+.chatHeaderActions{position:relative}
+.chatHeaderActions .msgMenu summary{color:white}
+.chatHeaderActions .msgMenu[open] summary,.chatHeaderActions .msgMenu summary:hover{background:rgba(255,255,255,.18)}
+.aboutItem{background:white;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(15,23,42,0.08)}
+.aboutItem strong{display:block;margin-bottom:6px}
+.chatListOnly{
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 14px 40px rgba(15,23,42,0.12);
+}
+.chatThreadRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+}
+.chatThreadRow:hover{background:#e7f7ee}
+.chatThreadMain{
+  flex:1;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  min-width:0;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:0;
+  cursor:pointer;
+}
+.chatConversationPage{
+  background:#efeae2;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+#messagesPanel.chatOpen{
+  position:fixed;
+  inset:0;
+  z-index:8500;
+  overflow:hidden;
+  background:#efeae2;
+}
+#messagesPanel.chatOpen #chatList{height:100%}
+#messagesPanel.chatOpen .sectionTitle{display:none}
+#messagesPanel.chatOpen .chatConversationPage{
+  min-height:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+}
+body.chatOpen header,
+body.chatOpen .bottomNav{display:none}
+body.chatOpen{margin-bottom:0}
+body.chatOpen main.wrap{padding:0;max-width:none}
+.chatConvHeader{
+  background:#075e54;
+  color:white;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.chatConvHeader .backBtn{
+  background:#128c7e;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  font-weight:bold;
+  cursor:pointer;
+  width:auto;
+}
+.chatConvInfo{flex:1;min-width:0}
+.chatConvInfo h2{
+  font-size:16px;
+  margin:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.chatConvInfo small{display:block;color:#dcfce7;margin-top:2px}
+.headerMenu{position:relative;margin-left:auto}
+.headerMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold}
+.headerMenu summary::-webkit-details-marker{display:none}
+.headerMenu[open] summary,.headerMenu summary:hover{background:rgba(255,255,255,.16)}
+.headerMenu summary{color:white}
+.chatConversationPage .messages{
+  flex:1;
+  padding:16px 12px;
+  overflow:auto;
+  background:#efeae2;
+  background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.28) 25%,transparent 25%);
+  background-size:32px 32px;
+}
+.chatConversationPage .message{
+  max-width:min(76%,520px);
+  margin:8px 0;
+  line-height:1.35;
+  padding:8px 34px 8px 10px;
+  border-radius:8px;
+  box-shadow:0 1px 2px rgba(15,23,42,0.14);
+  clear:both;
+  word-wrap:break-word;
+  position:relative;
+}
+.chatConversationPage .message b{
+  display:block;
+  font-size:12px;
+  color:#667781;
+  margin-bottom:3px;
+}
+.chatConversationPage .message.received{
+  background:white;
+  float:left;
+  border-top-left-radius:2px;
+}
+.chatConversationPage .message.sent{
+  background:#dcf8c6;
+  float:right;
+  border-top-right-radius:2px;
+}
+.chatConversationPage .message.emptyChat{
+  float:none;
+  max-width:100%;
+  margin:20px auto;
+  text-align:center;
+  background:rgba(255,255,255,.85);
+  color:#667781;
+}
+.chatInput{
+  display:flex;
+  gap:8px;
+  padding:10px;
+  background:#f0f2f5;
+  align-items:center;
+  flex-shrink:0;
+}
+.chatInput input{
+  flex:1;
+  padding:12px;
+  border:0;
+  border-radius:999px;
+  background:white;
+  outline:none;
+  font-size:15px;
+}
+.sendBtn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:#128c7e;
+  color:white;
+  margin:0;
+  font-size:18px;
+  display:grid;
+  place-items:center;
+  border:0;
+  cursor:pointer;
+  font-weight:bold;
+}
+.chatListPage{
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(15,23,42,0.08);
+}
+.threadMenu{position:relative;flex-shrink:0}
+.threadMenu summary{list-style:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.threadMenu summary::-webkit-details-marker{display:none}
+.threadMenu[open] summary,.threadMenu summary:hover{background:rgba(0,0,0,.08)}
+.chatShell{
+  display:grid;
+  grid-template-columns:minmax(260px,330px) 1fr;
+  min-height:620px;
+  background:white;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 14px 40px rgba(15,23,42,0.12);
+}
+.chatThreads{
+  border-right:1px solid #dbe5df;
+  background:#f8fafc;
+  overflow:auto;
+}
+.chatThread{
+  width:100%;
+  border:0;
+  border-bottom:1px solid #e2e8f0;
+  background:transparent;
+  text-align:left;
+  padding:14px;
+  border-radius:0;
+}
+.chatThread.active,.chatThread:hover{background:#e7f7ee}
+.chatAvatar{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#16a34a;
+  color:white;
+  font-weight:bold;
+  margin-right:10px;
+  vertical-align:top;
+}
+.chatSummary{display:inline-block;width:calc(100% - 58px);vertical-align:top}
+.chatSummary strong{display:block;color:#172033}
+.chatSummary small{display:block;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatWindow{background:#efeae2;display:flex;flex-direction:column;min-width:0}
+.chatHeader{background:#075e54;color:white;padding:14px 16px}
+.chatHeader strong{display:block}
+.chatHeader small{color:#dcfce7}
+.messages{padding:16px;overflow:auto;flex:1}
+.message{max-width:78%;margin:8px 0;line-height:1.4;padding:9px 34px 9px 11px;border-radius:10px;background:white;box-shadow:0 1px 2px rgba(15,23,42,0.08);position:relative}
+.message.mine{margin-left:auto;background:#dcf8c6}
+.message b{display:block;font-size:12px;color:#64748b;margin-bottom:3px}
+.msgMenu{position:absolute;right:5px;top:3px}
+.msgMenu summary{list-style:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;font-weight:bold}
+.msgMenu summary::-webkit-details-marker{display:none}
+.msgMenu[open] summary,.msgMenu summary:hover{background:rgba(0,0,0,.08)}
+.msgMenuList{position:absolute;right:0;top:26px;min-width:128px;background:white;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.22);padding:6px;z-index:20}
+.msgMenuList button{display:block;width:100%;margin:0;padding:9px 10px;border:0;border-radius:8px;background:white;color:#111827;text-align:left;font-weight:bold}
+.msgMenuList button:hover{background:#f1f5f9}
+.msgMenuList button.dangerText{color:#dc2626}
+.chatReply{display:flex;gap:8px;margin-top:8px}
+.chatWindow .chatReply{padding:12px;background:#f0f2f5;margin-top:0}
+.chatReply input{flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:999px}
+.chatReply button{width:auto;border-radius:999px;padding:12px 18px}
+.bottomNav{
+  position:fixed;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%);
+  width:min(540px,calc(100vw - 24px));
+  background:#0f172a;
+  border-radius:18px;
+  box-shadow:0 18px 45px rgba(15,23,42,0.28);
+  z-index:9000;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  padding:8px;
+  gap:6px;
+}
+.bottomNav button{
+  border-radius:12px;
+  background:transparent;
+  color:#cbd5e1;
+  padding:10px 6px;
+}
+.bottomNav button.active{background:white;color:#0f172a}
+.toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:min(360px,calc(100vw - 36px));
+  background:linear-gradient(135deg,#111827,#1f2937);
+  color:white;
+  padding:15px 16px;
+  border-radius:14px;
+  box-shadow:0 18px 45px rgba(15,23,42,0.28);
+  z-index:20000;
+  font-weight:bold;
+  opacity:0;
+  transform:translateY(14px);
+  pointer-events:none;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:linear-gradient(135deg,#15803d,#166534)}
+.toast.warning{background:linear-gradient(135deg,#b45309,#92400e)}
+.toast.error{background:linear-gradient(135deg,#dc2626,#991b1b)}
+.editModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.62);
+  z-index:10000;
+  padding:18px;
+  overflow:auto;
+}
+.editBox{
+  background:white;
+  max-width:820px;
+  margin:0 auto;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 22px 70px rgba(15,23,42,0.32);
+}
+.editGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.editBox label{display:block;font-weight:bold;margin:10px 0 6px}
+.editBox input,.editBox select,.editBox textarea{
+  width:100%;
+  padding:10px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font:inherit;
+}
+.editBox textarea{min-height:90px;resize:vertical}
+.amenityGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px}
+.amenityChoice{display:flex;gap:8px;align-items:center;background:#f8fafc;border-radius:8px;padding:8px}
+.amenityChoice input{width:auto}
+.formActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+@media(max-width:640px){
+  header{display:block}
+  .actions{margin-top:12px}
+  button,a.button{width:100%;text-align:center}
+  .bottomNav button,.msgMenuList button,.chatReply button,.sendBtn{width:auto}
+  .chatShell{grid-template-columns:1fr;min-height:calc(100vh - 190px)}
+  .chatThreads{max-height:250px;border-right:0;border-bottom:1px solid #dbe5df}
+}
+</style>
+</head>
 <body>
 
-<h2>Welcome Landlord</h2>
+<header>
+  <div>
+    <h1>Landlord Dashboard</h1>
+    <div id="who" style="color:#dbeafe;font-size:14px;margin-top:4px">Checking account...</div>
+  </div>
+</header>
 
-<button onclick="logout()">Logout</button>
+<main class="wrap">
+  <section id="propertyPanel" class="tabPanel active">
+    <div class="propertyTools">
+      <div>
+        <h2 style="margin:0 0 6px">Property</h2>
+      </div>
+      <a class="button primary" href="landlord.html">Add New Property</a>
+    </div>
+    <div id="list" class="grid"></div>
+  </section>
 
-<div id="formArea">
-  <!-- we will reuse your form here next step -->
-  <p>Go to landlord.html to upload property</p>
+  <section id="messagesPanel" class="tabPanel">
+    <div class="sectionTitle">
+      <h2>Messages</h2>
+      <span style="color:#64748b">Student conversations</span>
+    </div>
+    <div id="chatList"></div>
+  </section>
+
+  <section id="aboutPanel" class="tabPanel">
+    <h2>About</h2>
+    <div class="aboutGrid">
+      <div class="aboutItem">
+        <strong>Profile</strong>
+        <span id="aboutEmail">Loading account...</span>
+      </div>
+      <div class="aboutItem">
+        <strong>Visit Site With Houses</strong>
+        <a class="button light" href="index.html">Open Public Site</a>
+      </div>
+      <div class="aboutItem">
+        <strong>Contact Us</strong>
+        <p style="margin:0;color:#64748b;line-height:1.5">For listing support, contact the DeKUT Housing admin team through the site support channel.</p>
+      </div>
+      <div class="aboutItem">
+        <strong>Account</strong>
+        <button class="danger" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottomNav">
+  <button id="navProperty" class="active" onclick="showTab('property')">Property</button>
+  <button id="navMessages" onclick="showTab('messages')">Messages</button>
+  <button id="navAbout" onclick="showTab('about')">About</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<div id="editModal" class="editModal">
+  <div class="editBox">
+    <h2 id="editTitle">Edit Property</h2>
+    <p style="color:#64748b;margin-top:0">Submit changes for admin review after updating the property details.</p>
+    <div class="editGrid">
+      <div>
+        <label>Apartment / House Name</label>
+        <input id="editPropertyName" placeholder="e.g. Green View Apartments">
+      </div>
+      <div>
+        <label>House Type</label>
+        <select id="editType" onchange="toggleEditSharedFields()">
+          <option>Bedsitter</option>
+          <option>Single Room</option>
+          <option>One Bedroom</option>
+          <option>Two Bedroom</option>
+          <option>Shared Bedsitter</option>
+          <option>Shared Single Room</option>
+        </select>
+      </div>
+      <div>
+        <label>Monthly Rent (KSh)</label>
+        <input id="editRent" type="number">
+      </div>
+      <div>
+        <label>Deposit Amount (KSh)</label>
+        <input id="editDeposit" type="number">
+      </div>
+      <div>
+        <label>Preferred Occupants</label>
+        <select id="editGender">
+          <option>Any Gender</option>
+          <option>Male Only</option>
+          <option>Female Only</option>
+          <option>Mixed</option>
+        </select>
+      </div>
+      <div>
+        <label>Availability Status</label>
+        <select id="editAvailability">
+          <option>Available</option>
+          <option>Occupied</option>
+        </select>
+      </div>
+      <div>
+        <label>Rooms Available</label>
+        <input id="editRoomsAvailable" type="number">
+      </div>
+      <div id="editMaxOccupantsWrap" style="display:none">
+        <label>Maximum Occupants</label>
+        <input id="editMaxOccupants" type="number" min="1">
+      </div>
+      <div id="editSharedRentWrap" style="display:none">
+        <label>Shared Rent Arrangement</label>
+        <select id="editSharedRentType">
+          <option value="">Select rent arrangement</option>
+          <option>Per head</option>
+          <option>Shared among occupants</option>
+        </select>
+      </div>
+      <div>
+        <label>Utilities Included</label>
+        <select id="editUtilities" onchange="toggleEditPartialUtilities()">
+          <option>Yes</option>
+          <option>No</option>
+          <option>Partially Included</option>
+        </select>
+      </div>
+      <div id="editIncludedUtilitiesWrap" style="display:none">
+        <label>Utilities Included In Rent</label>
+        <input id="editIncludedUtilities" placeholder="e.g. Water and electricity">
+      </div>
+      <div>
+        <label>Contact Number</label>
+        <input id="editPhone" placeholder="+254712345678">
+      </div>
+      <div>
+        <label>Property Location</label>
+        <input id="editLocation">
+      </div>
+    </div>
+
+    <label>Property Description</label>
+    <textarea id="editExtra"></textarea>
+
+    <label>Amenities</label>
+    <div class="amenityGrid" id="editAmenities"></div>
+
+    <label>Other Amenities</label>
+    <input id="editExtraAmenities" placeholder="e.g. CCTV, Laundry Area">
+
+    <label>Replace Property Photos</label>
+    <input id="editImages" type="file" multiple accept="image/*">
+    <small style="color:#64748b">Leave this empty to keep the current photos.</small>
+
+    <div class="formActions">
+      <button class="light" onclick="closeEditModal()">Cancel</button>
+      <button class="primary" id="submitEditBtn" onclick="submitEditForApproval()">Submit edit for approval</button>
+    </div>
+  </div>
 </div>
 
 <script>
-
 const firebaseConfig = {
-apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
-authDomain:"dekut-housing.firebaseapp.com",
-databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
-projectId:"dekut-housing"
+  apiKey:"AIzaSyAnVbMha2jEf2NwUxc1YGzOzz4NjJE9S0Q",
+  authDomain:"dekut-housing.firebaseapp.com",
+  databaseURL:"https://dekut-housing-default-rtdb.firebaseio.com",
+  projectId:"dekut-housing",
+  storageBucket:"dekut-housing.appspot.com",
+  messagingSenderId:"784034754945",
+  appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let pending = {};
+let approved = {};
+let rejected = {};
+let chats = {};
+let ratings = {};
+let chatView = "list";
+let activeChatId = "";
+let activeEdit = null;
+let navApplying = false;
+let activeChatMessagesRef = null;
+let activeChatMessages = {};
+let landlordNotificationsRef = null;
+const AMENITY_OPTIONS = ["WiFi","Water","Electricity","Furnished","Parking","Security","Balcony","Hot Shower"];
+
+function isSharedType(type){
+  return type === "Shared Bedsitter" || type === "Shared Single Room";
+}
+
+function toggleEditSharedFields(){
+  const show = isSharedType(document.getElementById("editType").value);
+  document.getElementById("editMaxOccupantsWrap").style.display = show ? "block" : "none";
+  document.getElementById("editSharedRentWrap").style.display = show ? "block" : "none";
+  if(!show){
+    document.getElementById("editMaxOccupants").value = "";
+    document.getElementById("editSharedRentType").value = "";
+  }
+}
+
+function toggleEditPartialUtilities(){
+  const show = document.getElementById("editUtilities").value === "Partially Included";
+  document.getElementById("editIncludedUtilitiesWrap").style.display = show ? "block" : "none";
+  if(!show){
+    document.getElementById("editIncludedUtilities").value = "";
+  }
+}
 
 auth.onAuthStateChanged(user=>{
-if(!user){
-window.location.href = "landlord-login.html";
-}
+  if(!user){
+    window.location.href = "landlord-login.html";
+    return;
+  }
+  currentUser = user;
+  document.getElementById("who").innerText = user.email;
+  document.getElementById("aboutEmail").innerText = user.email;
+  startRealtime();
+  startNotifications();
 });
+
+function pushNavState(state){
+  if(navApplying) return;
+  history.pushState(state, "", location.pathname + location.search);
+}
+
+function setChatOpen(open){
+  document.body.classList.toggle("chatOpen", open);
+  const panel = document.getElementById("messagesPanel");
+  if(panel) panel.classList.toggle("chatOpen", open);
+}
+
+function showTab(tab, pushHistory=true){
+  document.querySelectorAll(".tabPanel").forEach(panel=>panel.classList.remove("active"));
+  document.querySelectorAll(".bottomNav button").forEach(btn=>btn.classList.remove("active"));
+  document.getElementById(tab + "Panel").classList.add("active");
+  document.getElementById("nav" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
+  if(tab !== "messages"){
+    chatView = "list";
+    setChatOpen(false);
+  }
+  if(tab === "messages") renderChats();
+  if(pushHistory) pushNavState({layer:"tab", tab});
+}
+
+window.addEventListener("popstate", (e)=>{
+  navApplying = true;
+  applyNavState(e.state || {layer:"tab", tab:"property"});
+  navApplying = false;
+});
+
+function applyNavState(state){
+  if(!state) state = {layer:"tab", tab:"property"};
+  if(state.layer === "edit"){
+    document.getElementById("editModal").style.display = "none";
+    activeEdit = null;
+    return;
+  }
+  if(state.layer === "chat"){
+    showTab("messages", false);
+    activeChatId = state.chatId || "";
+    chatView = "conversation";
+    renderChats();
+    return;
+  }
+  if(state.layer === "tab"){
+    document.getElementById("editModal").style.display = "none";
+    activeEdit = null;
+    if(activeChatMessagesRef){
+      activeChatMessagesRef();
+      activeChatMessagesRef = null;
+    }
+    chatView = "list";
+    activeChatId = "";
+    setChatOpen(false);
+    showTab(state.tab || "property", false);
+  }
+}
+
+history.replaceState({layer:"tab", tab:"property"}, "", location.pathname + location.search);
+
+function startRealtime(){
+  db.collection("pendingProperties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    pending = {};
+    snapshot.forEach(doc=>{
+      pending[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    render();
+  });
+  db.collection("properties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    approved = {};
+    snapshot.forEach(doc=>{
+      approved[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    render();
+  });
+  db.collection("rejectedProperties").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    rejected = {};
+    snapshot.forEach(doc=>{
+      rejected[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    render();
+  });
+  db.collection("chats").where("landlordUid", "==", currentUser.uid).onSnapshot(snapshot=>{
+    chats = {};
+    snapshot.forEach(doc=>{
+      chats[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    renderChats();
+  });
+  db.collection("ratings").onSnapshot(snapshot=>{
+    ratings = {};
+    snapshot.forEach(doc=>{
+      ratings[doc.id] = {};
+      const subData = doc.data();
+      for(let uid in subData){
+        ratings[doc.id][uid] = subData[uid];
+      }
+    });
+    render();
+  });
+}
+
+function startNotifications(){
+  if(landlordNotificationsRef) landlordNotificationsRef();
+  const notifyFrom = Date.now();
+  landlordNotificationsRef = db.collection("notifications").doc("landlords").collection(currentUser.uid).where("createdAt", ">=", notifyFrom).onSnapshot(snapshot=>{
+    snapshot.forEach(doc=>{
+      const note = doc.data() || {};
+      showToast((note.title || "New notification") + (note.body ? ": " + note.body : ""), "success");
+      doc.ref.update({read:true});
+    });
+  });
+}
+
+function getRatingPropertyId(p){
+  if(p.source === "approved") return p.id;
+  if(p.previousPropertyId) return p.previousPropertyId;
+  return p.id;
+}
+
+function getRatingSummary(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const values = Object.values(propertyRatings).map(item=>Number(item.rating || 0)).filter(Boolean);
+  if(values.length === 0) return "No ratings yet";
+  const total = values.reduce((sum, rating)=>sum + rating, 0);
+  const avg = total / values.length;
+  return "<span class='stars'>" + renderStars(avg) + "</span> " + avg.toFixed(1) + " (" + values.length + ")";
+}
+
+function renderStars(value){
+  const rounded = Math.round(Number(value || 0));
+  let stars = "";
+  for(let i = 1; i <= 5; i++){
+    stars += i <= rounded ? "★" : "☆";
+  }
+  return stars;
+}
+
+function getLandlordRatingComments(propertyId){
+  const propertyRatings = ratings[propertyId] || {};
+  const rows = Object.values(propertyRatings).sort((a,b)=>(b.createdAt || 0) - (a.createdAt || 0));
+  if(rows.length === 0) return "";
+  return rows.map(item=>`
+    <div class="ratingComment">
+      <strong>${item.userName || item.userEmail || "Student"}</strong>
+      <span class="stars">${renderStars(item.rating)}</span>
+      <p>${item.comment || "No written comment."}</p>
+      ${item.createdAt ? `<small>${new Date(item.createdAt).toLocaleDateString()}</small>` : ""}
+    </div>
+  `).join("");
+}
+
+function render(){
+  if(!currentUser) return;
+  const rows = [
+    ...Object.entries(pending).map(([id,p])=>({id,...p, source:"pending", reviewStatus:p.previousPropertyId ? "Pending edit approval" : "Pending approval"})),
+    ...Object.entries(approved).map(([id,p])=>({id,...p, source:"approved", reviewStatus:p.listingState === "suspended" ? "Suspended" : "Approved"})),
+    ...Object.entries(rejected).map(([id,p])=>({id,...p, source:"rejected", reviewStatus:"Rejected"}))
+  ].sort((a,b)=>(b.submittedForApprovalAt||b.updatedAt||b.createdAt||0)-(a.submittedForApprovalAt||a.updatedAt||a.createdAt||0));
+
+  const list = document.getElementById("list");
+  if(rows.length === 0){
+    list.innerHTML = "<div class='card empty'>No properties yet. Upload your first house for review.</div>";
+    return;
+  }
+
+  list.innerHTML = rows.map(p=>{
+    const img = p.images?.[0] || "";
+    const badgeClass =
+      p.reviewStatus === "Approved" ? "approved" :
+      p.reviewStatus === "Suspended" ? "suspended" :
+      p.reviewStatus === "Rejected" ? "rejected" :
+      "pending";
+    const availabilityToggle = p.status === "Available" ? "Occupied" : "Available";
+    const reviewNote = p.previousPropertyId && p.source === "pending"
+      ? "<div class='reason' style='background:#fef3c7;color:#78350f'><b>Edit status:</b> Waiting for admin approval. The current approved listing remains live until this edit is approved.</div>"
+      : "";
+    const ratingId = getRatingPropertyId(p);
+    const ratingSummary = getRatingSummary(ratingId);
+    const ratingCommentsHtml = getLandlordRatingComments(ratingId);
+    return `
+      <article class="card">
+        ${img ? `<img src="${img}" alt="">` : ""}
+        <div class="meta">
+          <strong>${p.propertyName || p.houseName || p.type || "Property"}</strong><br>
+          ${p.type || ""}<br>
+          ${p.location || ""}<br>
+          KSh ${p.rent || ""}<br>
+          ${p.phone || ""}<br>
+          <b>Status:</b> ${p.status || p.availability || ""}<br>
+          <div class="ratingLine"><b>Ratings:</b> ${ratingSummary}</div>
+          <span class="badge ${badgeClass}">${p.reviewStatus}</span>
+          ${reviewNote}
+          ${p.rejectReason ? `<div class="reason"><b>Admin reason:</b> ${p.rejectReason}</div>` : ""}
+          ${p.suspendReason ? `<div class="reason"><b>Suspension reason:</b> ${p.suspendReason}</div>` : ""}
+          ${ratingCommentsHtml ? `<div class="ratingsBlock"><strong>Student ratings & comments</strong>${ratingCommentsHtml}</div>` : ""}
+          <div class="cardActions">
+            ${p.source === "pending" ? `
+              <button class="light" onclick="openEditModal('pending','${p.id}')">Edit</button>
+              <button class="danger" onclick="deletePending('${p.id}')">Delete property</button>
+            ` : ""}
+            ${p.source === "approved" ? `
+              <button class="successBtn" onclick="updateAvailability('${p.id}','${availabilityToggle}')">Mark ${availabilityToggle}</button>
+              <button class="warnBtn" onclick="openEditModal('approved','${p.id}')">Edit Property</button>
+            ` : ""}
+            ${p.source === "rejected" ? `
+              <button class="warnBtn" onclick="openEditModal('rejected','${p.id}')">Edit and Resubmit</button>
+            ` : ""}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function getPropertyBySource(source, id){
+  if(source === "pending") return pending[id];
+  if(source === "approved") return approved[id];
+  if(source === "rejected") return rejected[id];
+  return null;
+}
+
+function splitAmenities(value){
+  return (value || "").split(",").map(item=>item.trim()).filter(Boolean);
+}
+
+function openEditModal(source, id){
+  const p = getPropertyBySource(source, id);
+  if(!p) return;
+
+  activeEdit = {source, id, property:p};
+  const selectedAmenities = splitAmenities(p.amenities);
+  const standardAmenities = selectedAmenities.filter(item=>AMENITY_OPTIONS.includes(item));
+  const otherAmenities = selectedAmenities.filter(item=>!AMENITY_OPTIONS.includes(item));
+
+  document.getElementById("editTitle").innerText =
+    source === "approved" ? "Edit approved property" :
+    source === "rejected" ? "Edit rejected property" :
+    "Edit pending property";
+  document.getElementById("editPropertyName").value = p.propertyName || p.houseName || "";
+  document.getElementById("editType").value = p.type || "Bedsitter";
+  document.getElementById("editRent").value = p.rent || "";
+  document.getElementById("editDeposit").value = p.deposit || "";
+  document.getElementById("editGender").value = p.gender || "Any Gender";
+  document.getElementById("editAvailability").value = p.status || p.availability || "Available";
+  document.getElementById("editRoomsAvailable").value = p.roomsAvailable || "";
+  document.getElementById("editMaxOccupants").value = p.maxOccupants || "";
+  document.getElementById("editSharedRentType").value = p.sharedRentType || "";
+  toggleEditSharedFields();
+  document.getElementById("editUtilities").value = p.utilities || "Yes";
+  document.getElementById("editIncludedUtilities").value = p.includedUtilities || "";
+  toggleEditPartialUtilities();
+  document.getElementById("editPhone").value = p.phone || "";
+  document.getElementById("editLocation").value = p.location || "";
+  document.getElementById("editExtra").value = p.extra || "";
+  document.getElementById("editExtraAmenities").value = otherAmenities.join(", ");
+  document.getElementById("editImages").value = "";
+
+  document.getElementById("editAmenities").innerHTML = AMENITY_OPTIONS.map(item=>`
+    <label class="amenityChoice">
+      <input type="checkbox" class="editAmenity" value="${item}" ${standardAmenities.includes(item) ? "checked" : ""}>
+      ${item}
+    </label>
+  `).join("");
+
+  document.getElementById("submitEditBtn").innerText =
+    source === "pending" ? "Submit edit for approval" :
+    source === "rejected" ? "Submit edit for approval" :
+    "Submit edit for approval";
+  document.getElementById("editModal").style.display = "block";
+  pushNavState({layer:"edit", source, id});
+}
+
+function closeEditModal(){
+  document.getElementById("editModal").style.display = "none";
+  activeEdit = null;
+  if(!navApplying){
+    if(history.state?.layer === "edit") history.back();
+    else showTab("property", false);
+  }
+}
+
+function toBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function collectEditForm(){
+  const selected = [];
+  document.querySelectorAll(".editAmenity:checked").forEach(item=>selected.push(item.value));
+  const extraAmenities = document.getElementById("editExtraAmenities").value.trim();
+  const amenities = selected.concat(splitAmenities(extraAmenities)).join(", ");
+  const files = Array.from(document.getElementById("editImages").files || []);
+  const images = files.length
+    ? await Promise.all(files.map(file=>toBase64(file)))
+    : activeEdit.property.images || [];
+
+  return {
+    type: document.getElementById("editType").value,
+    propertyName: document.getElementById("editPropertyName").value.trim(),
+    houseName: document.getElementById("editPropertyName").value.trim(),
+    rent: document.getElementById("editRent").value.trim(),
+    deposit: document.getElementById("editDeposit").value.trim(),
+    gender: document.getElementById("editGender").value,
+    availability: document.getElementById("editAvailability").value,
+    status: document.getElementById("editAvailability").value,
+    roomsAvailable: document.getElementById("editRoomsAvailable").value.trim(),
+    maxOccupants: isSharedType(document.getElementById("editType").value) ? document.getElementById("editMaxOccupants").value.trim() : "",
+    sharedRentType: isSharedType(document.getElementById("editType").value) ? document.getElementById("editSharedRentType").value : "",
+    utilities: document.getElementById("editUtilities").value,
+    includedUtilities: document.getElementById("editUtilities").value === "Partially Included" ? document.getElementById("editIncludedUtilities").value.trim() : "",
+    phone: document.getElementById("editPhone").value.trim(),
+    location: document.getElementById("editLocation").value.trim(),
+    extra: document.getElementById("editExtra").value.trim(),
+    amenities,
+    images
+  };
+}
+
+async function submitEditForApproval(){
+  if(!activeEdit || !currentUser) return;
+
+  const btn = document.getElementById("submitEditBtn");
+  btn.disabled = true;
+  btn.innerText = "Submitting...";
+
+  try{
+    const edits = await collectEditForm();
+    if(!edits.propertyName || !edits.type || !edits.rent || !edits.phone || !edits.location){
+      showToast("Please fill house name, house type, rent, phone, and location before submitting.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    if(isSharedType(edits.type) && (!edits.maxOccupants || !edits.sharedRentType)){
+      showToast("Please enter maximum occupants and the shared rent arrangement.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    if(edits.utilities === "Partially Included" && !edits.includedUtilities){
+      showToast("Please name the utilities included in rent.", "warning");
+      btn.disabled = false;
+      btn.innerText = "Submit edit for approval";
+      return;
+    }
+
+    const base = {
+      ...activeEdit.property,
+      ...edits,
+      approved: false,
+      reviewStatus: activeEdit.source === "approved" ? "pending_edit" : "pending",
+      landlordUid: currentUser.uid,
+      landlordEmail: currentUser.email,
+      createdAt: activeEdit.property.createdAt || Date.now(),
+      updatedAt: Date.now(),
+      submittedForApprovalAt: Date.now()
+    };
+
+    let submittedPropertyId = activeEdit.id;
+
+    if(activeEdit.source === "pending"){
+      await db.collection("pendingProperties").doc(activeEdit.id).update(base);
+    }else if(activeEdit.source === "rejected"){
+      delete base.rejectReason;
+      delete base.rejectedAt;
+      await db.collection("pendingProperties").doc(activeEdit.id).set(base);
+      await db.collection("rejectedProperties").doc(activeEdit.id).delete();
+    }else{
+      base.previousPropertyId = activeEdit.id;
+      const ref = await db.collection("pendingProperties").add(base);
+      submittedPropertyId = ref.id;
+    }
+
+    await db.collection("notifications").doc("admin").collection("notifications").add({
+      type: activeEdit.source === "approved" ? "property_edit" : "property_resubmission",
+      propertyId: submittedPropertyId,
+      previousPropertyId: activeEdit.source === "approved" ? activeEdit.id : "",
+      title: "Property edit submitted",
+      body: (base.type || "Property") + " in " + (base.location || "") + " is waiting for approval.",
+      read: false,
+      createdAt: Date.now()
+    });
+
+    closeEditModal();
+    showToast("Edit submitted for admin approval. You can track it as pending, approved, or rejected here.", "success");
+  }catch(error){
+    showToast("Could not submit edit: " + error.message, "error");
+  }finally{
+    btn.disabled = false;
+    btn.innerText = "Submit edit for approval";
+  }
+}
+
+function deletePending(id){
+  const p = pending[id];
+  if(!p) return;
+  const name = p.propertyName || p.houseName || p.type || "this property";
+  const location = p.location ? "\nLocation: " + p.location : "";
+  if(!confirm("Are you sure you want to delete \"" + name + "\"?" + location + "\n\nThis action cannot be undone.")) return;
+  db.collection("pendingProperties").doc(id).delete();
+}
+
+function updateAvailability(id, status){
+  db.collection("properties").doc(id).update({
+    status,
+    availability: status,
+    updatedAt: Date.now()
+  });
+}
+
+function showToast(message, type="success"){
+  const toast = document.getElementById("toast");
+  toast.className = "toast " + type + " show";
+  toast.innerText = message;
+  clearTimeout(window.dashboardToastTimer);
+  window.dashboardToastTimer = setTimeout(()=>{
+    toast.className = "toast";
+  },3200);
+}
+
+function toggleChats(){
+  showTab("messages");
+  renderChats();
+}
+
+function renderChats(){
+  const chatList = document.getElementById("chatList");
+  if(!chatList) return;
+
+  const rows = Object.entries(chats)
+    .map(([id, chat])=>({id, ...chat}))
+    .sort((a,b)=>(b.updatedAt || 0) - (a.updatedAt || 0));
+
+  if(rows.length === 0){
+    chatView = "list";
+    setChatOpen(false);
+    chatList.innerHTML = "<div class='card empty'>No student messages yet.</div>";
+    return;
+  }
+
+  if(chatView === "conversation" && activeChatId && chats[activeChatId]){
+    setChatOpen(true);
+    renderChatConversation(chatList, chats[activeChatId]);
+    return;
+  }
+
+  setChatOpen(false);
+
+  if(activeChatMessagesRef){
+    activeChatMessagesRef();
+    activeChatMessagesRef = null;
+  }
+
+  chatView = "list";
+  chatList.innerHTML = `
+    <div class="chatListPage">
+      ${rows.map(chat=>{
+        const studentName = chat.userName || chat.userEmail || "Student";
+        const initial = studentName.trim().charAt(0).toUpperCase() || "S";
+        return `
+          <div class="chatThreadRow">
+            <button class="chatThreadMain" onclick="openChatConversation('${chat.id}')">
+              <span class="chatAvatar">${initial}</span>
+              <span class="chatSummary">
+                <strong>${studentName}</strong>
+                <small>${chat.propertyTitle || "Property chat"}</small>
+                <small>${chat.lastMessage || chat.propertyLocation || "Open conversation"}</small>
+              </span>
+            </button>
+            <details class="threadMenu msgMenu" onclick="event.stopPropagation()">
+              <summary>⋮</summary>
+              <div class="msgMenuList">
+                <button onclick="openChatConversation('${chat.id}')">Open chat</button>
+              </div>
+            </details>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderChatConversation(chatList, chat){
+  const activeStudent = chat.userName || chat.userEmail || "Student";
+  const title = (chat.propertyTitle || "Property chat") + (chat.propertyLocation ? " - " + chat.propertyLocation : "");
+
+  if(activeChatMessagesRef) activeChatMessagesRef();
+  activeChatMessagesRef = db.collection("chats").doc(chat.id).collection("messages").orderBy("createdAt").onSnapshot(snapshot=>{
+    activeChatMessages = {};
+    snapshot.forEach(doc=>{
+      activeChatMessages[doc.id] = {id: doc.id, ...doc.data()};
+    });
+    renderLandlordChatMessages(chat, activeStudent);
+  });
+
+  chatList.innerHTML = `
+    <div class="chatConversationPage">
+      <div class="chatConvHeader">
+        <button class="backBtn" onclick="backToChatList()" aria-label="Back">←</button>
+        <div class="chatConvInfo">
+          <h2>${title}</h2>
+          <small>${activeStudent}</small>
+        </div>
+        <details class="headerMenu msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button onclick="openChatConversation('${chat.id}', false)">Refresh</button>
+          </div>
+        </details>
+      </div>
+      <div class="messages" id="activeMessages"></div>
+      <div class="chatInput">
+        <input id="reply-${chat.id}" placeholder="Reply to ${activeStudent}">
+        <button class="sendBtn" onclick="sendReply('${chat.id}')">➤</button>
+      </div>
+    </div>
+  `;
+
+  renderLandlordChatMessages(chat, activeStudent);
+}
+
+function renderLandlordChatMessages(chat, activeStudent){
+  const box = document.getElementById("activeMessages");
+  if(!box) return;
+
+  const rows = Object.entries(activeChatMessages || {})
+    .map(([id, message])=>({id, ...message}))
+    .sort((a,b)=>(a.createdAt || 0) - (b.createdAt || 0));
+
+  if(rows.length === 0){
+    box.innerHTML = "<div class='message emptyChat'>No messages in this chat yet.</div>";
+    return;
+  }
+
+  box.innerHTML = rows.map(m=>`
+    <div class="message ${m.senderRole === "landlord" ? "sent" : "received"}">
+      <b>${m.senderRole === "landlord" ? "You" : (m.senderName || activeStudent)}</b>
+      ${m.text || ""}
+      ${m.editedAt ? "<small>Edited</small>" : ""}
+      ${m.senderUid === currentUser.uid ? `
+        <details class="msgMenu">
+          <summary>⋮</summary>
+          <div class="msgMenuList">
+            <button onclick="editReply('${chat.id}','${m.id}')">Edit</button>
+            <button class="dangerText" onclick="deleteReply('${chat.id}','${m.id}')">Delete</button>
+          </div>
+        </details>
+      ` : ""}
+    </div>
+  `).join("");
+
+  box.scrollTop = box.scrollHeight;
+}
+
+function openChatConversation(chatId, pushHistory=true){
+  if(!chats[chatId]) return;
+  activeChatId = chatId;
+  chatView = "conversation";
+  renderChats();
+  if(pushHistory) pushNavState({layer:"chat", chatId});
+}
+
+function backToChatList(){
+  if(!navApplying) history.back();
+}
+
+function selectChat(chatId){
+  openChatConversation(chatId);
+}
+
+function sendReply(chatId){
+  const input = document.getElementById("reply-" + chatId);
+  const text = input.value.trim();
+  if(!text) return;
+  const chat = chats[chatId] || {};
+
+  db.collection("chats").doc(chatId).collection("messages").add({
+    senderUid: currentUser.uid,
+    senderRole: "landlord",
+    senderName: currentUser.email || "Landlord",
+    text,
+    createdAt: Date.now()
+  });
+  db.collection("chats").doc(chatId).update({
+    updatedAt: Date.now(),
+    lastMessage: text
+  });
+  if(chat.userUid){
+    db.collection("notifications").doc("users").collection(chat.userUid).add({
+      type: "message",
+      chatId,
+      propertyId: chat.propertyId || "",
+      title: "New landlord reply",
+      body: (currentUser.email || "Landlord") + ": " + text,
+      read: false,
+      createdAt: Date.now()
+    });
+  }
+  input.value = "";
+}
+
+function editReply(chatId, messageId){
+  const current = activeChatMessages[messageId]?.text || "";
+  const text = prompt("Edit your message", current);
+  if(text === null) return;
+  const trimmed = text.trim();
+  if(!trimmed) return;
+  db.collection("chats").doc(chatId).collection("messages").doc(messageId).update({
+    text: trimmed,
+    editedAt: Date.now()
+  });
+  db.collection("chats").doc(chatId).update({
+    updatedAt: Date.now(),
+    lastMessage: trimmed
+  });
+}
+
+function deleteReply(chatId, messageId){
+  if(!confirm("Delete this message?")) return;
+  db.collection("chats").doc(chatId).collection("messages").doc(messageId).delete();
+}
 
 function logout(){
-auth.signOut().then(()=>{
-window.location.href="landlord-login.html";
-});
+  auth.signOut().then(()=> window.location.href="landlord-login.html");
 }
-
 </script>
-
 </body>
 </html>
