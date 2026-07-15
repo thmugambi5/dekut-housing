@@ -464,7 +464,7 @@ auth.onAuthStateChanged(async user => {
 
   const adminSnap = await db.collection("admins").doc(user.uid).get();
 
-  if(!adminSnap.exists()){
+  if(!adminSnap.exists){
     auth.signOut();
     window.location.href = "admin-login.html";
     return;
