@@ -1027,6 +1027,18 @@ height:200px;
 <option>Parking</option>
 <option>Security</option>
 </select>
+<select id="genderFilter" onchange="applyFilters()">
+<option value="">Any Gender</option>
+<option>Male</option>
+<option>Female</option>
+<option>Any</option>
+</select>
+<select id="utilitiesFilter" onchange="applyFilters()">
+<option value="">Any Utilities</option>
+<option>Included</option>
+<option>Partially Included</option>
+<option>Not Included</option>
+</select>
 <input id="minRent" type="number" placeholder="Min Rent">
 <input id="maxRent" type="number" placeholder="Max Rent">
 <input id="maxDist" type="number" placeholder="Max Distance (km)">
@@ -1412,6 +1424,8 @@ let search = document.getElementById("searchBox").value.toLowerCase();
 let typeFilter = document.getElementById("typeFilter").value;
 let availabilityFilter = document.getElementById("availabilityFilter").value;
 let amenityFilter = document.getElementById("amenityFilter").value.toLowerCase();
+let genderFilter = document.getElementById("genderFilter").value;
+let utilitiesFilter = document.getElementById("utilitiesFilter").value;
 let min = parseInt(document.getElementById("minRent").value) || 0;
 let max = parseInt(document.getElementById("maxRent").value) || 999999;
 let dist = parseFloat(document.getElementById("maxDist").value) || 999;
@@ -1440,6 +1454,8 @@ distance<=dist &&
 (!typeFilter || p.type === typeFilter) &&
 (!availabilityFilter || (p.status || p.availability) === availabilityFilter) &&
 (!amenityFilter || amenitiesText.includes(amenityFilter)) &&
+(!genderFilter || (p.gender || "") === genderFilter) &&
+(!utilitiesFilter || (p.utilities || "") === utilitiesFilter) &&
 (search==="" || text.includes(search))
 ){
 filteredArray.push({id,...p});
@@ -1932,6 +1948,8 @@ document.getElementById("maxDist").value="";
 document.getElementById("typeFilter").value="";
 document.getElementById("availabilityFilter").value="";
 document.getElementById("amenityFilter").value="";
+document.getElementById("genderFilter").value="";
+document.getElementById("utilitiesFilter").value="";
 document.getElementById("sortBy").value="newest";
 applyFilters();
 }
