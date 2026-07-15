@@ -928,15 +928,6 @@ createdAt: Date.now()
 
 });
 
-await db.collection("notifications").doc("admin").collection("notifications").add({
-type: "property_upload",
-propertyId: newPropertyRef.id,
-title: "New property uploaded",
-body: propertyNameVal + " (" + typeVal + ") in " + locationVal + " is waiting for approval.",
-read: false,
-createdAt: Date.now()
-});
-
 updateProgress(100,"Upload completed successfully");
 
 /* SUCCESS MESSAGE */
@@ -946,6 +937,21 @@ msg.innerHTML = `
 Waiting for admin approval.
 </div>
 `;
+
+/* SEND NOTIFICATION (non-critical) */
+try{
+await db.collection("notifications").doc("admin").collection("notifications").add({
+type: "property_upload",
+propertyId: newPropertyRef.id,
+title: "New property uploaded",
+body: propertyNameVal + " (" + typeVal + ") in " + locationVal + " is waiting for approval.",
+read: false,
+createdAt: Date.now()
+});
+}
+catch(notifErr){
+console.error("Notification failed but upload succeeded:", notifErr);
+}
 
 /* RESET FORM */
 document.getElementById("type").selectedIndex = 0;
