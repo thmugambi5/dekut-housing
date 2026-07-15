@@ -1887,7 +1887,7 @@ let saved = isWishlisted(p.id);
 list.innerHTML += `
 <div class="card">
 
-${img?`<img src="${img}" onclick='openDetails("${safe(p)}")'>`:``}
+${img?`<img src="${img}" loading="lazy" onclick='openDetails("${safe(p)}")'>`:``}
 
 <div class="cardContent">
 <div class="cardName">${p.propertyName||p.houseName||p.type||"Property"}</div>
