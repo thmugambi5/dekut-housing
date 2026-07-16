@@ -532,6 +532,40 @@ const storage = firebase.storage();
 
 let currentLandlord = null;
 
+/* RATE LIMITING */
+const MAX_UPLOADS_PER_DAY = 5;
+const UPLOAD_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+async function checkRateLimit() {
+  if (!currentLandlord) return { allowed: false, error: 'Not authenticated' };
+  
+  try {
+    const now = Date.now();
+    const cutoff = now - UPLOAD_WINDOW_MS;
+    
+    // Get recent uploads from this landlord
+    const snapshot = await db.collection("pendingProperties")
+      .where("landlordUid", "==", currentLandlord.uid)
+      .where("createdAt", ">=", cutoff)
+      .get();
+    
+    const recentUploads = snapshot.size;
+    
+    if (recentUploads >= MAX_UPLOADS_PER_DAY) {
+      return { 
+        allowed: false, 
+        error: `You have reached your daily upload limit (${MAX_UPLOADS_PER_DAY} properties per day). Please try again tomorrow.` 
+      };
+    }
+    
+    return { allowed: true, remaining: MAX_UPLOADS_PER_DAY - recentUploads };
+  } catch (error) {
+    console.error("Rate limit check failed:", error);
+    // Allow upload if rate limit check fails (fail open)
+    return { allowed: true };
+  }
+}
+
 auth.onAuthStateChanged(user => {
 
 if(!user){
@@ -674,6 +708,45 @@ alert("Please allow location permission");
 
 }
 
+/* INPUT VALIDATION AND SANITIZATION */
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  return input
+    .replace(/[<>]/g, '') // Remove < and >
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .trim();
+}
+
+function validateNumber(value, min, max, fieldName) {
+  const num = parseFloat(value);
+  if (isNaN(num)) return { valid: false, error: `${fieldName} must be a number` };
+  if (min !== undefined && num < min) return { valid: false, error: `${fieldName} must be at least ${min}` };
+  if (max !== undefined && num > max) return { valid: false, error: `${fieldName} must be at most ${max}` };
+  return { valid: true, value: num };
+}
+
+function validateText(value, minLength, maxLength, fieldName) {
+  const text = sanitizeInput(value);
+  if (minLength && text.length < minLength) return { valid: false, error: `${fieldName} must be at least ${minLength} characters` };
+  if (maxLength && text.length > maxLength) return { valid: false, error: `${fieldName} must be at most ${maxLength} characters` };
+  return { valid: true, value: text };
+}
+
+function validateEmail(email) {
+  const sanitized = sanitizeInput(email);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(sanitized)) return { valid: false, error: 'Please enter a valid email address' };
+  return { valid: true, value: sanitized };
+}
+
+function validatePhone(phone) {
+  const sanitized = sanitizeInput(phone);
+  const phoneRegex = /^[\d\s\+\-\(\)]{10,20}$/;
+  if (!phoneRegex.test(sanitized)) return { valid: false, error: 'Please enter a valid phone number' };
+  return { valid: true, value: sanitized };
+}
+
 /* IMAGE COMPRESSION */
 async function compressImage(file, maxWidth = 1200, quality = 0.7) {
   return new Promise((resolve) => {
@@ -788,40 +861,68 @@ const msg =
 document.getElementById("msg");
 
 /* VALIDATION */
-if(
-!typeVal ||
-!propertyNameVal ||
-!rentVal ||
-!phoneVal ||
-!locationVal
-){
-
-alert("Please fill all required fields");
-
-uploadBtn.disabled = false;
-
-return;
-
+// Validate and sanitize all inputs
+const typeValidation = validateText(typeVal, 2, 50, "Property type");
+if (!typeValidation.valid) {
+  alert(typeValidation.error);
+  uploadBtn.disabled = false;
+  return;
 }
 
+const propertyNameValidation = validateText(propertyNameVal, 3, 100, "Property name");
+if (!propertyNameValidation.valid) {
+  alert(propertyNameValidation.error);
+  uploadBtn.disabled = false;
+  return;
+}
+
+const rentValidation = validateNumber(rentVal, 500, 1000000, "Rent");
+if (!rentValidation.valid) {
+  alert(rentValidation.error);
+  uploadBtn.disabled = false;
+  return;
+}
+
+const phoneValidation = validatePhone(phoneVal);
+if (!phoneValidation.valid) {
+  alert(phoneValidation.error);
+  uploadBtn.disabled = false;
+  return;
+}
+
+const locationValidation = validateText(locationVal, 3, 200, "Location");
+if (!locationValidation.valid) {
+  alert(locationValidation.error);
+  uploadBtn.disabled = false;
+  return;
+}
+
+// Sanitize all text inputs
+typeVal = typeValidation.value;
+propertyNameVal = propertyNameValidation.value;
+rentVal = rentValidation.value;
+phoneVal = phoneValidation.value;
+locationVal = locationValidation.value;
+depositVal = sanitizeInput(depositVal);
+genderVal = sanitizeInput(genderVal);
+availabilityVal = sanitizeInput(availabilityVal);
+roomsVal = sanitizeInput(roomsVal);
+maxOccupantsVal = sanitizeInput(maxOccupantsVal);
+sharedRentTypeVal = sanitizeInput(sharedRentTypeVal);
+utilitiesVal = sanitizeInput(utilitiesVal);
+includedUtilitiesVal = sanitizeInput(includedUtilitiesVal);
+extraVal = sanitizeInput(extraVal);
+
 if(utilitiesVal === "Partially Included" && !includedUtilitiesVal){
-
 alert("Please name the utilities included in rent.");
-
 uploadBtn.disabled = false;
-
 return;
-
 }
 
 if(isSharedType(typeVal) && (!maxOccupantsVal || !sharedRentTypeVal)){
-
 alert("Please enter maximum occupants and choose whether shared rent is per head or shared among occupants.");
-
 uploadBtn.disabled = false;
-
 return;
-
 }
 
 if(!lat || !lng){
@@ -834,6 +935,48 @@ return;
 
 }
 
+/* RATE LIMIT CHECK */
+const rateLimitCheck = await checkRateLimit();
+if (!rateLimitCheck.allowed) {
+  alert(rateLimitCheck.error);
+  uploadBtn.disabled = false;
+  return;
+}
+
+if (rateLimitCheck.remaining !== undefined) {
+  console.log(`Uploads remaining today: ${rateLimitCheck.remaining}`);
+}
+
+/* ERROR HANDLING WITH USER-FRIENDLY MESSAGES */
+function getErrorMessage(error) {
+  const errorMessages = {
+    'storage/unauthorized': 'You do not have permission to upload images. Please check your account permissions.',
+    'storage/canceled': 'The upload was cancelled.',
+    'storage/unknown': 'An unknown error occurred during upload. Please try again.',
+    'storage/object-not-found': 'The storage bucket could not be found.',
+    'storage/quota-exceeded': 'Storage quota exceeded. Please contact support.',
+    'storage/server-file-wrong-size': 'The file size is incorrect.',
+    'firestore/permission-denied': 'You do not have permission to save this property. Please check your account.',
+    'firestore/unavailable': 'The database is currently unavailable. Please try again later.',
+    'firestore/unknown': 'An unknown error occurred. Please try again.',
+    'network-request-failed': 'Network connection failed. Please check your internet connection.',
+    'auth/user-not-found': 'User not found. Please log in again.',
+    'auth/invalid-email': 'Invalid email address.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+  };
+
+  const errorCode = error.code || '';
+  for (const [code, message] of Object.entries(errorMessages)) {
+    if (errorCode.includes(code)) {
+      return message;
+    }
+  }
+
+  // Default error message
+  return error.message || 'An unexpected error occurred. Please try again.';
+}
+
 try{
 
 updateProgress(10,"Compressing and uploading images...");
@@ -841,6 +984,18 @@ updateProgress(10,"Compressing and uploading images...");
 /* IMAGES - Compress and Upload to Firebase Storage */
 let files =
 document.getElementById("images").files;
+
+if(!files || files.length === 0){
+  alert("Please select at least one image for the property.");
+  uploadBtn.disabled = false;
+  return;
+}
+
+if(files.length > 10){
+  alert("Maximum 10 images allowed. Please select fewer images.");
+  uploadBtn.disabled = false;
+  return;
+}
 
 let imageUrls = [];
 
@@ -1014,9 +1169,11 @@ document.getElementById("progressFill").style.width = "0%";
 }
 catch(err){
 
-alert("Upload failed: " + err.message);
+alert("Upload failed: " + getErrorMessage(err));
 
 updateProgress(0,"Upload failed");
+
+console.error("Upload error:", err);
 
 }
 

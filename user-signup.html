@@ -85,6 +85,36 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+/* INPUT VALIDATION AND SANITIZATION */
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  return input
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .trim();
+}
+
+function validateText(value, minLength, maxLength, fieldName) {
+  const text = sanitizeInput(value);
+  if (minLength && text.length < minLength) return { valid: false, error: `${fieldName} must be at least ${minLength} characters` };
+  if (maxLength && text.length > maxLength) return { valid: false, error: `${fieldName} must be at most ${maxLength} characters` };
+  return { valid: true, value: text };
+}
+
+function validateEmail(email) {
+  const sanitized = sanitizeInput(email);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(sanitized)) return { valid: false, error: 'Please enter a valid email address' };
+  return { valid: true, value: sanitized };
+}
+
+function validatePassword(password) {
+  if (password.length < 6) return { valid: false, error: 'Password must be at least 6 characters' };
+  if (password.length > 128) return { valid: false, error: 'Password must be at most 128 characters' };
+  return { valid: true, value: password };
+}
+
 async function signup(){
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -92,19 +122,37 @@ async function signup(){
   const msg = document.getElementById("msg");
   const btn = document.getElementById("signupBtn");
 
-  if(!name || !email || !password){
-    msg.innerHTML = "<span class='error'>Please fill in all fields.</span>";
+  // Validate inputs
+  const nameValidation = validateText(name, 2, 50, "Name");
+  if (!nameValidation.valid) {
+    msg.innerHTML = "<span class='error'>" + nameValidation.error + "</span>";
     return;
   }
+
+  const emailValidation = validateEmail(email);
+  if (!emailValidation.valid) {
+    msg.innerHTML = "<span class='error'>" + emailValidation.error + "</span>";
+    return;
+  }
+
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    msg.innerHTML = "<span class='error'>" + passwordValidation.error + "</span>";
+    return;
+  }
+
+  // Use sanitized values
+  const sanitizedName = nameValidation.value;
+  const sanitizedEmail = emailValidation.value;
 
   btn.disabled = true;
   btn.innerText = "Creating account...";
 
   try{
-    const credential = await auth.createUserWithEmailAndPassword(email, password);
+    const credential = await auth.createUserWithEmailAndPassword(sanitizedEmail, password);
     await db.collection("users").doc(credential.user.uid).set({
-      name,
-      email,
+      name: sanitizedName,
+      email: sanitizedEmail,
       role: "user",
       createdAt: Date.now()
     });

@@ -1107,6 +1107,20 @@ height:200px;
 
 <div id="toast" class="toast"></div>
 
+<div id="globalLoader" class="globalLoader" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+<div style="background:white;padding:20px;border-radius:8px;text-align:center;">
+<div style="width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px;"></div>
+<div style="color:#333;font-weight:bold;">Loading...</div>
+</div>
+</div>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
 <div class="modal" id="mapModal"></div>
 
 <div class="photoModal" id="photoModal">
@@ -1152,6 +1166,24 @@ appId:"1:784034754945:web:198f5e3cf47777ab97f880"
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+/* ANALYTICS */
+let analytics = null;
+try {
+  analytics = firebase.analytics();
+} catch (e) {
+  console.log("Analytics not available");
+}
+
+function trackEvent(eventName, params = {}) {
+  if (analytics) {
+    analytics.logEvent(eventName, params);
+  }
+  console.log("Analytics:", eventName, params);
+}
+
+// Track page view
+trackEvent('page_view', { page: 'home' });
 
 function goLandlord(){
 window.location.href="landlord-login.html";
@@ -1259,17 +1291,23 @@ if(!navApplying) history.back();
 
 function saveProfile(){
 if(!requireUser("profile")) return;
+if(isLoading("saveProfile")) return;
+
 const name = document.getElementById("profileName").value.trim();
 if(!name){
 showToast("Please enter your name.", "warning");
 return;
 }
+
+setLoading("saveProfile", true);
+
 db.collection("users").doc(currentUser.uid).update({name, updatedAt: Date.now()})
 .then(()=>{
 currentUserProfile = {...(currentUserProfile || {}), name};
 showToast("Profile updated successfully.", "success");
 })
-.catch(()=> showToast("Could not save profile.", "error"));
+.catch(()=> showToast("Could not save profile.", "error"))
+.finally(()=> setLoading("saveProfile", false));
 }
 
 function logoutUser(){
@@ -1300,6 +1338,38 @@ showToast("Please create an account or login first to use " + feature + ".", "wa
 clearTimeout(window.loginRedirectTimer);
 window.loginRedirectTimer = setTimeout(()=> window.location.href = "user-signup.html", 1800);
 return false;
+}
+
+/* LOADING STATES */
+let loadingStates = {};
+
+function setLoading(operation, isLoading, elementId = null) {
+  loadingStates[operation] = isLoading;
+  
+  if (elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      if (isLoading) {
+        element.disabled = true;
+        element.dataset.originalText = element.innerText;
+        element.innerText = "Loading...";
+      } else {
+        element.disabled = false;
+        element.innerText = element.dataset.originalText || element.innerText;
+      }
+    }
+  }
+  
+  // Show/hide global loading indicator
+  const globalLoader = document.getElementById("globalLoader");
+  if (globalLoader) {
+    const hasLoading = Object.values(loadingStates).some(state => state);
+    globalLoader.style.display = hasLoading ? "flex" : "none";
+  }
+}
+
+function isLoading(operation) {
+  return loadingStates[operation] || false;
 }
 
 function showToast(message, type="success"){
@@ -1513,6 +1583,9 @@ return wishlist[propertyId] === true;
 
 function toggleWishlist(propertyId, button){
 if(!requireUser("wishlist")) return;
+if(isLoading("wishlist")) return;
+
+setLoading("wishlist", true, button ? button.id : null);
 
 let ref = db.collection("wishlists").doc(currentUser.uid);
 if(isWishlisted(propertyId)){
@@ -1521,16 +1594,20 @@ ref.update({[propertyId]: firebase.firestore.FieldValue.delete()})
   wishlist[propertyId] = false;
   if(button) button.innerText = "Add to wishlist";
   showToast("Removed from wishlist.", "success");
+  trackEvent('remove_from_wishlist', { property_id: propertyId });
 })
-.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
+.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"))
+.finally(()=> setLoading("wishlist", false));
 }else{
 ref.set({[propertyId]: true}, {merge: true})
 .then(()=>{
   wishlist[propertyId] = true;
   if(button) button.innerText = "Wishlisted";
   showToast("Property added to wishlist successfully.", "success");
+  trackEvent('add_to_wishlist', { property_id: propertyId });
 })
-.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"));
+.catch(()=> showToast("Please login or sign up first to access wishlist.", "warning"))
+.finally(()=> setLoading("wishlist", false));
 }
 }
 
@@ -1588,6 +1665,9 @@ if(!selectedRating){
 showToast("Please choose a star rating first.", "warning");
 return;
 }
+if(isLoading("rating")) return;
+
+setLoading("rating", true);
 
 let comment = document.getElementById("ratingComment").value.trim();
 db.collection("ratings").doc(activeRatingPropertyId).set({
@@ -1602,8 +1682,10 @@ db.collection("ratings").doc(activeRatingPropertyId).set({
 .then(()=>{
 closeRatingModal();
 showToast("Rating submitted successfully.", "success");
+trackEvent('submit_rating', { property_id: activeRatingPropertyId, rating: selectedRating });
 })
-.catch(()=> showToast("Please login or sign up first to access rating.", "warning"));
+.catch(()=> showToast("Please login or sign up first to access rating.", "warning"))
+.finally(()=> setLoading("rating", false));
 }
 
 function getChatId(propertyId){
@@ -1841,10 +1923,13 @@ db.collection("chats").doc(activeChat.id).collection("messages").doc(messageId).
 
 function sendChatMessage(){
 if(!requireUser("chat") || !activeChat) return;
+if(isLoading("sendMessage")) return;
 
 let input = document.getElementById("chatInput");
 let text = input.value.trim();
 if(!text) return;
+
+setLoading("sendMessage", true);
 
 db.collection("chats").doc(activeChat.id).collection("messages").add({
   senderUid: currentUser.uid,
@@ -1852,7 +1937,8 @@ db.collection("chats").doc(activeChat.id).collection("messages").add({
   senderName: activeChat.userName,
   text,
   createdAt: Date.now()
-}).catch(()=> showToast("Please login or sign up first to access chat.", "warning"));
+}).catch(()=> showToast("Please login or sign up first to access chat.", "warning"))
+.finally(()=> setLoading("sendMessage", false));
 
 db.collection("chats").doc(activeChat.id).update({
   lastMessage: text,
@@ -1868,6 +1954,8 @@ db.collection("notifications").doc("landlords").collection(activeChat.landlordUi
   read: false,
   createdAt: Date.now()
 });
+
+trackEvent('send_chat_message', { property_id: activeChat.propertyId, chat_id: activeChat.id });
 
 input.value = "";
 }
@@ -1970,6 +2058,7 @@ return `
 }
 
 function openDetails(encoded){
+trackEvent('view_property_details', { property_id: JSON.parse(decodeURIComponent(encoded)).id });
 
 let p = JSON.parse(decodeURIComponent(encoded));
 let ratingSummary = getRatingSummary(p.id);
